@@ -13,6 +13,12 @@ depends: [
   "ocaml"
   "dune" {>= "3.7"}
   "odoc" {with-doc}
+  "algaeff" {>= "0.2"}
+  "asai"
+  "bantorra"
+  "bwd" {>= "1.1"}
+  "cmdliner" {>= "1.1"}
+  "yuujinchou" {>= "4.0"}
 ]
 build: [
   ["dune" "subst"] {dev}
@@ -27,5 +33,9 @@ build: [
     "@runtest" {with-test}
     "@doc" {with-doc}
   ]
+]
+pin-depends: [
+  [ "asai.0.1.0~dev" "git+https://github.com/RedPRL/asai" ]
+  [ "bantorra.0.2.0~dev" "git+https://github.com/RedPRL/bantorra" ]
 ]
 dev-repo: "git+https://github.com/username/reponame.git"
