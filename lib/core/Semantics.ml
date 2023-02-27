@@ -4,6 +4,8 @@ open Bwd.Infix
 module S = Syntax
 module D = Domain
 
+open TermBuilder
+
 module Internal =
 struct
   type env = D.env
@@ -44,6 +46,10 @@ struct
     match clo with
     | D.Clo { env; body } ->
       Eff.run ~env:(env #< v) (fun () -> eval body)
+
+  and graft_value (gtm : S.t Graft.t) =
+    let tm, env = Graft.graft gtm in
+    Eff.run ~env @@ fun () -> eval tm
 end
 
 let eval ~env tm =
@@ -58,3 +64,6 @@ let do_ap =
 
 let inst_clo =
   Internal.inst_clo
+
+let graft_value =
+  Internal.graft_value

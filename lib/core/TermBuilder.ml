@@ -1,0 +1,44 @@
+open Bwd
+open Bwd.Infix
+
+module D = Domain
+module S = Syntax
+
+type 'a tb = int -> 'a
+
+(** A {!type:'a tb} can be thought of a piece of syntax that is
+    relative to some environment. *)
+let run_tb (env : D.env) (k : 'a tb) : 'a =
+  k (Bwd.length env)
+
+(** Convert a DeBruijin level into a DeBruijin indexed variable relative to the environment. *)
+let var (lvl : int) : S.t tb =
+  fun size ->
+  S.Var (size - lvl - 1)
+
+let bind_var (k : int -> 'a tb) : 'a tb =
+  fun size ->
+  k size (size + 1)
+
+let scope (k : S.t tb -> 'a tb) : 'a tb =
+  bind_var (fun lvl -> k (var lvl))
+
+module Graft =
+struct
+  type 'a t = D.env -> 'a tb * D.env
+
+  let value (v : D.t) (k : S.t tb -> 'a t) : 'a t =
+    fun env ->
+    (* Create a variable that points to the end of the extended context.
+       The DeBruijin arithmetic is a little tricky, but lets us avoid a subtraction. *)
+    let x = var (Bwd.length env) in
+    let env = env #< v in
+    k x env 
+
+  let build (builder : 'a tb) : 'a t =
+    fun env -> (builder, env)
+
+  let graft (k : 'a t) : 'a * D.env =
+    let (tb, env) = k Emp in
+    (run_tb env tb , env)
+end
