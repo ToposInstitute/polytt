@@ -27,14 +27,16 @@ struct
       D.Lam (nm, clo b)
     | S.Ap (f, a) ->
       do_ap (eval f) (eval a)
+    | S.Univ ->
+      D.Univ
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with
     | D.Lam (_, clo) ->
       inst_clo clo arg
-    | D.Neu (Pi(_, _, clo), neu) ->
+    | D.Neu (Pi(_, a, clo), neu) ->
       let fib = inst_clo clo arg in
-      D.Neu (fib, D.push_frm neu (D.Ap { tp = fib; arg }))
+      D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
     | _ ->
       invalid_arg "bad do_ap"
 
@@ -43,3 +45,16 @@ struct
     | D.Clo { env; body } ->
       Eff.run ~env:(env #< v) (fun () -> eval body)
 end
+
+let eval ~env tm =
+  Internal.Eff.run ~env @@ fun () ->
+  Internal.eval tm
+
+let eval_top tm =
+  eval ~env:Emp tm
+
+let do_ap =
+  Internal.do_ap
+
+let inst_clo =
+  Internal.inst_clo

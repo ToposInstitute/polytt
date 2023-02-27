@@ -5,6 +5,7 @@ type t = Data.value =
   | Neu of t * neu
   | Pi of Ident.t * t * clo
   | Lam of Ident.t * clo
+  | Univ
 
 and neu = Data.neu = { hd : hd; spine : frame bwd }        
 
@@ -19,3 +20,6 @@ and clo = Data.clo = Clo of { env : env; body : Data.syn }
 
 let push_frm {hd; spine} frm =
   {hd; spine = spine #< frm}
+
+let var tp lvl =
+  Data.Neu (tp, { hd = Var lvl; spine = Emp })
