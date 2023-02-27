@@ -1,3 +1,6 @@
+(** The syntax of the core language.
+    This module repackages definitions in Data.ml for nicer qualified imports. *)
+
 type t = Data.syn =
   | Var of int
   | Pi of Ident.t * t * t (* Π (a : A) (B a) *)

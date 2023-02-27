@@ -1,3 +1,7 @@
+(** The definition of core ASTs. These need to be defined in the same 
+    module, as they are mutually recursive. See Syntax.ml and Domain.ml 
+    for repackaged versions. *)
+
 open Bwd
 
 type syn =

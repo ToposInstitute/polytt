@@ -1,3 +1,6 @@
+(** The values of the core language. 
+    This module repackages definitions in Data.ml for nicer qualified imports. *)
+
 open Bwd
 open Bwd.Infix
 

@@ -1,3 +1,6 @@
+(** {1 Evaluation} This module defines the core evaluation algorithm, along with 
+    eliminators for values. *)
+
 module S := Syntax
 module D := Domain
 
