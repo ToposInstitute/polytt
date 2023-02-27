@@ -1,2 +1,6 @@
+(env
+   (dev
+     (flags (:standard -w -32-37-38 -warn-error -a+31))))
+
 (library
  (name polytt))

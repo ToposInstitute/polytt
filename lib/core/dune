@@ -1,0 +1,4 @@
+(library
+  (name Core)
+  (libraries bwd algaeff yuujinchou)
+  (public_name polytt.core))
