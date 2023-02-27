@@ -130,3 +130,4 @@ _opam/
 
 # for Nix
 result/
+/.envrc.local
