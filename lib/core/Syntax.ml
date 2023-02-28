@@ -34,6 +34,7 @@ let rec dump fmt =
 let atom = P.nonassoc 11
 let juxtaposition = P.left 10
 let arrow = P.right 3
+
 (** This is used when precedence does not matter *)
 let atomic = P.right_of juxtaposition
 
