@@ -1,8 +1,22 @@
 #debug on
 
-def id : (A : type) → A → A := λ A → λ x → x
+def id : (A : type) → A → A :=
+  λ A x → x
+
+def const : (A : type) → (B : type) → A → B → A :=
+  λ _ _ x _ → x
 
 def four : nat := 4
 
 def double : nat → nat :=
   λ n → elim (λ _ → nat) zero (λ _ → λ n → succ (succ n)) n
+
+def sigma : (A : type) → (A → type) → type :=
+  λ A → λ B → (x : A) × B x
+
+-- This is a comment
+def pair : nat → nat → (_ : nat) × nat :=
+  λ n m → (n , m)
+
+def projl : (ℕ × ℕ) → ℕ :=
+  λ x → fst x

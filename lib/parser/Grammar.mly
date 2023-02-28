@@ -109,7 +109,7 @@ plain_term:
     { tm }
 
 arrow:
-  | LAMBDA; nms = name; RIGHT_ARROW; tm = term
+  | LAMBDA; nms = list(name); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
   | LPR; name = name; COLON; base = term; RPR; RIGHT_ARROW; fam = term
     { CS.Pi (name, base, fam) }

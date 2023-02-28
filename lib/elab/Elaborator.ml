@@ -12,8 +12,8 @@ struct
     match tm.node with
     | CS.Pi (name, a, b) ->
       R.Pi.formation ~name (chk a) (fun _ -> chk b)
-    | CS.Lam (name, tm) ->
-      R.Pi.intro ~name (fun _ -> chk tm)
+    | CS.Lam ( names, tm) ->
+      List.fold_right (fun t tac -> R.Pi.intro ~name:t (fun _ -> tac)) names (chk tm)
     | CS.Sigma (name, a, b) ->
       R.Sigma.formation ~name (chk a) (fun _ -> chk b)
     | CS.Pair (a, b) ->

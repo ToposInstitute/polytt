@@ -7,7 +7,7 @@ type t = t_ node
 and t_ =
   | Var of Yuujinchou.Trie.path
   | Pi of Ident.t * t * t
-  | Lam of Ident.t * t
+  | Lam of Ident.t list * t
   | Ap of t * t list
   | Sigma of Ident.t * t * t
   | Pair of t * t
