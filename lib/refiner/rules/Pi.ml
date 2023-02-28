@@ -16,7 +16,7 @@ let intro ?(name = `Anon) tac =
   | D.Pi (_, a, clo) ->
     Var.abstract ~name a @@ fun v ->
     let fib = inst_clo clo (Var.value v) in
-    Chk.run (tac v) fib
+    S.Lam (name, Chk.run (tac v) fib)
   | _ -> failwith "FIXME: better error handling" 
 
 let ap f_tac arg_tac =
