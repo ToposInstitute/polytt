@@ -36,6 +36,15 @@ let eval tm =
 let inst_clo clo v =
   Semantics.inst_clo clo v
 
+let do_ap f a =
+  Semantics.do_ap f a
+
+let do_fst tm =
+  Semantics.do_fst tm
+
+let do_snd tm =
+  Semantics.do_snd tm
+
 let fresh_var tp () =
   let env = Locals.read () in
   D.var tp env.size
