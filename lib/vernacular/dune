@@ -1,0 +1,4 @@
+(library
+  (name Vernacular)
+  (public_name polytt.vernacular)
+  (libraries polytt.core polytt.elab))

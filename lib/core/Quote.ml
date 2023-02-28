@@ -104,3 +104,7 @@ end
 let quote ~size ~tp v =
   Internal.Eff.run ~env:size @@ fun () ->
   Internal.quote tp v
+
+let quote_top ~tp v =
+  Internal.Eff.run ~env:0 @@ fun () ->
+  Internal.quote tp v

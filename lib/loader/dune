@@ -1,0 +1,4 @@
+(library
+  (name Loader)
+  (public_name polytt.loader)
+  (libraries  polytt.parser polytt.vernacular))

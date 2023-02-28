@@ -1,0 +1,7 @@
+(library
+  (name Parser)
+  (public_name polytt.parser)
+  (libraries polytt.vernacular asai))
+
+(ocamllex Lex)
+(menhir (modules Grammar))

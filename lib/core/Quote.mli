@@ -6,3 +6,4 @@ module S := Syntax
 module D := Domain
 
 val quote : size:int -> tp:D.t -> D.t -> S.t
+val quote_top : tp:D.t -> D.t -> S.t

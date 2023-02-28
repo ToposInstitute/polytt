@@ -1,0 +1,9 @@
+#debug on
+
+def id : (A : type) → A → A :=
+  λ A → λ x → x
+
+def four : nat := 4
+
+def double : nat → nat :=
+  λ n → elim (λ _ → nat) zero (λ _ → λ n → succ (succ n)) n

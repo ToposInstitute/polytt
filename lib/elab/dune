@@ -1,0 +1,4 @@
+(library
+  (name Elab)
+  (public_name polytt.elab)
+  (libraries polytt.core polytt.refiner asai))
