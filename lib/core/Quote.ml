@@ -35,6 +35,21 @@ struct
         quote D.Univ (Sem.inst_clo clo arg)
       in
       S.Pi (nm, a, b)
+    | _, D.Sigma (nm, a, clo) ->
+      let a = quote D.Univ a in
+      let b = bind D.Univ @@ fun arg ->
+        quote D.Univ (Sem.inst_clo clo arg)
+      in
+      S.Sigma (nm, a, b)
+    | D.Sigma (_, a, tp_clo), D.Pair (v1, v2) ->
+      let t1 = quote a v1 in
+      let t2 = quote (Sem.inst_clo tp_clo v1) v2 in
+      S.Pair (t1, t2)
+    | D.Sigma (_, a, tp_clo), v ->
+      let v1 = Sem.do_fst v in
+      let t1 = quote a v1 in
+      let t2 = quote (Sem.inst_clo tp_clo v1) (Sem.do_snd v) in
+      S.Pair (t1, t2)
     | _, D.Univ ->
       S.Univ
     | _, D.Neu (_, neu) ->
@@ -54,6 +69,10 @@ struct
     match frm with
     | D.Ap {tp; arg} ->
       S.Ap (tm, quote tp arg)
+    | D.Fst ->
+      S.Fst tm
+    | D.Snd ->
+      S.Snd tm
 end
 
 let quote ~size ~tp v =

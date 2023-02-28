@@ -11,6 +11,10 @@ type t = Data.syn =
   | Pi of Ident.t * t * t (* Π (a : A) (B a) *)
   | Lam of Ident.t * t (* λ x. e *)
   | Ap of t * t (* f a *)
+  | Sigma of Ident.t * t * t
+  | Pair of t * t
+  | Fst of t
+  | Snd of t
   | Univ
 
 (** Raw printing for debugging *)

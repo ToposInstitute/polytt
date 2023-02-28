@@ -9,12 +9,18 @@ type syn =
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
   | Lam of Ident.t * syn (* λ x. e *)
   | Ap of syn * syn (* f a *)
+  | Sigma of Ident.t * syn * syn
+  | Pair of syn * syn
+  | Fst of syn
+  | Snd of syn
   | Univ
 
 and value =
   | Neu of value * neu
   | Pi of Ident.t * value * clo
   | Lam of Ident.t * clo
+  | Sigma of Ident.t * value * clo
+  | Pair of value * value
   | Univ
 
 and neu = { hd : hd; spine : frame bwd }        
@@ -24,6 +30,8 @@ and hd =
 
 and frame =
   | Ap of { tp : value; arg : value }
+  | Fst
+  | Snd
 
 and env = value bwd
 and clo = Clo of { env : env; body : syn }

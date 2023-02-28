@@ -29,6 +29,14 @@ struct
       D.Lam (nm, clo b)
     | S.Ap (f, a) ->
       do_ap (eval f) (eval a)
+    | S.Sigma (nm, a, b) ->
+      D.Sigma (nm, eval a, clo b)
+    | S.Pair (a, b) ->
+      D.Pair (eval a, eval b)
+    | S.Fst tm ->
+      do_fst (eval tm)
+    | S.Snd tm ->
+      do_snd (eval tm)
     | S.Univ ->
       D.Univ
 
@@ -41,6 +49,25 @@ struct
       D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
     | _ ->
       invalid_arg "bad do_ap"
+
+  and do_fst (v: D.t) =
+    match v with
+    | D.Pair (a, _b) ->
+      a
+    | D.Neu (D.Sigma (_, a, _clo), neu) ->
+      D.Neu (a, D.push_frm neu D.Fst)
+    | _ ->
+      invalid_arg "bad do_fst"
+
+  and do_snd (v: D.t) =
+    match v with
+    | D.Pair (_a, b) ->
+      b
+    | D.Neu (D.Sigma (_, _a, clo), neu) ->
+      let fib = inst_clo clo (do_fst v) in
+      D.Neu (fib, D.push_frm neu D.Snd)
+    | _ ->
+      invalid_arg "bad do_snd"
 
   and inst_clo clo v =
     match clo with
@@ -61,6 +88,12 @@ let eval_top tm =
 
 let do_ap =
   Internal.do_ap
+
+let do_fst =
+  Internal.do_fst
+
+let do_snd =
+  Internal.do_snd
 
 let inst_clo =
   Internal.inst_clo
