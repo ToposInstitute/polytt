@@ -12,7 +12,7 @@ let test expected term =
     failwith "Not what was expected"
 
 
-let () = test "λ x → λ y → x" (S.Lam (abs "x", S.Lam (abs "y", S.Var 1)))
+let () = test "λ x y → x" (S.Lam (abs "x", S.Lam (abs "y", S.Var 1)))
 let () = test "(λ x → x) (λ y → y)" (S.Ap (S.Lam (abs "x", S.Var 0), S.Lam (abs "y", S.Var 0)))
 let () = test "(λ x → x , λ y → y)" (S.Pair (S.Lam (abs "x", S.Var 0), (S.Lam (abs "y", S.Var 0))))
 let () = test "λ x → x x (x x)" (S.Lam (abs "x", S.Ap (S.Ap (S.Var 0, S.Var 0), S.Ap (S.Var 0, S.Var 0))))

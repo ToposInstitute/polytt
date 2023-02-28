@@ -89,6 +89,11 @@ let pp_braced_cond classify plain_pp penv fmt tm =
   else
     plain_pp this penv fmt tm
 
+let rec collect_lams env nms tm =
+  match tm with
+  | Lam (nm, t) -> collect_lams (env #< nm) (nm :: nms) t
+  | body -> env, List.rev nms, body
+
 (** Pretty print a term *)
 let rec pp env =
   pp_braced_cond classify_tm @@ fun this _penv fmt ->
@@ -106,7 +111,10 @@ let rec pp env =
   | Pair (a, b) -> Format.fprintf fmt "(%a , %a)" (pp env P.isolated) a (pp env P.isolated) b
   | Fst a -> Format.fprintf fmt "fst %a" (pp env (P.right_of this)) a
   | Snd a -> Format.fprintf fmt "snd %a" (pp env (P.right_of this)) a
-  | Lam (nm, t) -> Format.fprintf fmt "λ %a → %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t
+  | Lam (nm, t) ->
+    let (env , nms, body) = collect_lams env [] (Lam (nm, t)) in
+    Format.fprintf fmt "λ %a → %a" (pp_sep_list ~sep:" " Ident.pp) nms  (pp env (P.right_of this)) body
+  (* Format.fprintf fmt "λ %a → %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t *)
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
   | Nat -> Format.fprintf fmt "ℕ"
   | Zero -> Format.fprintf fmt "0"
