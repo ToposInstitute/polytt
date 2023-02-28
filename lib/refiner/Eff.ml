@@ -29,6 +29,10 @@ let quote ~tp tm =
   let env = Locals.read () in
   Quote.quote ~size:env.size ~tp tm
 
+let equate ~tp v1 v2 =
+  let env = Locals.read () in
+  Conversion.equate ~size:env.size ~tp v1 v2
+
 let eval tm =
   let env = Locals.read () in
   Semantics.eval ~env:(Bwd.map Cell.value env.locals) tm

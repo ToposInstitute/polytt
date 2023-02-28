@@ -10,6 +10,7 @@ module Cell : sig
 end
 
 val quote : tp:D.tp -> D.t -> S.t
+val equate : tp:D.tp -> D.t -> D.t -> unit
 val eval : S.t -> D.t
 val inst_clo : D.clo -> D.t -> D.t
 val do_ap : D.t -> D.t -> D.t
