@@ -12,7 +12,7 @@ type t = Data.value =
   | Pair of t * t
   | Nat
   | Zero
-  | Succ
+  | Succ of t
   | Univ
 
 and tp = t

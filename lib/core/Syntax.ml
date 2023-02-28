@@ -17,7 +17,7 @@ type t = Data.syn =
   | Snd of t
   | Nat
   | Zero
-  | Succ
+  | Succ of t
   | NatElim of { mot : t; zero : t; succ : t; scrut : t }
   | Univ
 

@@ -15,7 +15,7 @@ type syn =
   | Snd of syn
   | Nat
   | Zero
-  | Succ
+  | Succ of syn
   | NatElim of { mot : syn; zero : syn; succ : syn; scrut : syn }
   | Univ
 
@@ -27,7 +27,7 @@ and value =
   | Pair of value * value
   | Nat
   | Zero
-  | Succ
+  | Succ of value
   | Univ
 
 and neu = { hd : hd; spine : frame bwd }        
