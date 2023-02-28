@@ -23,6 +23,10 @@ let rec dump fmt =
   | Univ -> Format.fprintf fmt "univ"
   | Var i -> Format.fprintf fmt "var[%i]" i
   | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a %a %a]" Ident.pp nm dump a dump b
+  | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump b
+  | Pair (a, b) -> Format.fprintf fmt "pair[%a %a]" dump a dump b
+  | Fst a -> Format.fprintf fmt "pair[%a]" dump a
+  | Snd a -> Format.fprintf fmt "pair[%a]" dump a
   | Lam (nm, t) -> Format.fprintf fmt "lam[%a, %a]" Ident.pp nm dump t
   | Ap (f, a) -> Format.fprintf fmt "ap[%a, %a]" dump f dump a
 
@@ -39,6 +43,10 @@ let classify_tm =
   | Univ -> atom
   | Var _ -> atom
   | Pi _ -> arrow
+  | Sigma _ -> arrow
+  | Pair _ -> atom
+  | Fst _ -> juxtaposition
+  | Snd _ -> juxtaposition
   | Lam _ -> arrow
   | Ap _ -> juxtaposition
 
@@ -60,6 +68,10 @@ let rec pp env =
   function
   | Var i -> Ident.pp fmt (Bwd.nth env i)
   | Pi (nm, a, b) -> Format.fprintf fmt "Π(%a : %a), %a" Ident.pp nm (pp env atomic) a (pp (env #< nm) (P.right_of this)) b
+  | Sigma (nm, a, b) -> Format.fprintf fmt "Σ(%a : %a), %a" Ident.pp nm (pp env atomic) a (pp (env #< nm) (P.right_of this)) b
+  | Pair (a, b) -> Format.fprintf fmt "(%a, %a)" (pp env atomic) a (pp env atomic) b
+  | Fst a -> Format.fprintf fmt "fst %a" (pp env (P.right_of this)) a
+  | Snd a -> Format.fprintf fmt "snd %a" (pp env (P.right_of this)) a
   | Lam (nm, t) -> Format.fprintf fmt "λ %a. %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
   | Univ -> Format.fprintf fmt "U"
