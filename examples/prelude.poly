@@ -1,6 +1,7 @@
-
 def id : (A : type) → A → A :=
   λ A x → x
+
+#print id
 
 def const : (A : type) → (B : type) → A → B → A :=
   λ _ _ x _ → x
@@ -13,12 +14,10 @@ def double : ℕ → ℕ :=
 def sigma : (A : type) → (A → type) → type :=
   λ A → λ B → (x : A) × B x
 
--- sigma : (A : type) → (A → type) → type :=
---   λ A → λ B → (x : A) × (λ _ → B _) x
-
--- This is a comment
 def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
   λ n m → (n , m)
 
 def projl : (ℕ × ℕ) → ℕ :=
   λ x → fst x
+
+#normalize double 1000

@@ -11,7 +11,7 @@ let formation ?(name = `Anon) base_tac fam_tac =
     in
     S.Pi(name, base, fam)
   | _ ->
-    error `TypeError "Expected element of type."
+    Error.error `TypeError "Expected element of type."
 
 let intro ?(name = `Anon) tac =
   Chk.rule @@ function
@@ -20,7 +20,7 @@ let intro ?(name = `Anon) tac =
     let fib = inst_clo clo (Var.value v) in
     S.Lam (name, Chk.run (tac v) fib)
   | _ ->
-    error `TypeError "Expected element of Π."
+    Error.error `TypeError "Expected element of Π."
 
 let ap f_tac arg_tac =
   Syn.rule @@ fun () ->
@@ -31,4 +31,4 @@ let ap f_tac arg_tac =
     let fib = inst_clo clo (eval arg) in
     fib, S.Ap(f, arg)
   | _ ->
-    error `TypeError "Expected element of Π."
+    Error.error `TypeError "Expected element of Π."

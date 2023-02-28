@@ -1,4 +1,5 @@
 open Core
 open Tactic
 
-val resolve : Ident.t -> Syn.tac
+val local : Cell.t -> Syn.tac
+val global : Globals.resolved -> Syn.tac

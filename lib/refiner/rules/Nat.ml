@@ -1,5 +1,4 @@
 open Core
-open Eff
 open Errors
 open Tactic
 open TermBuilder
@@ -13,7 +12,7 @@ let formation =
   | D.Univ ->
     S.Nat
   | _ ->
-    error `TypeError "Expected element of type."
+    Error.error `TypeError "Expected element of type."
 
 let zero =
   Chk.rule @@
@@ -21,7 +20,7 @@ let zero =
   | D.Nat ->
     S.Zero
   | _ ->
-    error `TypeError "Expected element of nat."
+    Error.error `TypeError "Expected element of nat."
 
 let succ tac =
   Chk.rule @@
@@ -29,7 +28,7 @@ let succ tac =
   | D.Nat ->
     S.Succ (Chk.run tac D.Nat)
   | _ ->
-    error `TypeError "Expected element of nat."
+    Error.error `TypeError "Expected element of nat."
 
 let lit n =
   Chk.rule @@
@@ -43,7 +42,7 @@ let lit n =
       end
     in go n
   | _ ->
-    error `TypeError "Expected element of nat."
+    Error.error `TypeError "Expected element of nat."
 
 let elim mot_tac zero_tac succ_tac scrut_tac =
   Syn.rule @@ fun () ->
@@ -70,4 +69,4 @@ let elim mot_tac zero_tac succ_tac scrut_tac =
   | D.Nat ->
     do_ap vmot vscrut, S.NatElim {mot; zero; succ; scrut}
   | _ ->
-    error `TypeError "Expected element of nat."
+    Error.error `TypeError "Expected element of nat."

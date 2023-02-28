@@ -16,47 +16,119 @@ struct
     value : D.t;
   }
 
-  let value cell =
-    cell.value
+  let name cell = cell.name
+  let tp cell = cell.tp
+  let value cell = cell.value
 end
 
-type env = {
-  locals : Cell.t bwd;
-  size : int;
-  loc : Span.t;
-  ppenv : Ident.t bwd
-}
+module Globals =
+struct
+  type resolved = 
+    | Def of { tm : D.t; tp : D.tp }
 
-module Locals = Algaeff.Reader.Make(struct type nonrec env = env end)
+  type _ Effect.t += Resolve : Ident.path -> resolved option Effect.t
 
-let run_top ~loc k =
-  Locals.run ~env:{ locals = Emp; size = 0; loc; ppenv = Emp } k
+  let resolve path =
+    Effect.perform (Resolve path)
 
-let located loc k =
-  Locals.scope (fun env -> { env with loc }) k
+  let run ~(resolve : Ident.path -> resolved option) k =
+    Effect.Deep.try_with k () {
+      effc =
+        fun (type a) (eff : a Effect.t) ->
+          match eff with
+          | Resolve p ->
+            Option.some @@ fun (k : (a, _) Effect.Deep.continuation) ->
+            Algaeff.Fun.Deep.finally k (fun () -> resolve p)
+          | _ -> None
+    }
+end
 
-let error code fmt =
-  let env = Locals.read () in
-  Logger.fatalf ~loc:env.loc code fmt
+module Locals =
+struct
+  type env = {
+    locals : D.t bwd;
+    local_names : (Cell.t, unit) Yuujinchou.Trie.t;
+    size : int;
+    ppenv : Ident.t bwd
+  }
+
+  let top_env = {
+    locals = Emp;
+    local_names = Yuujinchou.Trie.empty;
+    size = 0;
+    ppenv = Emp
+  }
+
+  module Eff = Algaeff.Reader.Make(struct type nonrec env = env end)
+
+  let run_top k =
+    Eff.run ~env:top_env k
+
+  let env () =
+    Eff.read ()
+
+  let resolve path =
+    let env = Eff.read () in
+    Yuujinchou.Trie.find_singleton path env.local_names
+    |> Option.map @@ fun (cell, ()) -> cell
+
+  let fresh_var tp () =
+    let env = Eff.read () in
+    D.var tp env.size
+
+  let abstract ?(name = `Anon) tp k =
+    let var = fresh_var tp () in
+    let cell = { Cell.name; tp; value = var } in
+    let bind_var env =
+      let local_names =
+        match name with
+        | `User path ->
+          Yuujinchou.Trie.update_singleton path (fun _ -> Some (cell, ())) env.local_names
+        | _ -> env.local_names
+      in {
+        locals = env.locals #< var;
+        local_names;
+        size = env.size + 1;
+        ppenv = env.ppenv #< name
+      }
+    in
+    Eff.scope bind_var @@ fun () ->
+    k var
+end
+
+module Error =
+struct
+  module Eff = Algaeff.Reader.Make(struct type nonrec env = Span.t end)
+
+  let error code fmt =
+    let loc = Eff.read () in
+    Logger.fatalf ~loc:loc code fmt
+
+  let locate loc k =
+    Eff.scope (fun _ -> loc) k
+
+  let run ~loc k =
+    Eff.run ~env:loc k
+end
 
 let quote ~tp tm =
-  let env = Locals.read () in
+  let env = Locals.env () in
   Quote.quote ~size:env.size ~tp tm
 
 let equate ~tp v1 v2 =
-  let env = Locals.read () in
+  let env = Locals.env () in
   try
     Conversion.equate ~size:env.size ~tp v1 v2
   with Conversion.Unequal ->
     let tm1 = Quote.quote ~size:env.size ~tp v1 in
     let tm2 = Quote.quote ~size:env.size ~tp v2 in
-    error `ConversionError "Could not solve %a = %a@."
+    Error.error `ConversionError "Could not solve %a = %a@."
       (S.pp env.ppenv (Precedence.left_of S.equals)) tm1
       (S.pp env.ppenv (Precedence.right_of S.equals)) tm2
 
 let eval tm =
-  let env = Locals.read () in
-  Semantics.eval ~env:(Bwd.map Cell.value env.locals) tm
+  let env = Locals.env () in
+  Semantics.eval ~env:env.locals tm
 
 let inst_clo clo v =
   Semantics.inst_clo clo v
@@ -75,24 +147,3 @@ let do_snd tm =
 
 let do_nat_elim ~mot ~zero ~succ ~scrut =
   Semantics.do_nat_elim ~mot ~zero ~succ ~scrut
-
-let fresh_var tp () =
-  let env = Locals.read () in
-  D.var tp env.size
-
-let lookup_var nm = 
-  let env = Locals.read () in
-  env.locals |> Bwd.find_opt @@ fun { Cell.name; _ } ->
-  Ident.equal nm name
-
-let abstract ?(name = `Anon) tp k =
-  let var = fresh_var tp () in
-  let bind_var env =
-    { env with
-      locals = env.locals #< { name; tp; value = var };
-      size = env.size + 1;
-      ppenv = env.ppenv #< name
-    }
-  in
-  Locals.scope bind_var @@ fun () ->
-  k var

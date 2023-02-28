@@ -1,5 +1,5 @@
 open Core
-open Eff
+include Eff
 
 module S = Syntax
 module D = Domain
@@ -53,6 +53,6 @@ struct
     tp, tm
 
   let abstract ?(name = `Anon) tp k =
-    Eff.abstract ~name tp @@ fun value ->
+    Locals.abstract ~name tp @@ fun value ->
     k {tp; value}
 end

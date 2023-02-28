@@ -2,56 +2,78 @@ module CS = Syntax
 module D = Core.Domain
 module S = Core.Syntax
 
-module R = Refiner
-module T = R.Tactic
+open Refiner
+module T = Tactic
 
 module Internal =
 struct
   let rec chk (tm : CS.t) =
-    R.Eff.located tm.loc @@ fun () ->
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.Pi (name, a, b) ->
-      R.Pi.formation ~name (chk a) (fun _ -> chk b)
-    | CS.Lam ( names, tm) ->
-      List.fold_right (fun t tac -> R.Pi.intro ~name:t (fun _ -> tac)) names (chk tm)
+      Pi.formation ~name (chk a) (fun _ -> chk b)
+    | CS.Lam (names, tm) ->
+      chk_lams names tm
     | CS.Sigma (name, a, b) ->
-      R.Sigma.formation ~name (chk a) (fun _ -> chk b)
+      Sigma.formation ~name (chk a) (fun _ -> chk b)
     | CS.Pair (a, b) ->
-      R.Sigma.intro (chk a) (chk b)
+      Sigma.intro (chk a) (chk b)
     | CS.Nat ->
-      R.Nat.formation
+      Nat.formation
     | CS.Zero ->
-      R.Nat.zero
+      Nat.zero
     | CS.Succ n ->
-      R.Nat.succ (chk n)
+      Nat.succ (chk n)
     | CS.Lit n ->
-      R.Nat.lit n
+      Nat.lit n
     | CS.Univ ->
-      R.Univ.formation
+      Univ.formation
     | _ ->
       T.Chk.syn (syn tm)
 
+  and chk_lams names tm =
+    match names with
+    | [] -> chk tm
+    | name :: names ->
+      Pi.intro ~name @@ fun _ -> chk_lams names tm
+
   and syn (tm : CS.t) =
-    R.Eff.located tm.loc @@ fun () ->
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.Var path ->
-      R.Var.resolve (`User path)
+      syn_var path
+    (* R.Var.resolve path *)
     | CS.Ap (fn, args) ->
-      List.fold_left (fun tac arg -> R.Pi.ap tac (chk arg)) (syn fn) args
+      List.fold_left (fun tac arg -> Pi.ap tac (chk arg)) (syn fn) args
     | CS.Fst tm ->
-      R.Sigma.fst (syn tm)
+      Sigma.fst (syn tm)
     | CS.Snd tm ->
-      R.Sigma.fst (syn tm)
+      Sigma.fst (syn tm)
     | CS.NatElim (mot, zero, succ, scrut) ->
-      R.Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
+      Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
     | _ ->
-      R.Eff.error `RequiresAnnotation "Term requires an annotation."
+      T.Error.error `RequiresAnnotation "Term requires an annotation."
+
+  and syn_var path =
+    match T.Locals.resolve path with
+    | Some cell ->
+      Refiner.Var.local cell
+    | None ->
+      begin
+        match T.Globals.resolve path with
+        | Some res ->
+          Refiner.Var.global res
+        | None ->
+          T.Error.error `UnboundVariable "Variable is not bound."
+      end
 end
 
 let chk (tm : CS.t) (tp : D.tp) =
-  R.Eff.run_top ~loc:tm.loc @@ fun () ->
+  T.Locals.run_top @@ fun () ->
+  T.Error.run ~loc:tm.loc @@ fun () ->
   T.Chk.run (Internal.chk tm) tp
 
 let syn (tm : CS.t) =
-  R.Eff.run_top ~loc:tm.loc @@ fun () ->
+  T.Locals.run_top @@ fun () ->
+  T.Error.run ~loc:tm.loc @@ fun () ->
   T.Syn.run (Internal.syn tm)

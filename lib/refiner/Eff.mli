@@ -14,9 +14,25 @@ module Cell : sig
   }
 end
 
-val run_top : loc:Span.t -> (unit -> 'a) -> 'a
-val located : Span.t -> (unit -> 'a) -> 'a
-val error : Code.t -> ('a, Format.formatter, unit, 'b) format4 -> 'a
+module Globals : sig
+  type resolved = 
+    | Def of { tm : D.t; tp : D.tp }
+  val resolve : Ident.path -> resolved option
+  val run : resolve:(Yuujinchou.Trie.path -> resolved option) -> (unit -> 'a) -> 'a
+end
+
+module Locals : sig
+  val run_top : (unit -> 'a) -> 'a
+  val resolve : Ident.path -> Cell.t option
+  val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
+end
+
+module Error : sig
+  val error : Code.t -> ('a, Format.formatter, unit, 'b) format4 -> 'a
+  val locate : Span.t -> (unit -> 'a) -> 'a
+  val run : loc:Span.t -> (unit -> 'a) -> 'a
+end
+
 
 val quote : tp:D.tp -> D.t -> S.t
 val equate : tp:D.tp -> D.t -> D.t -> unit
@@ -29,5 +45,3 @@ val do_fst : D.t -> D.t
 val do_snd : D.t -> D.t
 val do_nat_elim : mot:D.t -> zero:D.t -> succ:D.t -> scrut:D.t -> D.t
 
-val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
-val lookup_var : Ident.t -> Cell.t option
