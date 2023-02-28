@@ -1,2 +1,3 @@
 (test
- (name polytt))
+ (name polytt)
+ (libraries polytt.core))

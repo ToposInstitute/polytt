@@ -35,9 +35,6 @@ let atom = P.nonassoc 11
 let juxtaposition = P.left 10
 let arrow = P.right 3
 
-(** This is used when precedence does not matter *)
-let atomic = P.right_of juxtaposition
-
 (** Determine the precedence level of the thing we are about to print *)
 let classify_tm =
   function
@@ -68,9 +65,9 @@ let rec pp env =
   pp_braced_cond classify_tm @@ fun this _penv fmt ->
   function
   | Var i -> Ident.pp fmt (Bwd.nth env i)
-  | Pi (nm, a, b) -> Format.fprintf fmt "Π(%a : %a), %a" Ident.pp nm (pp env atomic) a (pp (env #< nm) (P.right_of this)) b
-  | Sigma (nm, a, b) -> Format.fprintf fmt "Σ(%a : %a), %a" Ident.pp nm (pp env atomic) a (pp (env #< nm) (P.right_of this)) b
-  | Pair (a, b) -> Format.fprintf fmt "(%a, %a)" (pp env atomic) a (pp env atomic) b
+  | Pi (nm, a, b) -> Format.fprintf fmt "Π(%a : %a), %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
+  | Sigma (nm, a, b) -> Format.fprintf fmt "Σ(%a : %a), %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
+  | Pair (a, b) -> Format.fprintf fmt "(%a, %a)" (pp env P.isolated) a (pp env P.isolated) b
   | Fst a -> Format.fprintf fmt "fst %a" (pp env (P.right_of this)) a
   | Snd a -> Format.fprintf fmt "snd %a" (pp env (P.right_of this)) a
   | Lam (nm, t) -> Format.fprintf fmt "λ %a. %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t
