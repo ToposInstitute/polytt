@@ -1,5 +1,6 @@
 open Core
 open Eff
+open Errors
 open Tactic
 open TermBuilder
 
@@ -11,21 +12,24 @@ let formation =
   function
   | D.Univ ->
     S.Nat
-  | _ -> failwith "FIXME: better errors"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of type."
 
 let zero =
   Chk.rule @@
   function
   | D.Nat ->
     S.Zero
-  | _ -> failwith "FIXME: better errors"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of nat."
 
 let succ tac =
   Chk.rule @@
   function
   | D.Nat ->
     S.Succ (Chk.run tac D.Nat)
-  | _ -> failwith "FIXME: better errors"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of nat."
 
 let lit n =
   Chk.rule @@
@@ -38,7 +42,8 @@ let lit n =
         | n -> S.Succ (go (n - 1))
       end
     in go n
-  | _ -> failwith "FIXME: better errors"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of nat."
 
 let elim mot_tac zero_tac succ_tac scrut_tac =
   Syn.rule @@ fun () ->
@@ -65,5 +70,4 @@ let elim mot_tac zero_tac succ_tac scrut_tac =
   | D.Nat ->
     do_ap vmot vscrut, S.NatElim {mot; zero; succ; scrut}
   | _ ->
-    failwith "FIXME: better errors"
-
+    Logger.fatalf `TypeError "Expected element of nat."

@@ -1,4 +1,6 @@
 module CS = Syntax
+module D = Core.Domain
+module S = Core.Syntax
 
 module R = Refiner
 module T = R.Tactic
@@ -6,6 +8,7 @@ module T = R.Tactic
 module Internal =
 struct
   let rec chk (tm : CS.t) =
+    R.Eff.located tm.loc @@ fun () ->
     match tm.node with
     | CS.Pi (name, a, b) ->
       R.Pi.formation ~name (chk a) (fun _ -> chk b)
@@ -29,6 +32,7 @@ struct
       T.Chk.syn (syn tm)
 
   and syn (tm : CS.t) =
+    R.Eff.located tm.loc @@ fun () ->
     match tm.node with
     | CS.Var path ->
       R.Var.resolve (`User path)
@@ -41,13 +45,13 @@ struct
     | CS.NatElim (mot, zero, succ, scrut) ->
       R.Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
     | _ ->
-      failwith "FIXME: better errors (requires annotation)"
+      R.Eff.error `RequiresAnnotation "Term requires an annotation."
 end
 
-let chk tm tp =
-  R.Eff.run_top @@ fun () ->
+let chk (tm : CS.t) (tp : D.tp) =
+  R.Eff.run_top ~loc:tm.loc @@ fun () ->
   T.Chk.run (Internal.chk tm) tp
 
-let syn tm =
-  R.Eff.run_top @@ fun () ->
+let syn (tm : CS.t) =
+  R.Eff.run_top ~loc:tm.loc @@ fun () ->
   T.Syn.run (Internal.syn tm)

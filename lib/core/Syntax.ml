@@ -51,6 +51,7 @@ let to_numeral =
 let atom = P.nonassoc 11
 let juxtaposition = P.left 10
 let arrow = P.right 3
+let equals = P.right 2
 
 (** Determine the precedence level of the thing we are about to print *)
 let classify_tm =
@@ -67,10 +68,10 @@ let classify_tm =
   | Nat -> atom
   | Zero -> atom
   | Succ n ->
-      begin
-        try let _ = to_numeral n in atom
-        with Failure _ -> juxtaposition
-      end
+    begin
+      try let _ = to_numeral n in atom
+      with Failure _ -> juxtaposition
+    end
   | NatElim _ -> juxtaposition
 
 (** Wrap in parens with a pretty printer *)

@@ -1,5 +1,6 @@
-open Tactic
 open Eff
+open Errors
+open Tactic
 
 let formation ?(name = `Anon) base_tac fam_tac =
   Chk.rule @@ function
@@ -9,7 +10,8 @@ let formation ?(name = `Anon) base_tac fam_tac =
       Chk.run (fam_tac a) D.Univ
     in
     S.Sigma(name, base, fam)
-  | _ -> failwith "FIXME: Better error handling"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of type."
 
 let intro tac_fst tac_snd =
   Chk.rule @@ function
@@ -17,7 +19,8 @@ let intro tac_fst tac_snd =
     let t1 = Chk.run tac_fst a in
     let t2 = Chk.run tac_snd (inst_clo clo (eval t1)) in
     S.Pair (t1, t2) 
-  | _ -> failwith "FIXME: Better error handling"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of Σ."
 
 let fst tac =
   Syn.rule @@ fun () ->
@@ -25,7 +28,8 @@ let fst tac =
   match tp with
   | D.Sigma (_, a, _clo) ->
     a, S.Fst tm
-  | _ -> failwith "FIXME: Better error handling"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of Σ."
 
 let snd tac =
   Syn.rule @@ fun () ->
@@ -34,4 +38,5 @@ let snd tac =
   | D.Sigma (_, _a, clo) ->
     let fib = inst_clo clo (do_fst @@ eval tm) in
     fib, S.Snd tm
-  | _ -> failwith "FIXME: Better error handling"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of Σ."

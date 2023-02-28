@@ -1,0 +1,4 @@
+(library
+  (name errors)
+  (public_name polytt.errors)
+  (libraries asai))

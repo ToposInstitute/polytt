@@ -1,7 +1,6 @@
 #debug on
 
-def id : (A : type) → A → A :=
-  λ A → λ x → x
+def id : (A : type) → A → A := λ A → λ x → x
 
 def four : nat := 4
 

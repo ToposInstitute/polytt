@@ -1,5 +1,6 @@
 open Tactic
 open Eff
+open Errors
 
 let formation ?(name = `Anon) base_tac fam_tac =
   Chk.rule @@ function
@@ -9,7 +10,8 @@ let formation ?(name = `Anon) base_tac fam_tac =
       Chk.run (fam_tac a) D.Univ
     in
     S.Pi(name, base, fam)
-  | _ -> failwith "FIXME: Better error handling"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of type."
 
 let intro ?(name = `Anon) tac =
   Chk.rule @@ function
@@ -17,7 +19,8 @@ let intro ?(name = `Anon) tac =
     Var.abstract ~name a @@ fun v ->
     let fib = inst_clo clo (Var.value v) in
     S.Lam (name, Chk.run (tac v) fib)
-  | _ -> failwith "FIXME: better error handling" 
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of Π."
 
 let ap f_tac arg_tac =
   Syn.rule @@ fun () ->
@@ -27,4 +30,5 @@ let ap f_tac arg_tac =
     let arg = Chk.run arg_tac a in
     let fib = inst_clo clo (eval arg) in
     fib, S.Ap(f, arg)
-  | _ -> failwith "FIXME: Better error handling"
+  | _ ->
+    Logger.fatalf `TypeError "Expected element of Π."

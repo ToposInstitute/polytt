@@ -1,7 +1,10 @@
+open Asai
 open Core
+open Errors
+open TermBuilder
+
 module D := Domain
 module S := Syntax
-open TermBuilder
 
 module Cell : sig
   type t = {
@@ -11,7 +14,10 @@ module Cell : sig
   }
 end
 
-val run_top : (unit -> 'a) -> 'a
+val run_top : loc:Span.t -> (unit -> 'a) -> 'a
+val located : Span.t -> (unit -> 'a) -> 'a
+val error : Code.t -> ('a, Format.formatter, unit, 'b) format4 -> 'a
+
 val quote : tp:D.tp -> D.t -> S.t
 val equate : tp:D.tp -> D.t -> D.t -> unit
 val eval : S.t -> D.t
