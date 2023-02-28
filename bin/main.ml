@@ -1,7 +1,7 @@
 open Cmdliner
 
 let file =
-  let doc = "Load and evaluate $(FILE)." in
+  let doc = "Load and evaluate FILE." in
   let docv = "FILE" in
   Arg.(required & pos 0 (some string) None & info [] ~docv ~doc)
 
