@@ -10,6 +10,8 @@ type t = Data.value =
   | Lam of Ident.t * clo
   | Univ
 
+and tp = t
+
 and neu = Data.neu = { hd : hd; spine : frame bwd }        
 
 and hd = Data.hd =
