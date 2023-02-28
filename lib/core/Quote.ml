@@ -60,6 +60,22 @@ struct
       S.Succ (quote D.Nat n)
     | _, D.Univ ->
       S.Univ
+    | _, D.Poly ->
+      S.Poly
+    | _, D.Tensor (p, q) ->
+      S.Tensor (quote D.Poly p, quote D.Poly q)
+    | _, D.Tri (p, q) ->
+      S.Tri (quote D.Poly p, quote D.Poly q)
+    | _, D.Frown (p, q, f) ->
+      let f_tp =
+        Sem.graft_value @@
+        Graft.value p @@ fun p ->
+        Graft.value q @@ fun q ->
+        Graft.build @@
+        TB.pi (TB.base p) @@ fun _ -> TB.base q
+      in
+      S.Frown (quote D.Poly p, quote D.Poly q, quote f_tp f)
+    (* S.Tri (quote D.Poly p, quote D.Poly q) *)
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->
@@ -103,6 +119,10 @@ struct
       in
       let qsucc = quote succ_tp succ in
       S.NatElim { mot = qmot; zero = qzero; succ = qsucc; scrut = tm }
+    | D.Base ->
+      S.Base tm
+    | D.Fib {tp; base} ->
+      S.Fib (tm, quote tp base)
     | D.Cases {mot; cases} ->
       let ls = List.map fst cases in
       let quote_key (l, v) = l, quote (Sem.do_ap mot (D.Label (ls, l))) v in

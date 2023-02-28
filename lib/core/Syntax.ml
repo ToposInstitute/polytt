@@ -27,6 +27,13 @@ type t = Data.syn =
   | Label of labelset * label
   | Cases of t * t labeled * t
   | Univ
+  | Poly
+  | PolyIntro of t * t
+  | Base of t
+  | Fib of t * t
+  | Tensor of t * t
+  | Tri of t * t
+  | Frown of t * t * t
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs

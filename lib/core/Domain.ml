@@ -20,6 +20,11 @@ type t = Data.value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
+  | Poly
+  | PolyIntro of t * t
+  | Tensor of t * t
+  | Tri of t * t
+  | Frown of t * t * t
 
 and tp = t
 
@@ -34,6 +39,8 @@ and frame = Data.frame =
   | Snd
   | NatElim of { mot : t; zero : t; succ : t }
   | Cases of { mot : t; cases : t labeled }
+  | Base
+  | Fib of { tp : t; base : t }
 
 and env = t bwd
 and clo = Data.clo = Clo of { env : env; body : Data.syn }

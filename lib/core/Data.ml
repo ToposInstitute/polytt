@@ -25,6 +25,13 @@ type syn =
   | Label of labelset * label
   | Cases of syn * syn labeled * syn
   | Univ (* A *)
+  | Poly
+  | PolyIntro of syn * syn
+  | Base of syn
+  | Fib of syn * syn
+  | Tensor of syn * syn
+  | Tri of syn * syn
+  | Frown of syn * syn * syn
 
 and value =
   | Neu of value * neu
@@ -38,6 +45,11 @@ and value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
+  | Poly
+  | PolyIntro of value * value
+  | Tensor of value * value
+  | Tri of value * value
+  | Frown of value * value * value
 
 and neu = { hd : hd; spine : frame bwd }
 
@@ -50,6 +62,8 @@ and frame =
   | Snd
   | NatElim of { mot : value; zero : value; succ : value }
   | Cases of { mot : value; cases : (string * value) list }
+  | Base
+  | Fib of { tp : value; base : value }
 
 and env = value bwd
 and clo = Clo of { env : env; body : syn }

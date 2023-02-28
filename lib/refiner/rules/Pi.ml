@@ -1,6 +1,4 @@
 open Tactic
-open Eff
-open Errors
 
 let formation ?(name = `Anon) base_tac fam_tac =
   Chk.rule @@ function

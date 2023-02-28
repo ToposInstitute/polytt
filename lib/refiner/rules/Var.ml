@@ -1,5 +1,3 @@
-open Core
-open Errors
 open Tactic
 
 let local (cell : Cell.t) =

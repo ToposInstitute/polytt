@@ -54,6 +54,20 @@ struct
       do_cases (eval mot) (List.map (fun (l, v) -> l, eval v) cases) (eval case)
     | S.Univ ->
       D.Univ
+    | S.Poly ->
+      D.Poly
+    | S.PolyIntro (b, fib) ->
+      D.PolyIntro (eval b, eval fib)
+    | S.Base p ->
+      do_base (eval p)
+    | S.Fib (p, x) ->
+      do_fib (eval p) (eval x)
+    | S.Tensor (p, q) ->
+      D.Tensor (eval p, eval q)
+    | S.Tri (p, q) ->
+      D.Tri (eval p, eval q)
+    | S.Frown (p, q, f) ->
+      D.Frown (eval p, eval q, eval f)
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with
@@ -111,6 +125,67 @@ struct
         invalid_arg "bad do_nat_elim"
     in rec_nat_elim scrut
 
+  and do_base p =
+    match p with
+    | D.PolyIntro (b, _) ->
+      b
+    | D.Tensor (p, q) ->
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value q @@ fun q ->
+      Graft.build @@
+      TB.sigma (TB.base p) @@ fun _ -> (TB.base q)
+    | D.Tri (p, q) ->
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value q @@ fun q ->
+      Graft.build @@
+      TB.sigma (TB.base p) @@ fun basex ->
+      TB.pi (TB.fib p basex) @@ fun _ ->
+      TB.base q
+    | D.Frown (p, q, f) ->
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value q @@ fun q ->
+      Graft.value f @@ fun f ->
+      Graft.build @@
+      TB.sigma (TB.base p) @@ fun basex ->
+      TB.fib q (TB.ap f basex)
+    | D.Neu (_, neu) ->
+      D.Neu (D.Univ, D.push_frm neu D.Base)
+    | _ ->
+      invalid_arg "bad do_base"
+
+  and do_fib p x =
+    match p with
+    | D.PolyIntro (_, fib) ->
+      do_ap fib x
+    | D.Tensor (p, q) ->
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value q @@ fun q ->
+      Graft.value x @@ fun x ->
+      Graft.build @@
+      TB.sigma (TB.fib p x) @@ fun _ -> (TB.fib q x)
+    | D.Tri (p, q) ->
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value q @@ fun q ->
+      Graft.value x @@ fun x ->
+      Graft.build @@
+      TB.sigma (TB.fib p @@ TB.fst x) @@ fun fibx ->
+      TB.fib q (TB.ap (TB.snd x) fibx)
+    | D.Frown (p, _q, _f) ->
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value x @@ fun x ->
+      Graft.build @@
+      TB.fib p (TB.fst x)
+    | D.Neu (_, neu) ->
+      D.Neu (D.Univ, D.push_frm neu (D.Fib { tp = do_base p; base = x }))
+    | _ ->
+      invalid_arg "bad do_fib"
+
   and inst_clo clo v =
     match clo with
     | D.Clo { env; body } ->
@@ -139,6 +214,12 @@ let do_snd =
 
 let do_nat_elim ~mot ~zero ~succ ~scrut =
   Internal.do_nat_elim mot zero succ scrut
+
+let do_base p =
+  Internal.do_base p
+
+let do_fib p x =
+  Internal.do_fib p x
 
 let inst_clo =
   Internal.inst_clo

@@ -46,6 +46,33 @@ struct
       ()
     | _, D.Succ n1, D.Succ n2 ->
       equate D.Nat n1 n2
+    | _, D.Poly, D.Poly ->
+      ()
+    | _, D.PolyIntro (b1, f1), D.PolyIntro (b2, f2) ->
+      equate D.Univ b1 b2;
+      let f_tp =
+        Sem.graft_value @@
+        Graft.value b1 @@ fun b ->
+        Graft.build @@
+        TB.pi b @@ fun _ -> TB.univ
+      in
+      equate f_tp f1 f2
+    | _, D.Tensor (p1, q1), D.Tensor (p2, q2) ->
+      equate D.Poly p1 p2;
+      equate D.Poly q1 q2
+    | _, D.Tri (p1, q1), D.Tri (p2, q2) ->
+      equate D.Poly p1 p2;
+      equate D.Poly q1 q2
+    | _, D.Frown (p1, q1, f1), D.Frown (p2, q2, f2) ->
+      equate D.Poly p1 p2;
+      equate D.Poly q1 q2;
+      let f_tp =
+        Sem.graft_value @@
+        Graft.value p1 @@ fun p ->
+        Graft.value q1 @@ fun q ->
+        Graft.build @@
+        TB.pi (TB.base p) @@ fun _ -> TB.base q
+      in equate f_tp f1 f2
     | _, D.FinSet s1, D.FinSet s2 when SS.of_list s1 = SS.of_list s2 ->
       ()
     | _, D.Label (_, l), D.Label (_, r) when l = r ->
@@ -93,6 +120,12 @@ struct
         TB.ap mot (TB.succ n)
       in
       equate succ_tp elim1.succ elim2.succ
+    | D.Base, D.Base ->
+      ()
+    | D.Fib fib1, D.Fib fib2 ->
+      (* Don't need to equate the argument types of 2 stuck fibs,
+         as our invariants require that all terms are well-typed. *)
+      equate fib1.tp fib1.base fib2.base
     | D.Cases r1, D.Cases r2 ->
       (* This is not the bad eta law (c.f.
          http://strictlypositive.org/Ripley.pdf section 3: The Uniqueness of

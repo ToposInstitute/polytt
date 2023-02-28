@@ -34,6 +34,15 @@ struct
   let ap fn arg size =
     S.Ap (fn size, arg size)
 
+  let sigma ?(name = `Anon) base fam size =
+    S.Sigma(name, base size, scope fam size)
+
+  let fst tm size =
+    S.Fst (tm size)
+
+  let snd tm size =
+    S.Snd (tm size)
+
   let nat _ =
     S.Nat
 
@@ -54,6 +63,12 @@ struct
 
   let univ _ =
     S.Univ
+
+  let base p size =
+    S.Base (p size)
+
+  let fib p x size =
+    S.Fib (p size, x size)
 end
 
 module Graft =

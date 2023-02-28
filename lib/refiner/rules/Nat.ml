@@ -1,5 +1,4 @@
 open Core
-open Errors
 open Tactic
 open TermBuilder
 

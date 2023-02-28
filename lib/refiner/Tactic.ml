@@ -1,5 +1,7 @@
 open Core
 include Eff
+include Errors
+include TermBuilder
 
 module S = Syntax
 module D = Domain
