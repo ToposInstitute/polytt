@@ -1,6 +1,13 @@
 open Core
 module D := Domain
 module S := Syntax
+module Cell : sig
+  type t = {
+    name : Ident.t;
+    tp : D.tp;
+    value : D.t;
+  }
+end
 
 val quote : tp:D.tp -> D.t -> S.t
 val eval : S.t -> D.t
@@ -10,3 +17,4 @@ val do_fst : D.t -> D.t
 val do_snd : D.t -> D.t
 
 val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
+val lookup_var : Ident.t -> Cell.t option

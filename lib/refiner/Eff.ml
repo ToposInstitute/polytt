@@ -49,6 +49,11 @@ let fresh_var tp () =
   let env = Locals.read () in
   D.var tp env.size
 
+let lookup_var nm = 
+  let env = Locals.read () in
+  env.locals |> Bwd.find_opt @@ fun { Cell.name; _ } ->
+  Ident.equal nm name
+
 let abstract ?(name = `Anon) tp k =
   let var = fresh_var tp () in
   let bind_var env =
