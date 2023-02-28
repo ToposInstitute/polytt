@@ -6,7 +6,10 @@ module D := Domain
 
 open TermBuilder
 
+(** Given an environment context, convert from a Syntax term to a Domain term. *)
 val eval : env:D.env -> S.t -> D.t
+
+(** Entrypoint to the evaluator. Calls 'eval' with an empty environment. *)
 val eval_top : S.t -> D.t
 
 val do_ap : D.t -> D.t -> D.t

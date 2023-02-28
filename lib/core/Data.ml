@@ -9,15 +9,15 @@ type syn =
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
   | Lam of Ident.t * syn (* λ x. e *)
   | Ap of syn * syn (* f a *)
-  | Sigma of Ident.t * syn * syn
-  | Pair of syn * syn
+  | Sigma of Ident.t * syn * syn (* Σ[ a ∈ A] (B a) *)
+  | Pair of syn * syn (* A × B *)
   | Fst of syn
   | Snd of syn
-  | Nat
+  | Nat (* ℕ *)
   | Zero
   | Succ of syn
   | NatElim of { mot : syn; zero : syn; succ : syn; scrut : syn }
-  | Univ
+  | Univ (* A *)
 
 and value =
   | Neu of value * neu

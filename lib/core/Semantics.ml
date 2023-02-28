@@ -50,9 +50,9 @@ struct
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with
-    | D.Lam (_, clo) ->
+    | D.Lam (_t, clo) ->
       inst_clo clo arg
-    | D.Neu (Pi(_, a, clo), neu) ->
+    | D.Neu (Pi(_t, a, clo), neu) ->
       let fib = inst_clo clo arg in
       D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
     | _ ->

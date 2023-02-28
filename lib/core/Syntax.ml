@@ -8,9 +8,9 @@ module P = Precedence
 
 type t = Data.syn =
   | Var of int
-  | Pi of Ident.t * t * t (* Π (a : A) (B a) *)
-  | Lam of Ident.t * t (* λ x. e *)
-  | Ap of t * t (* f a *)
+  | Pi of Ident.t * t * t
+  | Lam of Ident.t * t
+  | Ap of t * t
   | Sigma of Ident.t * t * t
   | Pair of t * t
   | Fst of t
