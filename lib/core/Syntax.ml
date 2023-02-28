@@ -63,3 +63,6 @@ let rec pp env =
   | Lam (nm, t) -> Format.fprintf fmt "λ %a. %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
   | Univ -> Format.fprintf fmt "U"
+
+
+let pp_toplevel = pp Emp P.isolated

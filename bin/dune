@@ -1,4 +1,4 @@
 (executable
  (public_name polytt)
  (name main)
- (libraries polytt))
+ (libraries polytt.core))
