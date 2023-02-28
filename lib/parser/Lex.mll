@@ -30,15 +30,12 @@ let keywords =
   make_table 0 [
     ("def", DEF);
     ("type", TYPE);
-    ("nat", NAT);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);
     ("elim", NAT_ELIM);
     ("fst", FST);
     ("snd", SND);
-    ("π₁", FST);
-    ("π₂", SND);
   ]
 
 (* Some Lexing Utilities *)

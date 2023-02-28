@@ -96,12 +96,14 @@ let rec pp env =
       with Failure _ ->
         Format.fprintf fmt "![bad index %d]!" i
     end
-  | Pi (nm, a, b) -> Format.fprintf fmt "Π(%a : %a), %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
-  | Sigma (nm, a, b) -> Format.fprintf fmt "Σ(%a : %a), %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
-  | Pair (a, b) -> Format.fprintf fmt "(%a, %a)" (pp env P.isolated) a (pp env P.isolated) b
+  | Pi (`Anon, a, b) -> Format.fprintf fmt "%a → %a" (pp env (P.left_of this)) a (pp (env #< `Anon) (P.right_of this)) b
+  | Pi (nm, a, b) -> Format.fprintf fmt "(%a : %a) → %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
+  | Sigma (`Anon, a, b) -> Format.fprintf fmt "%a × %a" (pp env P.isolated) a (pp (env #< `Anon) (P.right_of this)) b
+  | Sigma (nm, a, b) -> Format.fprintf fmt "(%a : %a) × %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
+  | Pair (a, b) -> Format.fprintf fmt "(%a , %a)" (pp env P.isolated) a (pp env P.isolated) b
   | Fst a -> Format.fprintf fmt "fst %a" (pp env (P.right_of this)) a
   | Snd a -> Format.fprintf fmt "snd %a" (pp env (P.right_of this)) a
-  | Lam (nm, t) -> Format.fprintf fmt "λ %a. %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t
+  | Lam (nm, t) -> Format.fprintf fmt "λ %a → %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
   | Nat -> Format.fprintf fmt "ℕ"
   | Zero -> Format.fprintf fmt "0"
@@ -112,7 +114,7 @@ let rec pp env =
         Format.fprintf fmt "succ %a" (pp env (P.right_of juxtaposition)) n'
     end
   | NatElim r -> Format.fprintf fmt "nat-elim %a %a %a %a"(pp env (P.right_of this)) r.mot (pp env (P.right_of this)) r.zero (pp env (P.right_of this)) r.succ (pp env (P.right_of this)) r.scrut
-  | Univ -> Format.fprintf fmt "U"
+  | Univ -> Format.fprintf fmt "type"
 
 
 let pp_toplevel = pp Emp P.isolated

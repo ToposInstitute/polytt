@@ -15,16 +15,19 @@ let execute_cmd (cmd : CS.cmd) =
     let tp = Elaborator.chk tp D.Univ in
     let vtp = Sem.eval_top tp in
     let tm = Elaborator.chk tm vtp in
-    Debug.print "Defined %a : %a@."
-      S.pp_toplevel tm
+    let vtm = Sem.eval_top tm in
+    Debug.print "Defined %a : %a := %a@."
+      Ident.pp name
       S.pp_toplevel tp
+      S.pp_toplevel (Quote.quote_top ~tp:vtp vtm)
   | CS.Def {name; tp = None; tm} ->
     let (vtp, tm) = Elaborator.syn tm in
     let tp = Quote.quote_top ~tp:D.Univ vtp in
-    Debug.print "Defined %a : %a@."
-      S.pp_toplevel tm
+    Debug.print "Defined %a : %a := %a@."
+      Ident.pp name
       S.pp_toplevel tp
-  | CS.Fail {name; tp = Some tp; tm} ->
+      S.pp_toplevel tm
+  | CS.Fail {tp = Some tp; tm; _} ->
     begin
       try
         let tp = Elaborator.chk tp D.Univ in
@@ -33,7 +36,7 @@ let execute_cmd (cmd : CS.cmd) =
         failwith "FIXME: better error"
       with _ -> ()
     end
-  | CS.Fail {name; tp = None; tm} ->
+  | CS.Fail {tp = None; tm; _} ->
     begin
       let _ = Elaborator.syn tm in
       failwith "FIXME: better error"
