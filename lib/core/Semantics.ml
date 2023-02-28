@@ -3,6 +3,7 @@ open Bwd.Infix
 
 module S = Syntax
 module D = Domain
+module MS = Map.Make(String)
 
 open TermBuilder
 
@@ -45,6 +46,12 @@ struct
       D.Succ (eval n)
     | S.NatElim {mot; zero; succ; scrut} ->
       do_nat_elim (eval mot) (eval zero) (eval succ) (eval scrut)
+    | S.FinSet ls ->
+      D.FinSet ls
+    | S.Label (ls, l) ->
+      D.Label (ls, l)
+    | S.Cases (mot, cases, case) ->
+      do_cases (eval mot) (List.map (fun (l, v) -> l, eval v) cases) (eval case)
     | S.Univ ->
       D.Univ
 
@@ -79,6 +86,16 @@ struct
       D.Neu (fib, D.push_frm neu D.Snd)
     | _ ->
       invalid_arg "bad do_snd"
+
+  and do_cases mot cases case =
+    match case with
+    | D.Label (_, l) ->
+      MS.find l (MS.of_seq (List.to_seq cases))
+    | D.Neu (D.FinSet _, neu) as n ->
+      let fib = do_ap mot n in
+      D.Neu (fib, D.push_frm neu (D.Cases { mot; cases }))
+    | _ ->
+      invalid_arg "bad do_cases"
 
   and do_nat_elim mot zero succ scrut =
     let rec rec_nat_elim =

@@ -60,6 +60,10 @@ struct
       S.Succ (quote D.Nat n)
     | _, D.Univ ->
       S.Univ
+    | _, D.FinSet ls ->
+      S.FinSet ls
+    | _, D.Label (ls, l) ->
+      S.Label (ls, l)
     | _, D.Neu (_, neu) ->
       quote_neu neu
     | _ ->
@@ -99,6 +103,10 @@ struct
       in
       let qsucc = quote succ_tp succ in
       S.NatElim { mot = qmot; zero = qzero; succ = qsucc; scrut = tm }
+    | D.Cases {mot; cases} ->
+      let ls = List.map fst cases in
+      let quote_key (l, v) = l, quote (Sem.do_ap mot (D.Label (ls, l))) v in
+      S.Cases (quote (Sem.graft_value (Graft.build (TB.pi (TB.finset ls) (fun _ -> TB.univ)))) mot, List.map quote_key cases, tm)
 end
 
 let quote ~size ~tp v =

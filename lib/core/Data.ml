@@ -1,8 +1,12 @@
-(** The definition of core ASTs. These need to be defined in the same 
-    module, as they are mutually recursive. See Syntax.ml and Domain.ml 
+(** The definition of core ASTs. These need to be defined in the same
+    module, as they are mutually recursive. See Syntax.ml and Domain.ml
     for repackaged versions. *)
 
 open Bwd
+
+type labelset = string list
+type label = string
+type 'a labeled = (string * 'a) list
 
 type syn =
   | Var of int
@@ -17,6 +21,9 @@ type syn =
   | Zero
   | Succ of syn
   | NatElim of { mot : syn; zero : syn; succ : syn; scrut : syn }
+  | FinSet of labelset
+  | Label of labelset * label
+  | Cases of syn * syn labeled * syn
   | Univ (* A *)
 
 and value =
@@ -28,9 +35,11 @@ and value =
   | Nat
   | Zero
   | Succ of value
+  | FinSet of labelset
+  | Label of labelset * label
   | Univ
 
-and neu = { hd : hd; spine : frame bwd }        
+and neu = { hd : hd; spine : frame bwd }
 
 and hd =
   | Var of int
@@ -40,6 +49,7 @@ and frame =
   | Fst
   | Snd
   | NatElim of { mot : value; zero : value; succ : value }
+  | Cases of { mot : value; cases : (string * value) list }
 
 and env = value bwd
 and clo = Clo of { env : env; body : syn }

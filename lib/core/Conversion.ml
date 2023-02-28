@@ -3,6 +3,8 @@ open Bwd
 module S = Syntax
 module D = Domain
 module Sem = Semantics
+module SS = Set.Make(String)
+module MS = Map.Make(String)
 
 open TermBuilder
 
@@ -17,14 +19,15 @@ struct
     Eff.scope (fun size -> size + 1) @@ fun () ->
     f arg
 
-  let rec equate tp v1 v2 = 
+  let rec equate tp v1 v2 =
     match (tp, v1, v2) with
     | _, D.Neu (_, neu1), D.Neu (_, neu2) ->
       equate_neu neu1 neu2
     | _, D.Pi (_, a1, clo1), D.Pi (_, a2, clo2) ->
       equate D.Univ a1 a2;
       bind D.Univ @@ fun v ->
-      equate D.Univ (Sem.inst_clo clo1 v) (Sem.inst_clo clo2 v)
+      equate D.Univ (Sem.inst_clo clo1 v) (Sem.inst_clo clo2 v);
+      ()
     | D.Pi (_, a, clo), v1, v2 ->
       bind a @@ fun x ->
       let fib = Sem.inst_clo clo x in
@@ -43,6 +46,10 @@ struct
       ()
     | _, D.Succ n1, D.Succ n2 ->
       equate D.Nat n1 n2
+    | _, D.FinSet s1, D.FinSet s2 when SS.of_list s1 = SS.of_list s2 ->
+      ()
+    | _, D.Label (_, l), D.Label (_, r) when l = r ->
+      ()
     | _, D.Univ, D.Univ ->
       ()
     | _, _, _ ->
@@ -86,8 +93,33 @@ struct
         TB.ap mot (TB.succ n)
       in
       equate succ_tp elim1.succ elim2.succ
+    | D.Cases r1, D.Cases r2 ->
+      (* This is not the bad eta law (c.f.
+         http://strictlypositive.org/Ripley.pdf section 3: The Uniqueness of
+         Magic), since we are only are matching on explicit case expressions
+         here, and two empty ones will be definitionally equal already *)
+      (* ls1 and ls2 are potentially different order, but by the end they should
+         be checked to be identical, since their labels should correspond
+         to the labels on their cases which we are checking *)
+      let ls1 = List.map fst r1.cases in
+      let ls2 = List.map fst r2.cases in
+      let get_motives l = (Sem.do_ap r1.mot (D.Label (ls1, l)), Sem.do_ap r2.mot (D.Label (ls2, l))) in
+      let m1 = MS.of_seq (List.to_seq r1.cases) in
+      let m2 = MS.of_seq (List.to_seq r2.cases) in
+      let _ = equate_maps get_motives m1 m2 in
+      ()
     | _ ->
       raise Unequal
+
+  and equate_maps get_motives =
+    MS.merge @@ fun k mv1 mv2 ->
+    match mv1, mv2 with
+    | Some v1, Some v2 ->
+      let (m1, m2) = get_motives k in
+      equate D.Univ m1 m2;
+      equate m1 v1 v2;
+      None
+    | _, _ -> raise Unequal
 end
 
 let equate ~size ~tp v1 v2 =

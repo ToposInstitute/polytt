@@ -6,6 +6,10 @@ open Bwd.Infix
 
 module P = Precedence
 
+type labelset = string list
+type label = string
+type 'a labeled = (string * 'a) list
+
 type t = Data.syn =
   | Var of int
   | Pi of Ident.t * t * t
@@ -19,6 +23,9 @@ type t = Data.syn =
   | Zero
   | Succ of t
   | NatElim of { mot : t; zero : t; succ : t; scrut : t }
+  | FinSet of labelset
+  | Label of labelset * label
+  | Cases of t * t labeled * t
   | Univ
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
@@ -40,6 +47,9 @@ let rec dump fmt =
   | Zero -> Format.fprintf fmt "zero"
   | Succ n -> Format.fprintf fmt "succ[%a]" dump n
   | NatElim r -> Format.fprintf fmt "nat-elim[%a %a %a %a]" dump r.mot dump r.zero dump r.succ dump r.scrut
+  | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
+  | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
+  | Cases (mot, cases, case) -> Format.fprintf fmt "cases[%a, %a, %a]" dump mot (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
 
 let to_numeral =
   let rec go acc =
@@ -76,6 +86,9 @@ let classify_tm =
       with Failure _ -> juxtaposition
     end
   | NatElim _ -> juxtaposition
+  | FinSet _ -> atom
+  | Label _ -> atom
+  | Cases _ -> juxtaposition
 
 (** Wrap in parens with a pretty printer *)
 let pp_braced pp fmt a = Format.fprintf fmt "(%a)" pp a
@@ -126,6 +139,11 @@ let rec pp env =
     end
   | NatElim r -> Format.fprintf fmt "nat-elim %a %a %a %a"(pp env (P.right_of this)) r.mot (pp env (P.right_of this)) r.zero (pp env (P.right_of this)) r.succ (pp env (P.right_of this)) r.scrut
   | Univ -> Format.fprintf fmt "type"
+  | FinSet [] -> Format.fprintf fmt "#{}"
+  | FinSet ls -> Format.fprintf fmt "#{ %a }" (pp_sep_list Format.pp_print_string) ls
+  | Label (ls, l) -> Format.fprintf fmt "#{ %a }.%a" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
+  | Cases (_, [], case) -> Format.fprintf fmt "{} %a" dump case
+  | Cases (_, cases, case) -> Format.fprintf fmt "{ %a } %a" (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
 
 
 let pp_toplevel = pp Emp P.isolated

@@ -37,11 +37,20 @@ struct
   let nat _ =
     S.Nat
 
-  let zero =
+  let zero _ =
     S.Zero
 
   let succ n size =
     S.Succ (n size)
+
+  let finset ls _ =
+    S.FinSet ls
+
+  let label ls l _ =
+    S.Label (ls, l)
+
+  let cases mot cases case size =
+    S.Cases (mot size, cases size, case size)
 
   let univ _ =
     S.Univ
@@ -57,7 +66,7 @@ struct
        The DeBruijin arithmetic is a little tricky, but lets us avoid a subtraction. *)
     let x = var (Bwd.length env) in
     let env = env #< v in
-    k x env 
+    k x env
 
   let build (builder : 'a tb) : 'a t =
     fun env -> (builder, env)
