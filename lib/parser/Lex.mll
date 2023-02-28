@@ -111,6 +111,12 @@ and real_token = parse
     { COLON_EQUALS }
   | ","
     { COMMA }
+  | "."
+    { DOT }
+  | "#"
+    { HASH }
+  | "="
+    { EQUALS }
   (* Delimiters *)
   | '('
     { LPR }
@@ -120,6 +126,10 @@ and real_token = parse
     { LSQ }
   | ']'
     { RSQ }
+  | '{'
+    { LBR }
+  | '}'
+    { RBR }
   | number
     { NUMERAL (int_of_string (Lexing.lexeme lexbuf)) }
   | "on"

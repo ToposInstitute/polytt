@@ -1,6 +1,10 @@
 open Asai
 open Core
 
+type labelset = string list
+type label = string
+type 'a labeled = (string * 'a) list
+
 type 'a node = { node : 'a; loc : Span.t }
 
 type t = t_ node
@@ -17,5 +21,9 @@ and t_ =
   | Zero
   | Succ of t
   | NatElim of t * t * t * t
+  | FinSet of labelset
+  | Label of label
+  | Record of t labeled
+  | RecordLit of t labeled
   | Lit of int
   | Univ

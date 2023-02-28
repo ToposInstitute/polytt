@@ -141,7 +141,7 @@ let rec pp env =
   | Univ -> Format.fprintf fmt "type"
   | FinSet [] -> Format.fprintf fmt "#{}"
   | FinSet ls -> Format.fprintf fmt "#{ %a }" (pp_sep_list Format.pp_print_string) ls
-  | Label (ls, l) -> Format.fprintf fmt "#{ %a }.%a" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
+  | Label (_ls, l) -> Format.fprintf fmt "#%a" Format.pp_print_string l
   | Cases (_, [], case) -> Format.fprintf fmt "{} %a" dump case
   | Cases (_, cases, case) -> Format.fprintf fmt "{ %a } %a" (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
 

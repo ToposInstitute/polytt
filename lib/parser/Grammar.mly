@@ -18,13 +18,14 @@ let ap_or_atomic =
 %token <int> NUMERAL
 %token <bool> FLAG
 %token <string> ATOM
-%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW UNDERSCORE
+%token COLON COLON_COLON COLON_EQUALS COMMA DOT RIGHT_ARROW UNDERSCORE EQUALS
 (* Symbols *)
 %token FORALL LAMBDA
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
+%token HASH
 (* Delimiters *)
-%token LPR RPR LSQ RSQ
+%token LPR RPR LSQ RSQ LBR RBR
 (* Keywords *)
 %token TYPE
 (* Commands *)
@@ -105,8 +106,20 @@ plain_term:
     { CS.Succ tm }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
+  | HASH; LBR; labels = separated_list(COMMA, ATOM); RBR;
+    { CS.FinSet labels }
+  | LBR; labels = separated_list(COMMA, labeled_field(EQUALS)); RBR;
+    { CS.RecordLit labels }
+  | DOT; label = ATOM;
+    { CS.Label label }
+  | LBR; labels = separated_nonempty_list(COMMA, labeled_field(COLON)); RBR;
+    { CS.Record labels }
   | tm = arrow
     { tm }
+
+labeled_field(sep):
+  | label = ATOM; sep; term = term;
+    { (label, term) }
 
 arrow:
   | LAMBDA; nms = list(name); RIGHT_ARROW; tm = term
