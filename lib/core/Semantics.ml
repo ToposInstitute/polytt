@@ -37,6 +37,14 @@ struct
       do_fst (eval tm)
     | S.Snd tm ->
       do_snd (eval tm)
+    | S.Nat ->
+      D.Nat
+    | S.Zero ->
+      D.Zero
+    | S.Succ n ->
+      D.Succ (eval n)
+    | S.NatElim {mot; zero; succ; scrut} ->
+      do_nat_elim (eval mot) (eval zero) (eval succ) (eval scrut)
     | S.Univ ->
       D.Univ
 
@@ -49,6 +57,9 @@ struct
       D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
     | _ ->
       invalid_arg "bad do_ap"
+
+  and do_aps f args =
+    List.fold_left do_ap f args
 
   and do_fst (v: D.t) =
     match v with
@@ -68,6 +79,20 @@ struct
       D.Neu (fib, D.push_frm neu D.Snd)
     | _ ->
       invalid_arg "bad do_snd"
+
+  and do_nat_elim mot zero succ scrut =
+    let rec rec_nat_elim =
+      function
+      | D.Zero ->
+        zero
+      | D.Succ n ->
+        do_aps succ [n; rec_nat_elim n]
+      | D.Neu (_, neu) as n ->
+        let fib = do_ap mot n in
+        D.Neu (fib, D.push_frm neu (D.NatElim { mot; zero; succ }))
+      | _ ->
+        invalid_arg "bad do_nat_elim"
+    in rec_nat_elim scrut
 
   and inst_clo clo v =
     match clo with

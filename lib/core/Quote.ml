@@ -4,6 +4,8 @@ module S = Syntax
 module D = Domain
 module Sem = Semantics
 
+open TermBuilder
+
 module Internal =
 struct
   module Eff = Algaeff.Reader.Make (struct type env = int end)
@@ -50,6 +52,12 @@ struct
       let t1 = quote a v1 in
       let t2 = quote (Sem.inst_clo tp_clo v1) (Sem.do_snd v) in
       S.Pair (t1, t2)
+    | _, D.Nat ->
+      S.Nat
+    | _, D.Zero ->
+      S.Zero
+    | _, D.Succ n ->
+      S.Succ (quote D.Nat n)
     | _, D.Univ ->
       S.Univ
     | _, D.Neu (_, neu) ->
@@ -73,6 +81,24 @@ struct
       S.Fst tm
     | D.Snd ->
       S.Snd tm
+    | D.NatElim {mot; zero; succ} ->
+      let mot_tp =
+        Sem.graft_value @@
+        Graft.build @@
+        TB.pi TB.nat @@ fun _ -> TB.univ
+      in
+      let qmot = quote mot_tp mot in
+      let qzero = quote (Sem.do_ap mot D.Zero) zero in
+      let succ_tp =
+        Sem.graft_value @@
+        Graft.value mot @@ fun mot ->
+        Graft.build @@
+        TB.pi TB.nat @@ fun n ->
+        TB.pi (TB.ap mot n) @@ fun _ ->
+        TB.ap mot (TB.succ n)
+      in
+      let qsucc = quote succ_tp succ in
+      S.NatElim { mot = qmot; zero = qzero; succ = qsucc; scrut = tm }
 end
 
 let quote ~size ~tp v =

@@ -4,6 +4,8 @@ module S = Syntax
 module D = Domain
 module Sem = Semantics
 
+open TermBuilder
+
 exception Unequal
 
 module Internal =
@@ -35,7 +37,14 @@ struct
       equate a (Sem.do_fst v1) (Sem.do_fst v2);
       let fib = Sem.inst_clo clo v1 in
       equate fib (Sem.do_snd v1) (Sem.do_snd v2)
-    | _, D.Univ, D.Univ -> ()
+    | _, D.Nat, D.Nat ->
+      ()
+    | _, D.Zero, D.Zero ->
+      ()
+    | _, D.Succ n1, D.Succ n2 ->
+      equate D.Nat n1 n2
+    | _, D.Univ, D.Univ ->
+      ()
     | _, _, _ ->
       raise Unequal
 
@@ -60,6 +69,23 @@ struct
       ()
     | D.Snd, D.Snd ->
       ()
+    | D.NatElim elim1, D.NatElim elim2 ->
+      let mot_tp =
+        Sem.graft_value @@
+        Graft.build @@
+        TB.pi TB.nat @@ fun _ -> TB.univ
+      in
+      equate mot_tp elim1.mot elim2.mot;
+      equate (Sem.do_ap elim1.mot D.Zero) elim1.zero elim2.zero;
+      let succ_tp =
+        Sem.graft_value @@
+        Graft.value elim1.mot @@ fun mot ->
+        Graft.build @@
+        TB.pi TB.nat @@ fun n ->
+        TB.pi (TB.ap mot n) @@ fun _ ->
+        TB.ap mot (TB.succ n)
+      in
+      equate succ_tp elim1.succ elim2.succ
     | _ ->
       raise Unequal
 end

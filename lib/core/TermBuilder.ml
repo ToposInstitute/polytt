@@ -23,6 +23,30 @@ let bind_var (k : int -> 'a tb) : 'a tb =
 let scope (k : S.t tb -> 'a tb) : 'a tb =
   bind_var (fun lvl -> k (var lvl))
 
+module TB =
+struct
+  let pi ?(name = `Anon) base fam size =
+    S.Pi(name, base size, scope fam size)
+
+  let lam ?(name = `Anon) body size =
+    S.Lam (name, scope body size)
+
+  let ap fn arg size =
+    S.Ap (fn size, arg size)
+
+  let nat _ =
+    S.Nat
+
+  let zero =
+    S.Zero
+
+  let succ n size =
+    S.Succ (n size)
+
+  let univ _ =
+    S.Univ
+end
+
 module Graft =
 struct
   type 'a t = D.env -> 'a tb * D.env
