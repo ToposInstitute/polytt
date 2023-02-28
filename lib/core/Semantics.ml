@@ -120,6 +120,9 @@ let do_fst =
 let do_snd =
   Internal.do_snd
 
+let do_nat_elim ~mot ~zero ~succ ~scrut =
+  Internal.do_nat_elim mot zero succ scrut
+
 let inst_clo =
   Internal.inst_clo
 
