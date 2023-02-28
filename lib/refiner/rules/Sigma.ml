@@ -11,7 +11,7 @@ let formation ?(name = `Anon) base_tac fam_tac =
     in
     S.Sigma(name, base, fam)
   | _ ->
-    Logger.fatalf `TypeError "Expected element of type."
+    error `TypeError "Expected element of type."
 
 let intro tac_fst tac_snd =
   Chk.rule @@ function
@@ -20,7 +20,7 @@ let intro tac_fst tac_snd =
     let t2 = Chk.run tac_snd (inst_clo clo (eval t1)) in
     S.Pair (t1, t2) 
   | _ ->
-    Logger.fatalf `TypeError "Expected element of Σ."
+    error `TypeError "Expected element of Σ."
 
 let fst tac =
   Syn.rule @@ fun () ->
@@ -29,7 +29,7 @@ let fst tac =
   | D.Sigma (_, a, _clo) ->
     a, S.Fst tm
   | _ ->
-    Logger.fatalf `TypeError "Expected element of Σ."
+    error `TypeError "Expected element of Σ."
 
 let snd tac =
   Syn.rule @@ fun () ->
@@ -39,4 +39,4 @@ let snd tac =
     let fib = inst_clo clo (do_fst @@ eval tm) in
     fib, S.Snd tm
   | _ ->
-    Logger.fatalf `TypeError "Expected element of Σ."
+    error `TypeError "Expected element of Σ."
