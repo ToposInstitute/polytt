@@ -33,6 +33,19 @@ let rec dump fmt =
   | Snd a -> Format.fprintf fmt "pair[%a]" dump a
   | Lam (nm, t) -> Format.fprintf fmt "lam[%a, %a]" Ident.pp nm dump t
   | Ap (f, a) -> Format.fprintf fmt "ap[%a, %a]" dump f dump a
+  | Nat -> Format.fprintf fmt "nat"
+  | Zero -> Format.fprintf fmt "zero"
+  | Succ n -> Format.fprintf fmt "succ[%a]" dump n
+  | NatElim r -> Format.fprintf fmt "nat-elim[%a %a %a %a]" dump r.mot dump r.zero dump r.succ dump r.scrut
+
+let to_numeral =
+  let rec go acc =
+    function
+    | Zero -> acc
+    | Succ t -> (go[@tailcall]) (acc+1) t
+    | _ -> failwith "Was not a numeral"
+  in
+  go 0
 
 (** Precedence levels *)
 let atom = P.nonassoc 11
@@ -51,6 +64,14 @@ let classify_tm =
   | Snd _ -> juxtaposition
   | Lam _ -> arrow
   | Ap _ -> juxtaposition
+  | Nat -> atom
+  | Zero -> atom
+  | Succ n ->
+      begin
+        try let _ = to_numeral n in atom
+        with Failure _ -> juxtaposition
+      end
+  | NatElim _ -> juxtaposition
 
 (** Wrap in parens with a pretty printer *)
 let pp_braced pp fmt a = Format.fprintf fmt "(%a)" pp a
@@ -81,6 +102,15 @@ let rec pp env =
   | Snd a -> Format.fprintf fmt "snd %a" (pp env (P.right_of this)) a
   | Lam (nm, t) -> Format.fprintf fmt "λ %a. %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
+  | Nat -> Format.fprintf fmt "ℕ"
+  | Zero -> Format.fprintf fmt "0"
+  | (Succ n') as n ->
+    begin
+      try Format.fprintf fmt "%d" (to_numeral n)
+      with Failure _ ->
+        Format.fprintf fmt "succ %a" (pp env (P.right_of juxtaposition)) n'
+    end
+  | NatElim r -> Format.fprintf fmt "nat-elim %a %a %a %a"(pp env (P.right_of this)) r.mot (pp env (P.right_of this)) r.zero (pp env (P.right_of this)) r.succ (pp env (P.right_of this)) r.scrut
   | Univ -> Format.fprintf fmt "U"
 
 

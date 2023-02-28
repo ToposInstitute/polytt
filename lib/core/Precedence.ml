@@ -1,3 +1,4 @@
+(* from https://github.com/RedPRL/cooltt/blob/main/src/core/SyntaxPrecedence.ml *)
 type t = int * int
 
 let nonassoc n = 2*n, 2*n
