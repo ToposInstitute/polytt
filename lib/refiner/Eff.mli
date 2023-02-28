@@ -9,6 +9,7 @@ module Cell : sig
   }
 end
 
+val run_top : (unit -> 'a) -> 'a
 val quote : tp:D.tp -> D.t -> S.t
 val equate : tp:D.tp -> D.t -> D.t -> unit
 val eval : S.t -> D.t

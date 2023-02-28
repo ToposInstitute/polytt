@@ -25,6 +25,9 @@ type env = {
 
 module Locals = Algaeff.Reader.Make(struct type nonrec env = env end)
 
+let run_top k =
+  Locals.run ~env:{ locals = Emp; size = 0 } k
+
 let quote ~tp tm =
   let env = Locals.read () in
   Quote.quote ~size:env.size ~tp tm

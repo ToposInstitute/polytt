@@ -1,6 +1,6 @@
 (library
   (name Refiner)
   (libraries polytt.core bwd algaeff asai)
-  (public_name polytt.elab))
+  (public_name polytt.refiner))
 
 (include_subdirs unqualified)
