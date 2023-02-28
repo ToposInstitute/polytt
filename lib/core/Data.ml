@@ -13,6 +13,10 @@ type syn =
   | Pair of syn * syn
   | Fst of syn
   | Snd of syn
+  | Nat
+  | Zero
+  | Succ
+  | NatElim of { mot : syn; zero : syn; succ : syn; scrut : syn }
   | Univ
 
 and value =
@@ -21,6 +25,9 @@ and value =
   | Lam of Ident.t * clo
   | Sigma of Ident.t * value * clo
   | Pair of value * value
+  | Nat
+  | Zero
+  | Succ
   | Univ
 
 and neu = { hd : hd; spine : frame bwd }        
@@ -32,6 +39,7 @@ and frame =
   | Ap of { tp : value; arg : value }
   | Fst
   | Snd
+  | NatElim of { mot : value; zero : value; succ : value }
 
 and env = value bwd
 and clo = Clo of { env : env; body : syn }

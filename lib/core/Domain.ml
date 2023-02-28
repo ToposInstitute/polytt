@@ -10,6 +10,9 @@ type t = Data.value =
   | Lam of Ident.t * clo
   | Sigma of Ident.t * t * clo
   | Pair of t * t
+  | Nat
+  | Zero
+  | Succ
   | Univ
 
 and tp = t
@@ -23,6 +26,7 @@ and frame = Data.frame =
   | Ap of { tp : t; arg : t }
   | Fst
   | Snd
+  | NatElim of { mot : t; zero : t; succ : t }
 
 and env = t bwd
 and clo = Data.clo = Clo of { env : env; body : Data.syn }

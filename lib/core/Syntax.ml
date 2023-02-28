@@ -15,6 +15,10 @@ type t = Data.syn =
   | Pair of t * t
   | Fst of t
   | Snd of t
+  | Nat
+  | Zero
+  | Succ
+  | NatElim of { mot : t; zero : t; succ : t; scrut : t }
   | Univ
 
 (** Raw printing for debugging *)
