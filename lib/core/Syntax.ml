@@ -64,7 +64,12 @@ let pp_braced_cond classify plain_pp penv fmt tm =
 let rec pp env =
   pp_braced_cond classify_tm @@ fun this _penv fmt ->
   function
-  | Var i -> Ident.pp fmt (Bwd.nth env i)
+  | Var i ->
+    begin
+      try Ident.pp fmt (Bwd.nth env i)
+      with Failure _ ->
+        Format.fprintf fmt "![bad index %d]!" i
+    end
   | Pi (nm, a, b) -> Format.fprintf fmt "Π(%a : %a), %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
   | Sigma (nm, a, b) -> Format.fprintf fmt "Σ(%a : %a), %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
   | Pair (a, b) -> Format.fprintf fmt "(%a, %a)" (pp env P.isolated) a (pp env P.isolated) b
