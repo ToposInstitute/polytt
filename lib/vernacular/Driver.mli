@@ -1,3 +1,3 @@
 module CS := Syntax
 
-val execute : CS.cmd list -> unit
+val execute : bool -> CS.cmd list -> unit

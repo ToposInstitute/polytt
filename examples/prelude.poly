@@ -1,4 +1,3 @@
-#debug on
 
 def id : (A : type) → A → A :=
   λ A x → x

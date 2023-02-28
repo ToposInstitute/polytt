@@ -9,7 +9,7 @@ open Elab
 
 exception Quit
 
-let execute_cmd (cmd : CS.cmd) =
+let execute_cmd  (cmd : CS.cmd) =
   match cmd.node with
   | CS.Def {name; tp = Some tp; tm} ->
     let tp = Elaborator.chk tp D.Univ in
@@ -58,7 +58,8 @@ let execute_cmd (cmd : CS.cmd) =
     raise Quit
 
 
-let execute cmds =
+let execute (debug : bool) cmds =
+  Debug.debug_mode debug;
   try
     List.iter execute_cmd cmds
   with Quit -> ()

@@ -4,7 +4,7 @@ open Vernacular
 
 module Terminal = Asai_unix.Make(Code)
 
-let load path =
+let load path debug =
   Logger.run ~emit:Terminal.display ~fatal:Terminal.display @@ fun () ->
   let lexbuf = Lexing.from_channel (open_in path) in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = path };
@@ -15,5 +15,5 @@ let load path =
     | Grammar.Error ->
       Logger.fatalf ~loc:(Span.of_lex lexbuf) `ParseError "Failed to parse"
   in
-  Driver.execute cmds;
+  Driver.execute debug cmds;
   Format.printf "All Done!@."
