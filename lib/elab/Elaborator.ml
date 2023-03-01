@@ -15,6 +15,9 @@ struct
       Pi.formation ~name (chk a) (fun _ -> chk b)
     | CS.Lam (names, tm) ->
       chk_lams names tm
+    | CS.Let (name, tm1, tm2) ->
+      let tm1 = syn tm1 in
+      Var.let_bind ~name:name tm1 (fun _ -> chk tm2) 
     | CS.Sigma (name, a, b) ->
       Sigma.formation ~name (chk a) (fun _ -> chk b)
     | CS.Pair (a, b) ->
@@ -57,6 +60,8 @@ struct
     (* R.Var.resolve path *)
     | CS.Ap (fn, args) ->
       List.fold_left (fun tac arg -> Pi.ap tac (chk arg)) (syn fn) args
+    | CS.Let (nm, tm1, tm2) ->
+      syn_let ~name:nm tm1 tm2
     | CS.Fst tm ->
       Sigma.fst (syn tm)
     | CS.Snd tm ->
@@ -82,6 +87,14 @@ struct
         | None ->
           T.Error.error `UnboundVariable "Variable is not bound."
       end
+
+  and syn_let ~name tm1 tm2 =
+    let tm1 = syn tm1 in
+    T.Syn.rule @@ fun () ->
+    let (vtp1, etm1) = T.Syn.run tm1 in
+    let vtm = Eff.eval etm1 in
+    let body = T.Chk.run (T.Var.concrete ~name vtp1 vtm (fun _ -> chk tm2)) vtp1 in
+    (vtp1, body) 
 end
 
 let chk (tm : CS.t) (tp : D.tp) =

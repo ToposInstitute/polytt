@@ -12,7 +12,7 @@ let formation =
   | D.Univ ->
     S.Nat
   | _ ->
-    Error.error `TypeError "Expected element of type."
+    Error.error `TypeError "Expected element of ℕ."
 
 let zero =
   Chk.rule @@
@@ -20,7 +20,7 @@ let zero =
   | D.Nat ->
     S.Zero
   | _ ->
-    Error.error `TypeError "Expected element of nat."
+    Error.error `TypeError "Expected element of ℕ."
 
 let succ tac =
   Chk.rule @@
@@ -28,7 +28,7 @@ let succ tac =
   | D.Nat ->
     S.Succ (Chk.run tac D.Nat)
   | _ ->
-    Error.error `TypeError "Expected element of nat."
+    Error.error `TypeError "Expected element of ℕ."
 
 let lit n =
   Chk.rule @@
@@ -41,8 +41,9 @@ let lit n =
         | n -> S.Succ (go (n - 1))
       end
     in go n
-  | _ ->
-    Error.error `TypeError "Expected element of nat."
+  | t ->
+    Debug.print "%a@." D.dump t;
+    Error.error `TypeError "Expected element of ℕ."
 
 let elim mot_tac zero_tac succ_tac scrut_tac =
   Syn.rule @@ fun () ->

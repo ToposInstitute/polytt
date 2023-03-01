@@ -7,6 +7,8 @@ let locate (start, stop) node =
   {CS.node; loc = Span.make (Span.of_lex_position start) (Span.of_lex_position stop)}
 
 let unlocate {CS.node; loc = _} = node
+let get_loc {CS.loc; node = _} = loc
+
 
 let ap_or_atomic =
   function
@@ -20,7 +22,7 @@ let ap_or_atomic =
 %token <string> ATOM
 %token COLON COLON_COLON COLON_EQUALS COMMA DOT RIGHT_ARROW UNDERSCORE EQUALS QUESTION
 (* Symbols *)
-%token FORALL LAMBDA
+%token FORALL LAMBDA LET IN
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
 %token HASH
@@ -33,7 +35,7 @@ let ap_or_atomic =
 %token EOF
 
 %right COLON
-%right RIGHT_ARROW TIMES
+%right RIGHT_ARROW TIMES IN
 
 %start <Vernacular.Syntax.cmd list> commands
 
@@ -107,10 +109,22 @@ plain_term:
     { CS.Succ tm }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
-  | tm = term; COLON; ty = term;
-    { CS.Anno (tm, ty) }
+  | tm = anno
+    { tm }
+  | tm = let_binding
+    { tm }
   | tm = arrow
     { tm }
+
+anno:
+  | tm = term; COLON; ty = term;
+    { CS.Anno (tm, ty) }
+
+let_binding:
+  | LET; nm = name; EQUALS; tm1 = term; IN; tm2 = term
+    { CS.Let (nm, tm1, tm2) }
+  | LET; nm = name; COLON; ty1 = term; EQUALS; tm1 = term; IN; tm2 = term
+    { CS.Let (nm, { node = Anno(tm1, ty1) ; loc = get_loc tm1 }, tm2) }
 
 labeled_field(sep):
   | label = ATOM; sep; term = term;

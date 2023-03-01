@@ -29,6 +29,7 @@ end
 module Locals : sig
   val run_top : (unit -> 'a) -> 'a
   val resolve : Ident.path -> Cell.t option
+  val concrete : ?name:Ident.t -> D.tp -> D.t -> (unit -> 'a) -> 'a
   val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
   val locals : unit -> Cell.t list
   val ppenv : unit -> Ident.t bwd

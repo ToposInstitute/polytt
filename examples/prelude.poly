@@ -1,15 +1,16 @@
 def id : (A : Type) → A → A :=
   λ A x → x
 
-#print id
-
 def const : (A : Type) → (B : Type) → A → B → A :=
   λ _ _ x _ → x
 
 def four : ℕ := 4
 
 def double : ℕ → ℕ :=
-  λ n → elim (λ _ → ℕ) ? (λ _ → λ n → succ (succ n)) n
+  λ n → elim (λ _ → ℕ) 0 (λ _ → λ n → succ (succ n)) n
+
+def add : ℕ → ℕ → ℕ :=
+  λ m n → elim (λ _ → ℕ) n (λ _ n → succ n) m 
 
 def sigma : (A : Type) → (A → Type) → Type :=
   λ A → λ B → (x : A) × B x
@@ -20,11 +21,6 @@ def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
 def projl : (ℕ × ℕ) → ℕ :=
   λ x → fst x
 
-#normalize double 4
-
-#print ((ℕ × ℕ) → ℕ : Type)
-#print (ℕ × (ℕ → ℕ) : Type)
-
 def Bool : Type := #{ true, false }
 
 def Record : Type := { true : ℕ, false : Bool }
@@ -33,7 +29,8 @@ def record_lit : Record := { true = 0, false = .true }
 
 def Anything : Type := (T : Type) * T
 
-#normalize (Record , record_lit : Record) : Anything
+def let-example :=
+  let n = 5 : ℕ
+  in n
 
-#normalize record_lit .true
-#normalize record_lit .false
+#normalize let-example

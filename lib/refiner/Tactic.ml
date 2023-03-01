@@ -44,6 +44,7 @@ and Var : sig
   val value : tac -> D.t
   val syn : tac -> Syn.tac
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
 end =
 struct
   type tac = { tp : D.tp; value : D.t }
@@ -56,5 +57,9 @@ struct
 
   let abstract ?(name = `Anon) tp k =
     Locals.abstract ~name tp @@ fun value ->
+    k {tp; value}
+
+  let concrete ?(name = `Anon) tp value k =
+    Eff.Locals.concrete ~name tp value @@ fun () ->
     k {tp; value}
 end

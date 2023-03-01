@@ -28,6 +28,8 @@ struct
       D.Pi (nm, eval a, clo b)
     | S.Lam (nm, b) ->
       D.Lam (nm, clo b)
+    | S.Let (_nm, tm1, tm2) ->
+      inst_clo (clo tm2) (eval tm1)
     | S.Ap (f, a) ->
       do_ap (eval f) (eval a)
     | S.Sigma (nm, a, b) ->

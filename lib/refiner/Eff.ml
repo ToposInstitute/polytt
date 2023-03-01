@@ -90,23 +90,30 @@ struct
     let env = Eff.read () in
     D.var tp env.size
 
+  let bind_var cell env =
+    let name = Cell.name cell in
+    let value = Cell.value cell in
+    let local_names =
+      match name with
+      | `User path ->
+        Yuujinchou.Trie.update_singleton path (fun _ -> Some (cell, ())) env.local_names
+      | _ -> env.local_names
+    in {
+      locals = env.locals #< value;
+      local_names;
+      size = env.size + 1;
+      ppenv = env.ppenv #< name
+    }
+
+  let concrete ?(name = `Anon) tp tm k =
+    let cell = { Cell.name; tp; value = tm } in
+    Eff.scope (bind_var cell) @@ fun () ->
+    k ()
+
   let abstract ?(name = `Anon) tp k =
     let var = fresh_var tp () in
     let cell = { Cell.name; tp; value = var } in
-    let bind_var env =
-      let local_names =
-        match name with
-        | `User path ->
-          Yuujinchou.Trie.update_singleton path (fun _ -> Some (cell, ())) env.local_names
-        | _ -> env.local_names
-      in {
-        locals = env.locals #< var;
-        local_names;
-        size = env.size + 1;
-        ppenv = env.ppenv #< name
-      }
-    in
-    Eff.scope bind_var @@ fun () ->
+    Eff.scope (bind_var cell) @@ fun () ->
     k var
 end
 

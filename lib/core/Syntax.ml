@@ -14,6 +14,7 @@ type t = Data.syn =
   | Var of int
   | Pi of Ident.t * t * t
   | Lam of Ident.t * t
+  | Let of Ident.t * t * t
   | Ap of t * t
   | Sigma of Ident.t * t * t
   | Pair of t * t
@@ -43,6 +44,7 @@ let rec dump fmt =
   | Fst a -> Format.fprintf fmt "pair[%a]" dump a
   | Snd a -> Format.fprintf fmt "pair[%a]" dump a
   | Lam (nm, t) -> Format.fprintf fmt "lam[%a, %a]" Ident.pp nm dump t
+  | Let (nm, t1, t2) -> Format.fprintf fmt "let[%a = %a in %a ]" Ident.pp nm dump t1 dump t2
   | Ap (f, a) -> Format.fprintf fmt "ap[%a, %a]" dump f dump a
   | Nat -> Format.fprintf fmt "nat"
   | Zero -> Format.fprintf fmt "zero"
@@ -81,6 +83,7 @@ let classify_tm =
   | Fst _ -> juxtaposition
   | Snd _ -> juxtaposition
   | Lam _ -> arrow
+  | Let _ -> atom
   | Ap _ -> juxtaposition
   | Nat -> atom
   | Zero -> atom
@@ -132,7 +135,8 @@ let rec pp env =
   | Lam (nm, t) ->
     let (env , nms, body) = collect_lams env [] (Lam (nm, t)) in
     Format.fprintf fmt "λ %a → %a" (pp_sep_list ~sep:" " Ident.pp) nms  (pp env (P.right_of this)) body
-  (* Format.fprintf fmt "λ %a → %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t *)
+  | Let (nm, t1, t2) -> 
+    Format.fprintf fmt "let %a = %a in %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t1 (pp (env #< nm) (P.right_of this)) t2
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
   | Nat -> Format.fprintf fmt "ℕ"
   | Zero -> Format.fprintf fmt "0"

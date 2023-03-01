@@ -12,6 +12,7 @@ type syn =
   | Var of int
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
   | Lam of Ident.t * syn (* λ x. e *)
+  | Let of Ident.t * syn * syn (* let x = e in t *)
   | Ap of syn * syn (* f a *)
   | Sigma of Ident.t * syn * syn (* Σ[ a ∈ A] (B a) *)
   | Pair of syn * syn (* A × B *)

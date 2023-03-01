@@ -12,6 +12,7 @@ and t_ =
   | Var of Yuujinchou.Trie.path
   | Pi of Ident.t * t * t
   | Lam of Ident.t list * t
+  | Let of Ident.t * t * t
   | Ap of t * t list
   | Sigma of Ident.t * t * t
   | Pair of t * t

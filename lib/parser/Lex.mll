@@ -93,8 +93,12 @@ and token = parse "" { skip_whitespace real_token lexbuf }
 
 and real_token = parse
   (* Symbols *)
-  | "\\" | "λ"
+  | "λ"
     { LAMBDA }
+  | "let"
+    { LET }
+  | "in"
+    { IN }
   | "forall" | "∀"
     { FORALL }
   | "->" | "→"
