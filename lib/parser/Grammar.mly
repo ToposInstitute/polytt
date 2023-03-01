@@ -107,14 +107,6 @@ plain_term:
     { CS.Succ tm }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
-  | HASH; LBR; labels = separated_list(COMMA, ATOM); RBR;
-    { CS.FinSet labels }
-  | LBR; labels = separated_list(COMMA, labeled_field(EQUALS)); RBR;
-    { CS.RecordLit labels }
-  | DOT; label = ATOM;
-    { CS.Label label }
-  | LBR; labels = separated_nonempty_list(COMMA, labeled_field(COLON)); RBR;
-    { CS.Record labels }
   | tm = term; COLON; ty = term;
     { CS.Anno (tm, ty) }
   | tm = arrow
@@ -151,3 +143,11 @@ plain_atomic_term:
     { CS.Univ }
   | QUESTION
     { CS.Hole }
+  | HASH; LBR; labels = separated_list(COMMA, ATOM); RBR;
+    { CS.FinSet labels }
+  | LBR; labels = separated_list(COMMA, labeled_field(EQUALS)); RBR;
+    { CS.RecordLit labels }
+  | DOT; label = ATOM;
+    { CS.Label label }
+  | LBR; labels = separated_nonempty_list(COMMA, labeled_field(COLON)); RBR;
+    { CS.Record labels }

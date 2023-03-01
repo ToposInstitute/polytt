@@ -35,5 +35,5 @@ def Anything : Type := (T : Type) * T
 
 #normalize (Record , record_lit : Record) : Anything
 
-#normalize record_lit (.true)
-#normalize record_lit (.false)
+#normalize record_lit .true
+#normalize record_lit .false
