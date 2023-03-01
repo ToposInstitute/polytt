@@ -21,15 +21,15 @@ def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
 def projl : (ℕ × ℕ) → ℕ :=
   λ x → fst x
 
-def Bool := #{ true, false }
+def Bool := #{ .true, .false }
 
 def Unit := (t : #{}) -> ({} : #{} -> Type) t
 
 def unit : Unit := {}
 
-def ARecord := { true : ℕ, false : Bool }
+def ARecord := { .true : ℕ, .false : Bool }
 
-def record_lit : ARecord := { true = 0, false = .true }
+def record_lit : ARecord := { .true = 0, .false = .true }
 
 def Anything := (T : Type) * T
 

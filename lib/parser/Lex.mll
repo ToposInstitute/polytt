@@ -115,8 +115,6 @@ and real_token = parse
     { COLON_EQUALS }
   | ","
     { COMMA }
-  | "."
-    { DOT }
   | "#"
     { HASH }
   | "="
@@ -149,6 +147,8 @@ and real_token = parse
       | tok -> tok
       | exception Not_found -> Printf.eprintf "Unknown Command: %s\n" (lexeme lexbuf); token lexbuf
     }
+  | "." atom
+    { LABEL (lexeme lexbuf) }
   | atom
     {
       let input = lexeme lexbuf in

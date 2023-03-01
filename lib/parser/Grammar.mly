@@ -20,7 +20,8 @@ let ap_or_atomic =
 %token <int> NUMERAL
 %token <bool> FLAG
 %token <string> ATOM
-%token COLON COLON_COLON COLON_EQUALS COMMA DOT RIGHT_ARROW UNDERSCORE EQUALS QUESTION
+%token <string> LABEL
+%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW UNDERSCORE EQUALS QUESTION
 (* Symbols *)
 %token FORALL LAMBDA LET IN
 %token TIMES FST SND
@@ -127,7 +128,7 @@ let_binding:
     { CS.Let (nm, { node = Anno(tm1, ty1) ; loc = get_loc tm1 }, tm2) }
 
 labeled_field(sep):
-  | label = ATOM; sep; term = term;
+  | label = LABEL; sep; term = term;
     { (label, term) }
 
 arrow:
@@ -157,11 +158,11 @@ plain_atomic_term:
     { CS.Univ }
   | QUESTION
     { CS.Hole }
-  | HASH; LBR; labels = separated_list(COMMA, ATOM); RBR;
+  | HASH; LBR; labels = separated_list(COMMA, LABEL); RBR;
     { CS.FinSet labels }
   | LBR; labels = separated_list(COMMA, labeled_field(EQUALS)); RBR;
     { CS.RecordLit labels }
-  | DOT; label = ATOM;
+  | label = LABEL;
     { CS.Label label }
   | LBR; labels = separated_nonempty_list(COMMA, labeled_field(COLON)); RBR;
     { CS.Record labels }
