@@ -32,11 +32,14 @@ let keywords =
     ("type", TYPE);
     ("poly", POLY);
     ("base", BASE);
+    ("hom-base", HOM_BASE);
+    ("hom-fib", HOM_FIB);
     ("fib", FIB);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);
     ("elim", NAT_ELIM);
+    ("⊗-elim", TENSOR_ELIM);
     ("fst", FST);
     ("snd", SND);
   ]
@@ -102,6 +105,8 @@ and real_token = parse
     { FORALL }
   | "->" | "→"
     { RIGHT_ARROW }
+  | "=>" | "⇒"
+    { THICK_RIGHT_ARROW }
   | "*" | "×"
     { TIMES }
   | "⊗"

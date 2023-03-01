@@ -18,12 +18,12 @@ let ap_or_atomic =
 %token <int> NUMERAL
 %token <bool> FLAG
 %token <string> ATOM
-%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW UNDERSCORE
+%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW THICK_RIGHT_ARROW UNDERSCORE
 (* Symbols *)
 %token FORALL LAMBDA
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
-%token POLY BASE FIB TENSOR TRI FROWN_LSQ
+%token POLY BASE FIB HOM_BASE HOM_FIB TENSOR TENSOR_ELIM TRI FROWN_LSQ
 (* Delimiters *)
 %token LPR RPR LSQ RSQ
 (* Keywords *)
@@ -32,6 +32,7 @@ let ap_or_atomic =
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
+%nonassoc THICK_RIGHT_ARROW
 %right RIGHT_ARROW TIMES
 
 %start <Vernacular.Syntax.cmd list> commands
@@ -106,8 +107,14 @@ plain_term:
     { CS.Base p }
   | FIB; p = atomic_term; x = atomic_term
     { CS.Fib (p, x) }
+  | HOM_BASE; f = atomic_term; x = atomic_term
+    { CS.HomBase (f, x) }
+  | HOM_FIB;  p = atomic_term; f = atomic_term; x = atomic_term; qx = atomic_term
+    { CS.HomFib (p, f, x, qx) }
   | p = atomic_term; TENSOR; q = atomic_term
     { CS.Tensor (p, q) }
+  | TENSOR_ELIM; mot = atomic_term; LPR; LAMBDA; p = name; q = name; RIGHT_ARROW; bdy = term; RPR; scrut = atomic_term
+    { CS.TensorElim(p, q, mot, bdy, scrut) }
   | p = atomic_term; TRI; q = atomic_term
     { CS.Tri (p, q) }
   | p = atomic_term; FROWN_LSQ; f = term; RSQ; q = atomic_term
@@ -124,6 +131,8 @@ arrow:
     { CS.Pi (name, base, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi (`Anon, base, fam) }
+  | p = term; THICK_RIGHT_ARROW; q = term
+    { CS.PolyHom (p, q) }
 
 atomic_term:
   | t = located(plain_atomic_term)

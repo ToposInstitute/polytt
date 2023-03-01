@@ -15,7 +15,8 @@ type t = Data.syn =
   | Pi of Ident.t * t * t
   | Lam of Ident.t * t
   | Ap of t * t
-  | Sigma of Ident.t * t * t
+  | Sigma of Ident.t * t 
+             * t
   | Pair of t * t
   | Fst of t
   | Snd of t
@@ -31,8 +32,16 @@ type t = Data.syn =
   | PolyIntro of t * t
   | Base of t
   | Fib of t * t
+  | PolyHom of t * t
+  | PolyHomIntro of t * t
+  | PolyHomLam of Ident.t * t
+  | HomBase of t * t * t
+  | HomFib of t * t * t * t
   | Tensor of t * t
+  | TensorIntro of t * t
+  | TensorElim of t * t * t
   | Tri of t * t
+  | TriIntro of t * t
   | Frown of t * t * t
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
@@ -70,6 +79,7 @@ let to_numeral =
 (** Precedence levels *)
 let atom = P.nonassoc 11
 let juxtaposition = P.left 10
+let times = P.right 4
 let arrow = P.right 3
 let equals = P.right 2
 
@@ -77,9 +87,24 @@ let equals = P.right 2
 let classify_tm =
   function
   | Univ -> atom
+  | Poly -> atom
   | Var _ -> atom
   | Pi _ -> arrow
-  | Sigma _ -> arrow
+  | Sigma _ -> times
+  | Base _ -> juxtaposition
+  | Fib _ -> juxtaposition
+  | PolyIntro _ -> atom
+  | PolyHom _ -> arrow
+  | PolyHomLam _ -> arrow
+  | PolyHomIntro _ -> atom
+  | HomBase _ -> juxtaposition
+  | HomFib _ -> juxtaposition
+  | Tensor _ -> arrow
+  | TensorIntro _ -> atom
+  | TensorElim _ -> juxtaposition
+  | Tri _ -> arrow
+  | TriIntro _ -> juxtaposition
+  | Frown _ -> arrow
   | Pair _ -> atom
   | Fst _ -> juxtaposition
   | Snd _ -> juxtaposition
@@ -146,6 +171,43 @@ let rec pp env =
     end
   | NatElim r -> Format.fprintf fmt "nat-elim %a %a %a %a"(pp env (P.right_of this)) r.mot (pp env (P.right_of this)) r.zero (pp env (P.right_of this)) r.succ (pp env (P.right_of this)) r.scrut
   | Univ -> Format.fprintf fmt "type"
+  | Poly -> Format.fprintf fmt "poly"
+  | PolyIntro (base, fam) ->
+    Format.fprintf fmt "(%a , %a)"
+      (pp env P.isolated) base
+      (pp env P.isolated) fam
+  | Base p ->
+    Format.fprintf fmt "base %a"
+      (pp env (P.right_of juxtaposition)) p
+  | Fib (p, x) ->
+    Format.fprintf fmt "fib %a %a"
+      (pp env (P.right_of juxtaposition)) p
+      (pp env (P.right_of juxtaposition)) x
+  | PolyHom (p, q) ->
+    Format.fprintf fmt "%a ⇒ %a"
+      (pp env (P.left_of arrow)) p
+      (pp env (P.right_of arrow)) q
+  | PolyHomIntro (fwd, bwd) ->
+    Format.fprintf fmt "(%a , %a)"
+      (pp env P.isolated) fwd
+      (pp env P.isolated) bwd
+  | PolyHomLam (name, body) ->
+    Format.fprintf fmt "λ %a → %a"
+      Ident.pp name
+      (pp (env #< name) (P.right_of arrow)) body
+  | HomBase (_, f, x) ->
+    Format.fprintf fmt "hom-base %a %a"
+      (pp env (P.right_of juxtaposition)) f
+      (pp env (P.right_of juxtaposition)) x
+  | HomFib (_, f, x, qx) ->
+    Format.fprintf fmt "hom-fib %a %a %a"
+      (pp env (P.right_of juxtaposition)) f
+      (pp env (P.right_of juxtaposition)) x
+      (pp env (P.right_of juxtaposition)) qx
+  | Tensor (p, q) ->
+    Format.fprintf fmt "%a ⊗ %a"
+      (pp env (P.left_of times)) p
+      (pp env (P.right_of times)) q
   | FinSet [] -> Format.fprintf fmt "#{}"
   | FinSet ls -> Format.fprintf fmt "#{ %a }" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "#{ %a }.%a" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l

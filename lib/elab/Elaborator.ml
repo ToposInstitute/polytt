@@ -30,6 +30,8 @@ struct
       Univ.formation
     | CS.Poly ->
       Poly.formation
+    | CS.PolyHom (p, q) ->
+      PolyHom.formation (chk p) (chk q)
     | CS.Tensor (p, q) ->
       Tensor.formation (chk p) (chk q)
     | CS.Tri (p, q) ->
@@ -43,15 +45,28 @@ struct
     match names with
     | [] -> chk tm
     | name :: names ->
-      Pi.intro ~name @@ fun _ -> chk_lams names tm
+      T.match_goal @@
+      function
+      | D.Pi _ ->
+        Pi.intro ~name @@ fun _ -> chk_lams names tm
+      | D.PolyHom _ ->
+        PolyHom.lam ~name @@ fun _ -> chk_lams names tm
+      | _ ->
+        T.Error.error `TypeError "Can only use lambda notation to make a Pi or a Hom."
 
   and chk_pair (a : CS.t) (b : CS.t) =
     T.match_goal @@
     function
-    | D.Sigma _ -> Sigma.intro (chk a) (chk b)
-    | D.Poly -> Poly.intro (chk a) (chk b)
+    | D.Sigma _ ->
+      Sigma.intro (chk a) (chk b)
+    | D.Poly ->
+      Poly.intro (chk a) (chk b)
+    | D.PolyHom _ ->
+      PolyHom.intro (chk a) (chk b)
+    | D.Tensor _ ->
+      Tensor.intro (chk a) (chk b)
     | _ ->
-      T.Error.error `TypeError "Can only use pair notation to make a sigma or a poly."
+      T.Error.error `TypeError "Can only use pair notation to make a sigma, poly, or tensor."
 
   and syn (tm : CS.t) =
     T.Error.locate tm.loc @@ fun () ->
@@ -70,6 +85,10 @@ struct
       Poly.base (chk p)
     | CS.Fib (p, x) ->
       Poly.fib (chk p) (chk x)
+    | CS.HomBase (f, x) ->
+      PolyHom.base (syn f) (chk x)
+    | CS.TensorElim (p_name, q_name, mot, bdy, scrut) ->
+      Tensor.elim ~p_name ~q_name (chk mot) (fun _ _ -> chk bdy) (syn scrut)
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 

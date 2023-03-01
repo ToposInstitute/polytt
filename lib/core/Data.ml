@@ -29,8 +29,16 @@ type syn =
   | PolyIntro of syn * syn
   | Base of syn
   | Fib of syn * syn
+  | PolyHom of syn * syn
+  | PolyHomIntro of syn * syn
+  | PolyHomLam of Ident.t * syn
+  | HomBase of syn * syn * syn
+  | HomFib of syn * syn * syn * syn
   | Tensor of syn * syn
+  | TensorIntro of syn * syn
+  | TensorElim of syn * syn * syn
   | Tri of syn * syn
+  | TriIntro of syn * syn
   | Frown of syn * syn * syn
 
 and value =
@@ -47,8 +55,13 @@ and value =
   | Univ
   | Poly
   | PolyIntro of value * value
+  | PolyHom of value * value
+  | PolyHomIntro of value * value
+  | PolyHomLam of Ident.t * clo
   | Tensor of value * value
+  | TensorIntro of value * value
   | Tri of value * value
+  | TriIntro of value * value
   | Frown of value * value * value
 
 and neu = { hd : hd; spine : frame bwd }
@@ -64,6 +77,9 @@ and frame =
   | Cases of { mot : value; cases : (string * value) list }
   | Base
   | Fib of { tp : value; base : value }
+  | HomBase of { poly : value; base : value }
+  | HomFib of { poly : value; base : value; fib : value }
+  | TensorElim of { p : value; q : value; mot : value; bdy : clo }
 
 and env = value bwd
 and clo = Clo of { env : env; body : syn }

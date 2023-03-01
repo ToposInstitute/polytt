@@ -1,4 +1,5 @@
 open Bwd
+open Errors
 
 module S = Syntax
 module D = Domain
@@ -70,8 +71,36 @@ struct
         TB.pi base @@ fun _ -> TB.univ
       in
       S.PolyIntro (quote D.Univ base, quote fib_tp fib)
+    | _, D.PolyHom (p, q) ->
+      S.PolyHom (quote D.Poly p, quote D.Poly q)
+    | D.PolyHom (p, q), D.PolyHomIntro (fwd, bwd) ->
+      (* FIXME: η-laws for poly-hom? *)
+      let fwd_tp =
+        Sem.graft_value @@
+        Graft.value p @@ fun p ->
+        Graft.value q @@ fun q ->
+        Graft.build @@
+        TB.pi (TB.base p) @@ fun _ -> TB.base q
+      in
+      let bwd_tp =
+        Sem.graft_value @@
+        Graft.value p @@ fun p ->
+        Graft.value q @@ fun q ->
+        Graft.value fwd @@ fun fwd ->
+        Graft.build @@
+        TB.pi (TB.base p) @@ fun base_p ->
+        TB.pi (TB.fib q (TB.ap fwd base_p)) @@ fun _ ->
+        TB.fib p base_p
+      in
+      S.PolyHomIntro (quote fwd_tp fwd, quote bwd_tp bwd)
+    | D.PolyHom (p, q), D.PolyHomLam (name, bdy) ->
+      (* FIXME: η-laws for poly-hom? *)
+      bind p @@ fun var_p ->
+      S.PolyHomLam (name, quote q (Sem.inst_clo bdy var_p))
     | _, D.Tensor (p, q) ->
       S.Tensor (quote D.Poly p, quote D.Poly q)
+    | D.Tensor (p, q), D.TensorIntro (px, qx) ->
+      S.TensorIntro (quote p px, quote q qx)
     | _, D.Tri (p, q) ->
       S.Tri (quote D.Poly p, quote D.Poly q)
     | _, D.Frown (p, q, f) ->
@@ -83,7 +112,6 @@ struct
         TB.pi (TB.base p) @@ fun _ -> TB.base q
       in
       S.Frown (quote D.Poly p, quote D.Poly q, quote f_tp f)
-    (* S.Tri (quote D.Poly p, quote D.Poly q) *)
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->
@@ -131,6 +159,13 @@ struct
       S.Base tm
     | D.Fib {tp; base} ->
       S.Fib (tm, quote tp base)
+    | D.HomBase {poly; base} ->
+      S.HomBase (quote D.Poly poly, tm, quote (Sem.do_base poly) base)
+    | D.TensorElim {p; q; mot; bdy} ->
+      bind p @@ fun var_p ->
+      bind q @@ fun var_q ->
+      let bdy = quote (D.Tensor (p, q)) (Sem.inst_clo2 bdy var_p var_q) in
+      S.TensorElim (quote D.Poly mot, bdy, tm)
     | D.Cases {mot; cases} ->
       let ls = List.map fst cases in
       let quote_key (l, v) = l, quote (Sem.do_ap mot (D.Label (ls, l))) v in

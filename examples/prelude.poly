@@ -28,10 +28,18 @@ def projl : (ℕ × ℕ) → ℕ :=
 def nyan : poly :=
   (ℕ , λ _ → ℕ)
 
--- #normalize base (nyan ⊗ (nyan ◁ (nyan ⌢[ id ℕ ] nyan))) 
-
 #normalize base (nyan ⌢[ id ℕ ] nyan)
 #normalize base (nyan ◁ nyan)
 #normalize base (nyan ⊗ nyan)
 #normalize fib (nyan ◁ nyan) (2 , λ _ → 3)
 #normalize fib (nyan ⌢[ id ℕ ] nyan) (2 , 3)
+ 
+def test : nyan ⇒ nyan ⊗ nyan :=
+  (λ x → (double x, x) , λ x _ → double x)
+
+#debug on
+
+def swap : (P : poly) → (Q : poly) → (P ⊗ Q ⇒ Q ⊗ P) :=
+  λ P Q pq → ⊗-elim (Q ⊗ P) (λ p q → (q , p)) pq
+
+#normalize hom-base (swap nyan nyan) (1 , 2)

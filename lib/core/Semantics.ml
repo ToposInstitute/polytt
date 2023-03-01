@@ -20,6 +20,9 @@ struct
     let env = Eff.read () in
     D.Clo { env; body }
 
+  let append vals k =
+    Eff.scope (fun env -> Bwd.append env vals) k
+
   let rec eval (tm : S.t) : D.t =
     match tm with
     | S.Var ix ->
@@ -62,12 +65,41 @@ struct
       do_base (eval p)
     | S.Fib (p, x) ->
       do_fib (eval p) (eval x)
+    | S.PolyHom (p, q) ->
+      D.PolyHom (eval p, eval q)
+    | S.PolyHomIntro (fwd, bwd) ->
+      D.PolyHomIntro (eval fwd, eval bwd)
+    | S.PolyHomLam (nm, tm) ->
+      D.PolyHomLam (nm, clo tm)
+    | S.HomBase (p, f, x) ->
+      do_hom_base (eval p) (eval f) (eval x)
+    | S.HomFib (p, f, x, qx) ->
+      failwith "FIXME: hom-fib"
     | S.Tensor (p, q) ->
       D.Tensor (eval p, eval q)
+    | S.TensorIntro (p, q) ->
+      D.TensorIntro (eval p, eval q)
+    | S.TensorElim (mot, bdy, scrut) ->
+      do_tensor_elim (eval mot) (clo bdy) (eval scrut)
     | S.Tri (p, q) ->
       D.Tri (eval p, eval q)
+    | S.TriIntro (f, r) ->
+      failwith "FIXME: tri-intro"
     | S.Frown (p, q, f) ->
       D.Frown (eval p, eval q, eval f)
+
+  and eval_hom_base f =
+    match f with
+    | S.Var ix ->
+      var ix
+    | S.TensorIntro (p, q) ->
+      D.Pair (eval_hom_base p, eval_hom_base q)
+    | S.TensorElim (_, bdy, scrut) ->
+      let scrut = eval_hom_base scrut in
+      (* Tensor is a positive type, whereas sigma is negative, which leads to this oddity. *)
+      append [do_fst scrut; do_snd scrut] @@ fun () ->
+      eval_hom_base bdy
+    | _ -> invalid_arg "bad do_eval_hom_base"
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with
@@ -186,10 +218,43 @@ struct
     | _ ->
       invalid_arg "bad do_fib"
 
+  and do_hom_base poly f x =
+    match f with
+    | D.PolyHomIntro (fwd, _) ->
+      do_ap fwd x
+    | D.PolyHomLam (_, clo) ->
+      Debug.print "Doing the cool eval@.";
+      inst_hom_clo_base clo x
+    | D.Neu (D.PolyHom (_, q), neu) ->
+      let q_base = do_base q in
+      D.Neu (q_base, D.push_frm neu (D.HomBase { poly; base = x }))
+    | _ ->
+      invalid_arg "bad do_hom_base"
+
+  and do_tensor_elim mot bdy scrut =
+    match scrut with
+    | D.TensorIntro (p, q) ->
+      inst_clo2 bdy p q
+    | D.Neu (D.Tensor (p, q), neu) ->
+      D.Neu (mot, D.push_frm neu (D.TensorElim {p; q; mot; bdy}))
+    | _ ->
+      invalid_arg "bad do_tensor_elim"
+
   and inst_clo clo v =
     match clo with
     | D.Clo { env; body } ->
       Eff.run ~env:(env #< v) (fun () -> eval body)
+
+  and inst_hom_clo_base clo v =
+    match clo with
+    | D.Clo { env; body } ->
+      Eff.run ~env:(env #< v) (fun () -> eval_hom_base body)
+
+
+  and inst_clo2 clo v1 v2 =
+    match clo with
+    | D.Clo { env; body } ->
+      Eff.run ~env:(env #< v1 #< v2) (fun () -> eval body)
 
   and graft_value (gtm : S.t Graft.t) =
     let tm, env = Graft.graft gtm in
@@ -223,6 +288,9 @@ let do_fib p x =
 
 let inst_clo =
   Internal.inst_clo
+
+let inst_clo2 =
+  Internal.inst_clo2
 
 let graft_value =
   Internal.graft_value

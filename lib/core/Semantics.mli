@@ -20,4 +20,5 @@ val do_base : D.t -> D.t
 val do_fib : D.t -> D.t -> D.t
 
 val inst_clo : D.clo -> D.t -> D.t
+val inst_clo2 : D.clo -> D.t -> D.t -> D.t
 val graft_value : S.t Graft.t -> D.t

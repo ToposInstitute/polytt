@@ -22,8 +22,13 @@ type t = Data.value =
   | Univ
   | Poly
   | PolyIntro of t * t
+  | PolyHom of t * t
+  | PolyHomIntro of t * t
+  | PolyHomLam of Ident.t * clo
   | Tensor of t * t
+  | TensorIntro of t * t
   | Tri of t * t
+  | TriIntro of t * t
   | Frown of t * t * t
 
 and tp = t
@@ -41,6 +46,9 @@ and frame = Data.frame =
   | Cases of { mot : t; cases : t labeled }
   | Base
   | Fib of { tp : t; base : t }
+  | HomBase of { poly : t; base : t }
+  | HomFib of { poly : t; base : t; fib : t }
+  | TensorElim of { p : t; q : t; mot : t; bdy : clo }
 
 and env = t bwd
 and clo = Data.clo = Clo of { env : env; body : Data.syn }
