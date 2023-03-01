@@ -24,3 +24,16 @@ def projl : (ℕ × ℕ) → ℕ :=
 
 #print ((ℕ × ℕ) → ℕ : Type)
 #print (ℕ × (ℕ → ℕ) : Type)
+
+def Bool : Type := #{ true, false }
+
+def Record : Type := { true : ℕ, false : Bool }
+
+def record_lit : Record := { true = 0, false = .true }
+
+def Anything : Type := (T : Type) * T
+
+#normalize (Record , record_lit : Record) : Anything
+
+#normalize record_lit (.true)
+#normalize record_lit (.false)

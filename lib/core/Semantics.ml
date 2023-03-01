@@ -91,14 +91,13 @@ struct
       invalid_arg "bad do_snd"
 
   and do_cases mot cases case =
-    match mot, case with
-    | _, D.Label (_, l) ->
+    match case with
+    | D.Label (_, l) ->
       MS.find l (MS.of_seq (List.to_seq cases))
-    | (D.Pi (_, _, clo) as p), (D.Neu (D.FinSet _, neu) as n) ->
-      Debug.print "do_cases %a %a@." D.dump p D.dump n;
-      let fib = n in
+    | D.Neu (D.FinSet _, neu) ->
+      let fib = do_ap mot case in
       D.Neu (fib, D.push_frm neu (D.Cases { mot; cases }))
-    | _, d ->
+    | d ->
       Debug.print "Tried to do_cases against %a@." D.dump d;
       invalid_arg "bad do_cases"
 
@@ -135,6 +134,9 @@ let eval_top tm =
 
 let do_ap =
   Internal.do_ap
+
+let do_aps =
+  Internal.do_aps
 
 let do_fst =
   Internal.do_fst

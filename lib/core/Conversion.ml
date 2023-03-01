@@ -25,7 +25,7 @@ struct
       equate_neu neu1 neu2
     | _, D.Pi (_, a1, clo1), D.Pi (_, a2, clo2) ->
       equate D.Univ a1 a2;
-      bind D.Univ @@ fun v ->
+      bind a1 @@ fun v ->
       equate D.Univ (Sem.inst_clo clo1 v) (Sem.inst_clo clo2 v);
       ()
     | D.Pi (_, a, clo), v1, v2 ->
@@ -34,7 +34,7 @@ struct
       equate fib (Sem.do_ap v1 x) (Sem.do_ap v2 x)
     | _, D.Sigma (_, a1, clo1), D.Sigma (_, a2, clo2) ->
       equate D.Univ a1 a2;
-      bind D.Univ @@ fun v ->
+      bind a1 @@ fun v ->
       equate D.Univ (Sem.inst_clo clo1 v) (Sem.inst_clo clo2 v)
     | D.Sigma (_, a, clo), v1, v2 ->
       equate a (Sem.do_fst v1) (Sem.do_fst v2);
@@ -105,19 +105,19 @@ struct
          to the labels on their cases which we are checking *)
       let ls1 = List.map fst r1.cases in
       let ls2 = List.map fst r2.cases in
-      let get_motives l = (Sem.do_ap r1.mot (D.Label (ls1, l)), Sem.do_ap r2.mot (D.Label (ls2, l))) in
+      let apply_motives l = (Sem.do_ap r1.mot (D.Label (ls1, l)), Sem.do_ap r2.mot (D.Label (ls2, l))) in
       let m1 = MS.of_seq (List.to_seq r1.cases) in
       let m2 = MS.of_seq (List.to_seq r2.cases) in
-      let _ = equate_maps get_motives m1 m2 in
+      let _ = equate_maps apply_motives m1 m2 in
       ()
     | _ ->
       raise Unequal
 
-  and equate_maps get_motives =
+  and equate_maps apply_motives =
     MS.merge @@ fun k mv1 mv2 ->
     match mv1, mv2 with
     | Some v1, Some v2 ->
-      let (m1, m2) = get_motives k in
+      let (m1, m2) = apply_motives k in
       equate D.Univ m1 m2;
       equate m1 v1 v2;
       None

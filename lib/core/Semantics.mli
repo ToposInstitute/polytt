@@ -1,4 +1,4 @@
-(** {1 Evaluation} This module defines the core evaluation algorithm, along with 
+(** {1 Evaluation} This module defines the core evaluation algorithm, along with
     eliminators for values. *)
 
 module S := Syntax
@@ -13,6 +13,7 @@ val eval : env:D.env -> S.t -> D.t
 val eval_top : S.t -> D.t
 
 val do_ap : D.t -> D.t -> D.t
+val do_aps : D.t -> D.t list -> D.t
 val do_fst : D.t -> D.t
 val do_snd : D.t -> D.t
 val do_nat_elim : mot:D.t -> zero:D.t -> succ:D.t -> scrut:D.t -> D.t
