@@ -1,15 +1,13 @@
 def id : (A : type) → A → A :=
   λ A x → x
 
-#print id
-
 def const : (A : type) → (B : type) → A → B → A :=
   λ _ _ x _ → x
 
 def four : ℕ := 4
 
 def double : ℕ → ℕ :=
-  λ n → elim (λ _ → ℕ) zero (λ _ → λ n → succ (succ n)) n
+  λ n → elim (λ _ → ℕ) ? (λ _ → λ n → succ (succ n)) n
 
 def sigma : (A : type) → (A → type) → type :=
   λ A → λ B → (x : A) × B x
@@ -20,4 +18,4 @@ def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
 def projl : (ℕ × ℕ) → ℕ :=
   λ x → fst x
 
-#normalize double 1000
+#normalize double 4

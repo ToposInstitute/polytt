@@ -18,7 +18,7 @@ let ap_or_atomic =
 %token <int> NUMERAL
 %token <bool> FLAG
 %token <string> ATOM
-%token COLON COLON_COLON COLON_EQUALS COMMA DOT RIGHT_ARROW UNDERSCORE EQUALS
+%token COLON COLON_COLON COLON_EQUALS COMMA DOT RIGHT_ARROW UNDERSCORE EQUALS QUESTION
 (* Symbols *)
 %token FORALL LAMBDA
 %token TIMES FST SND
@@ -149,3 +149,5 @@ plain_atomic_term:
     { CS.Lit n }
   | TYPE
     { CS.Univ }
+  | QUESTION
+    { CS.Hole }

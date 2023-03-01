@@ -5,6 +5,7 @@ type t =
   | `UnboundVariable
   | `TypeError
   | `ConversionError
+  | `HoleInSynth
   ]
 
 let default_severity _ = Asai.Severity.Error
@@ -17,3 +18,4 @@ let to_string : t -> string =
   | `UnboundVariable -> "E004"
   | `TypeError -> "E005"
   | `ConversionError -> "E006"
+  | `HoleInSynth -> "E007"

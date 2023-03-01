@@ -27,6 +27,7 @@ type t = Data.syn =
   | Label of labelset * label
   | Cases of t * t labeled * t
   | Univ
+  | Hole of t * int
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
@@ -50,6 +51,7 @@ let rec dump fmt =
   | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
   | Cases (mot, cases, case) -> Format.fprintf fmt "cases[%a, %a, %a]" dump mot (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
+  | Hole (tp, n) -> Format.fprintf fmt "hole[%a, %d]" dump tp n
 
 let to_numeral =
   let rec go acc =
@@ -89,6 +91,7 @@ let classify_tm =
   | FinSet _ -> atom
   | Label _ -> atom
   | Cases _ -> juxtaposition
+  | Hole _ -> atom
 
 (** Wrap in parens with a pretty printer *)
 let pp_braced pp fmt a = Format.fprintf fmt "(%a)" pp a
@@ -144,6 +147,6 @@ let rec pp env =
   | Label (_ls, l) -> Format.fprintf fmt "#%a" Format.pp_print_string l
   | Cases (_, [], case) -> Format.fprintf fmt "{} %a" dump case
   | Cases (_, cases, case) -> Format.fprintf fmt "{ %a } %a" (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
-
+  | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
 
 let pp_toplevel = pp Emp P.isolated

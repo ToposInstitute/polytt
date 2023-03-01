@@ -67,6 +67,20 @@ struct
   let env () =
     Eff.read ()
 
+  let locals () =
+    let env = Eff.read () in
+    Yuujinchou.Trie.to_seq_values env.local_names
+    |> Seq.map fst
+    |> List.of_seq
+
+  let ppenv () =
+    let env = Eff.read () in
+    env.ppenv
+
+  let size () =
+    let env = Eff.read () in
+    env.size
+
   let resolve path =
     let env = Eff.read () in
     Yuujinchou.Trie.find_singleton path env.local_names
@@ -109,6 +123,17 @@ struct
 
   let run ~loc k =
     Eff.run ~env:loc k
+end
+
+module Hole =
+struct
+  module Eff = Algaeff.State.Make(struct type nonrec state = int end)
+  let fresh () =
+    let n = Eff.get () in
+    Eff.set (n + 1);
+    n
+
+  let run k = Eff.run ~init:0 k
 end
 
 let quote ~tp tm =

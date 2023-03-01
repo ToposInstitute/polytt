@@ -64,6 +64,8 @@ struct
     match hd1, hd2 with
     | D.Var lvl1, D.Var lvl2 when lvl1 = lvl2 ->
       ()
+    | D.Hole (_, n) , D.Hole (_, m) when n = m ->
+      ()
     | _ -> raise Unequal
 
   and equate_frm frm1 frm2 =

@@ -25,6 +25,7 @@ type syn =
   | Label of labelset * label (* .foo *)
   | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
   | Univ (* A *)
+  | Hole of syn * int
 
 and value =
   | Neu of value * neu
@@ -43,6 +44,7 @@ and neu = { hd : hd; spine : frame bwd }
 
 and hd =
   | Var of int
+  | Hole of value * int
 
 and frame =
   | Ap of { tp : value; arg : value }

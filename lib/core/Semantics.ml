@@ -54,6 +54,8 @@ struct
       do_cases (eval mot) (List.map (fun (l, v) -> l, eval v) cases) (eval case)
     | S.Univ ->
       D.Univ
+    | S.Hole (tp, n) ->
+      D.hole (eval tp) n
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with

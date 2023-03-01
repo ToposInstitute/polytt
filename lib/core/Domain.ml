@@ -27,6 +27,7 @@ and neu = Data.neu = { hd : hd; spine : frame bwd }
 
 and hd = Data.hd =
   | Var of int
+  | Hole of tp * int
 
 and frame = Data.frame =
   | Ap of { tp : t; arg : t }
@@ -43,3 +44,6 @@ let push_frm {hd; spine} frm =
 
 let var tp lvl =
   Data.Neu (tp, { hd = Var lvl; spine = Emp })
+
+let hole tp n =
+  Data.Neu (tp, { hd = Hole (tp, n); spine = Emp })

@@ -1,4 +1,5 @@
 open Asai
+open Bwd
 open Core
 open Errors
 open TermBuilder
@@ -12,6 +13,10 @@ module Cell : sig
     tp : D.tp;
     value : D.t;
   }
+
+  val name : t -> Ident.t
+  val tp : t -> D.t
+  val value : t -> D.t
 end
 
 module Globals : sig
@@ -25,6 +30,9 @@ module Locals : sig
   val run_top : (unit -> 'a) -> 'a
   val resolve : Ident.path -> Cell.t option
   val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
+  val locals : unit -> Cell.t list
+  val ppenv : unit -> Ident.t bwd
+  val size : unit -> int
 end
 
 module Error : sig
@@ -33,6 +41,10 @@ module Error : sig
   val run : loc:Span.t -> (unit -> 'a) -> 'a
 end
 
+module Hole : sig
+  val run : (unit -> 'a) -> 'a
+  val fresh : unit -> int
+end
 
 val quote : tp:D.tp -> D.t -> S.t
 val equate : tp:D.tp -> D.t -> D.t -> unit

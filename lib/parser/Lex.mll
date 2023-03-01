@@ -117,6 +117,8 @@ and real_token = parse
     { HASH }
   | "="
     { EQUALS }
+  | "?"
+    { QUESTION }
   (* Delimiters *)
   | '('
     { LPR }

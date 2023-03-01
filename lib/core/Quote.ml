@@ -76,6 +76,8 @@ struct
     match hd with
     | D.Var lvl ->
       S.Var (quote_lvl lvl)
+    | D.Hole (tp, n) ->
+      S.Hole (quote D.Univ tp, n)
 
   and quote_frm tm frm =
     match frm with

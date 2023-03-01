@@ -28,3 +28,4 @@ and t_ =
   | Lit of int
   | Univ
   | Anno of t * t (* (t : ty) *)
+  | Hole

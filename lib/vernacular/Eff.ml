@@ -24,4 +24,5 @@ let run k =
     Scope.resolve path
     |> Option.map fst
   in
-  Refiner.Eff.Globals.run ~resolve k
+  Refiner.Eff.Globals.run ~resolve @@ fun () ->
+  Refiner.Eff.Hole.run k

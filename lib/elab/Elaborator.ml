@@ -29,6 +29,9 @@ struct
       Nat.lit n
     | CS.Univ ->
       Univ.formation
+    | CS.Hole ->
+      (* call refiner hole rule *)
+      Hole.unleash
     | _ ->
       T.Chk.syn (syn tm)
 
@@ -54,6 +57,8 @@ struct
       Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
     | CS.Anno (tm, tp) ->
       T.Syn.ann (chk tm) (chk tp)
+    | CS.Hole ->
+      T.Error.error `HoleInSynth "Cannot synthesize type of hole."
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 
