@@ -3,15 +3,12 @@ open Eff
 open Errors
 
 let formation ?(name = `Anon) base_tac fam_tac =
-  Chk.rule @@ function
-  | D.Univ ->
+  Syn.rule @@ fun () ->
     let base = Chk.run base_tac D.Univ in
     let fam = Var.abstract ~name (eval base) @@ fun a ->
       Chk.run (fam_tac a) D.Univ
     in
-    S.Pi(name, base, fam)
-  | _ ->
-    Error.error `TypeError "Expected element of type."
+    (D.Univ, S.Pi(name, base, fam))
 
 let intro ?(name = `Anon) tac =
   Chk.rule @@ function

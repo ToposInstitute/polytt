@@ -1,3 +1,3 @@
 open Tactic
 
-val formation : Chk.tac
+val formation : Syn.tac

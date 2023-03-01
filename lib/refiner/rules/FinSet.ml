@@ -12,12 +12,8 @@ type label = string
 type 'a labeled = (string * 'a) list
 
 let formation ls =
-  Chk.rule @@
-  function
-  | D.Univ ->
-    S.FinSet ls
-  | _ ->
-    Error.error `TypeError "Expected element of type."
+  Syn.rule @@ fun () ->
+    (D.Univ, S.FinSet ls)
 
 let label l =
   Chk.rule @@
@@ -28,9 +24,7 @@ let label l =
     Error.error `TypeError "Expected element of a finite set."
 
 let record cases_tac =
-  Chk.rule @@
-  function
-  | D.Univ ->
+  Syn.rule @@ fun () ->
     (* { a : Nat, b : bool } = (l : #{a,b}) -> { a = Nat, b = bool } l *)
     (* come up with the list of labels mentioned in the record type *)
     let ls = List.map fst cases_tac in
@@ -39,9 +33,7 @@ let record cases_tac =
     (* for each case, we check that it is a type *)
     let cases = List.map (fun (l, case_tac) -> l, Chk.run case_tac D.Univ) cases_tac in
     (* eta-expand *)
-    S.Pi (Ident.anon, S.FinSet ls, S.Cases (mot, cases, S.Var 0))
-  | _ ->
-    Error.error `TypeError "Expected element of type."
+    (D.Univ, S.Pi (Ident.anon, S.FinSet ls, S.Cases (mot, cases, S.Var 0)))
 
 let record_lit cases_tac =
   Chk.rule @@

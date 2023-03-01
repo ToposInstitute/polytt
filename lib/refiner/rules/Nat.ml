@@ -7,12 +7,8 @@ module D = Domain
 module S = Syntax
 
 let formation =
-  Chk.rule @@
-  function
-  | D.Univ ->
-    S.Nat
-  | _ ->
-    Error.error `TypeError "Expected element of ℕ."
+  Syn.rule @@ fun () ->
+    (D.Univ, S.Nat)
 
 let zero =
   Chk.rule @@

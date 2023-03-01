@@ -10,7 +10,7 @@ def double : ℕ → ℕ :=
   λ n → elim (λ _ → ℕ) 0 (λ _ → λ n → succ (succ n)) n
 
 def add : ℕ → ℕ → ℕ :=
-  λ m n → elim (λ _ → ℕ) n (λ _ n → succ n) m 
+  λ m n → elim (λ _ → ℕ) n (λ _ n → succ n) m
 
 def sigma : (A : Type) → (A → Type) → Type :=
   λ A → λ B → (x : A) × B x
@@ -21,13 +21,17 @@ def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
 def projl : (ℕ × ℕ) → ℕ :=
   λ x → fst x
 
-def Bool : Type := #{ true, false }
+def Bool := #{ true, false }
 
-def Record : Type := { true : ℕ, false : Bool }
+def Unit := (t : #{}) -> ({} : #{} -> Type) t
 
-def record_lit : Record := { true = 0, false = .true }
+def unit : Unit := {}
 
-def Anything : Type := (T : Type) * T
+def ARecord := { true : ℕ, false : Bool }
+
+def record_lit : ARecord := { true = 0, false = .true }
+
+def Anything := (T : Type) * T
 
 def let-example :=
   let n = 5 : ℕ

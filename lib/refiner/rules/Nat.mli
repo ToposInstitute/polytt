@@ -1,6 +1,6 @@
 open Tactic
 
-val formation : Chk.tac
+val formation : Syn.tac
 val zero: Chk.tac
 val succ : Chk.tac -> Chk.tac
 val lit : int -> Chk.tac

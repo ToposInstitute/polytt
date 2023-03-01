@@ -2,22 +2,19 @@ open Errors
 open Tactic
 
 let formation ?(name = `Anon) base_tac fam_tac =
-  Chk.rule @@ function
-  | D.Univ ->
+  Syn.rule @@ fun () ->
     let base = Chk.run base_tac D.Univ in
     let fam = Var.abstract ~name (eval base) @@ fun a ->
       Chk.run (fam_tac a) D.Univ
     in
-    S.Sigma(name, base, fam)
-  | _ ->
-    Error.error `TypeError "Expected element of type."
+    (D.Univ, S.Sigma(name, base, fam))
 
 let intro tac_fst tac_snd =
   Chk.rule @@ function
   | D.Sigma (_, a, clo) ->
     let t1 = Chk.run tac_fst a in
     let t2 = Chk.run tac_snd (inst_clo clo (eval t1)) in
-    S.Pair (t1, t2) 
+    S.Pair (t1, t2)
   | _ ->
     Error.error `TypeError "Expected element of Σ."
 
