@@ -15,7 +15,7 @@ def sigma : (A : type) → (A → type) → type :=
   λ A → λ B → (x : A) × B x
 
 def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
-  λ n m → (n , m)
+  λ n m → (n , m : ℕ)
 
 def projl : (ℕ × ℕ) → ℕ :=
   λ x → fst x

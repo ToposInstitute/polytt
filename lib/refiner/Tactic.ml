@@ -25,14 +25,16 @@ and Syn : sig
   type tac
   val rule : (unit -> D.tp * S.t) -> tac
   val run : tac -> D.tp * S.t
-  val ann : Chk.tac -> D.tp -> tac
+  val ann : Chk.tac -> Chk.tac -> tac
 end =
 struct
   type tac = unit -> D.tp * S.t
   let rule k = k
   let run k = k ()
-  let ann chk tp =
+  let ann chk tp_tac =
     rule @@ fun () ->
+    let tp = Chk.run tp_tac D.Univ in
+    let tp = eval tp in
     tp, Chk.run chk tp
 end
 

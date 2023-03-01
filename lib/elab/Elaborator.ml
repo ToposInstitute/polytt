@@ -1,6 +1,7 @@
 module CS = Syntax
 module D = Core.Domain
 module S = Core.Syntax
+module Sem = Core.Semantics
 
 open Refiner
 module T = Tactic
@@ -51,6 +52,8 @@ struct
       Sigma.fst (syn tm)
     | CS.NatElim (mot, zero, succ, scrut) ->
       Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
+    | CS.Anno (tm, tp) ->
+      T.Syn.ann (chk tm) (chk tp)
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 

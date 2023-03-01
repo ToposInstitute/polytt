@@ -32,6 +32,7 @@ let ap_or_atomic =
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
+%right COLON
 %right RIGHT_ARROW TIMES
 
 %start <Vernacular.Syntax.cmd list> commands
@@ -114,6 +115,8 @@ plain_term:
     { CS.Label label }
   | LBR; labels = separated_nonempty_list(COMMA, labeled_field(COLON)); RBR;
     { CS.Record labels }
+  | tm = term; COLON; ty = term;
+    { CS.Anno (tm, ty) }
   | tm = arrow
     { tm }
 

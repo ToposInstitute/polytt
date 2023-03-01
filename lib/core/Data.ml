@@ -18,12 +18,12 @@ type syn =
   | Fst of syn
   | Snd of syn
   | Nat (* ℕ *)
-  | Zero
-  | Succ of syn
+  | Zero (* zero *)
+  | Succ of syn (* succ n *)
   | NatElim of { mot : syn; zero : syn; succ : syn; scrut : syn }
-  | FinSet of labelset
-  | Label of labelset * label
-  | Cases of syn * syn labeled * syn
+  | FinSet of labelset (* #{ foo, bar } *)
+  | Label of labelset * label (* .foo *)
+  | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
   | Univ (* A *)
 
 and value =

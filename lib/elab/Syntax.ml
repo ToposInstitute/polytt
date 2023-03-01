@@ -27,3 +27,4 @@ and t_ =
   | RecordLit of t labeled
   | Lit of int
   | Univ
+  | Anno of t * t (* (t : ty) *)
