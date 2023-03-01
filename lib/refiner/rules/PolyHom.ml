@@ -55,8 +55,35 @@ let base f_tac x_tac =
   let f_tp, f = Syn.run f_tac in
   match f_tp with
   | D.PolyHom (p, q) ->
-    let qp = quote ~tp:D.Poly p in
     let x = Chk.run x_tac (do_base p) in
-    do_base q, S.HomBase (qp, f, x)
+    do_base q, S.HomBase (f, x)
   | _ ->
     Error.error `TypeError "Poly base must be applied to a poly hom."
+
+let fib f_tac base_tac fib_tac =
+  Syn.rule @@ fun () ->
+  let f_tp, f = Syn.run f_tac in
+  match f_tp with
+  | D.PolyHom (p, q) ->
+    let vf = eval f in
+    let base = Chk.run base_tac (do_base p) in
+    let vbase = eval base in
+    let fib_tp =
+      graft_value @@
+      Graft.value q @@ fun q ->
+      Graft.value vf @@ fun f ->
+      Graft.value vbase @@ fun base ->
+      Graft.build @@
+      TB.fib q (TB.hom_base f base)
+    in
+    let fib = Chk.run fib_tac fib_tp in
+    let tp =
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value vbase @@ fun base ->
+      Graft.build @@
+      TB.fib p base
+    in
+    tp, S.HomFib (f, base, fib)
+  | _ ->
+    Error.error `TypeError "Poly fib must be applied to a poly hom."

@@ -32,8 +32,8 @@ type syn =
   | PolyHom of syn * syn
   | PolyHomIntro of syn * syn
   | PolyHomLam of Ident.t * syn
-  | HomBase of syn * syn * syn
-  | HomFib of syn * syn * syn * syn
+  | HomBase of syn * syn
+  | HomFib of syn * syn * syn
   | Tensor of syn * syn
   | TensorIntro of syn * syn
   | TensorElim of syn * syn * syn
@@ -77,8 +77,8 @@ and frame =
   | Cases of { mot : value; cases : (string * value) list }
   | Base
   | Fib of { tp : value; base : value }
-  | HomBase of { poly : value; base : value }
-  | HomFib of { poly : value; base : value; fib : value }
+  | HomBase of { p : value; base : value }
+  | HomFib of { p : value; base : value; fib : value }
   | TensorElim of { p : value; q : value; mot : value; bdy : clo }
 
 and env = value bwd

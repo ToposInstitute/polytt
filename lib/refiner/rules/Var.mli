@@ -1,4 +1,3 @@
-open Core
 open Tactic
 
 val local : Cell.t -> Syn.tac

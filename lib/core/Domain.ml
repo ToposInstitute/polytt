@@ -46,8 +46,8 @@ and frame = Data.frame =
   | Cases of { mot : t; cases : t labeled }
   | Base
   | Fib of { tp : t; base : t }
-  | HomBase of { poly : t; base : t }
-  | HomFib of { poly : t; base : t; fib : t }
+  | HomBase of { p : t; base : t }
+  | HomFib of { p : t; base : t; fib : t }
   | TensorElim of { p : t; q : t; mot : t; bdy : clo }
 
 and env = t bwd

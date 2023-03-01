@@ -1,4 +1,4 @@
 (library
   (name Core)
-  (libraries polytt.errors bwd algaeff yuujinchou)
+  (libraries polytt.errors bwd algaeff containers yuujinchou)
   (public_name polytt.core))

@@ -71,10 +71,10 @@ struct
       D.PolyHomIntro (eval fwd, eval bwd)
     | S.PolyHomLam (nm, tm) ->
       D.PolyHomLam (nm, clo tm)
-    | S.HomBase (p, f, x) ->
-      do_hom_base (eval p) (eval f) (eval x)
-    | S.HomFib (p, f, x, qx) ->
-      failwith "FIXME: hom-fib"
+    | S.HomBase (f, x) ->
+      do_hom_base (eval f) (eval x)
+    | S.HomFib (f, x, qx) ->
+      do_hom_fib (eval f) (eval x) (eval qx)
     | S.Tensor (p, q) ->
       D.Tensor (eval p, eval q)
     | S.TensorIntro (p, q) ->
@@ -88,6 +88,12 @@ struct
     | S.Frown (p, q, f) ->
       D.Frown (eval p, eval q, eval f)
 
+  (** Evaluate the body of a poly lambda 'P ⇒ Q' as a map 'base P → base Q'.
+      The 'base P' value is bound as the final element of the context.
+
+      As this is the "forward mode" of poly hom evaluation, the general pattern
+      is to take introduction forms to introduction forms, and elimination forms
+      to elimination forms. *)
   and eval_hom_base f =
     match f with
     | S.Var ix ->
@@ -99,7 +105,59 @@ struct
       (* Tensor is a positive type, whereas sigma is negative, which leads to this oddity. *)
       append [do_fst scrut; do_snd scrut] @@ fun () ->
       eval_hom_base bdy
-    | _ -> invalid_arg "bad do_eval_hom_base"
+    | _ ->
+      invalid_arg "bad do_eval_hom_base"
+
+  (** Evaluate the body of a poly lambda 'f : P ⇒ Q' as a map
+      '(x : base P) → fib Q (hom-base f x) → base Q'.
+      We bind the 'base P' and 'fib Q (hom-base f x)' variables
+      as a /pair/ in the environment. This makes it easier to handle
+      the calling other poly-homs that come from the ambient environment,
+      and also clarifies the variable rule.
+
+      As this is the "backward mode" of poly hom evaluation, the general pattern
+      is to take introduction forms to /elimination/ forms, and elimination forms
+      to introduction forms.
+
+
+      > def swap : (P : poly) → (Q : poly) → (P ⊗ Q ⇒ Q ⊗ P) :=
+      >  λ P Q → λ pq → ⊗-elim (Q ⊗ P) (λ p q → (q , p)) pq
+  *)
+  and dispatch_eval_hom_fib vars f fib =
+    match f with
+    | S.Var ix ->
+      Debug.print "Writing to cell %d@." ix;
+      CCVector.set vars (CCVector.length vars - ix - 1) (Some fib);
+      var ix
+    | S.TensorIntro (p, q) ->
+      let p_base = dispatch_eval_hom_fib vars p (do_fst fib) in
+      let q_base = dispatch_eval_hom_fib vars q (do_snd fib) in
+      D.Pair (p_base, q_base)
+    | S.TensorElim (_, bdy, scrut) ->
+      (* Annoying time/space trade-off. To be able to compute the reverse direction
+         of the body of a tensor elim, we need to know the base value of scrut to
+         be able to bind vars in the environment. This does lead to a bit of duplicate
+         computation when we compute the fibre of scrut. *)
+      let scrut_base = eval_hom_base scrut in
+      CCVector.push vars None;
+      CCVector.push vars None;
+      Debug.print "Pushed cells, have %d cells now.@." (CCVector.length vars);
+      let bdy_base = append [do_fst scrut_base; do_snd scrut_base] @@ fun () ->
+        dispatch_eval_hom_fib vars bdy fib
+      in
+      let q_fib = Option.get @@ CCVector.pop_exn vars in
+      let p_fib = Option.get @@ CCVector.pop_exn vars in
+      Debug.print "Popped cells, have %d cells now.@." (CCVector.length vars);
+      (* We've already computed scrut_base, so we discard it. *)
+      let _ = dispatch_eval_hom_fib vars scrut (D.Pair (p_fib, q_fib)) in
+      bdy_base
+    | _ ->
+      invalid_arg "bad do_eval_hom_fib"
+
+  and eval_hom_fib f fib =
+    let vars = CCVector.make 1 None in
+    let _ = dispatch_eval_hom_fib vars f fib in
+    Option.get @@ CCVector.pop_exn vars
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with
@@ -218,16 +276,27 @@ struct
     | _ ->
       invalid_arg "bad do_fib"
 
-  and do_hom_base poly f x =
+  and do_hom_base f x =
     match f with
     | D.PolyHomIntro (fwd, _) ->
       do_ap fwd x
     | D.PolyHomLam (_, clo) ->
-      Debug.print "Doing the cool eval@.";
       inst_hom_clo_base clo x
-    | D.Neu (D.PolyHom (_, q), neu) ->
+    | D.Neu (D.PolyHom (p, q), neu) ->
       let q_base = do_base q in
-      D.Neu (q_base, D.push_frm neu (D.HomBase { poly; base = x }))
+      D.Neu (q_base, D.push_frm neu (D.HomBase { p; base = x }))
+    | _ ->
+      invalid_arg "bad do_hom_base"
+
+  and do_hom_fib f x qx =
+    match f with
+    | D.PolyHomIntro (_, bwd) ->
+      do_aps bwd [x; qx]
+    | D.PolyHomLam (_, clo) ->
+      inst_hom_clo_fib clo x qx
+    | D.Neu (D.PolyHom (p, q), neu) ->
+      let q_base = do_base q in
+      D.Neu (q_base, D.push_frm neu (D.HomFib { p; base = x; fib = qx }))
     | _ ->
       invalid_arg "bad do_hom_base"
 
@@ -250,6 +319,10 @@ struct
     | D.Clo { env; body } ->
       Eff.run ~env:(env #< v) (fun () -> eval_hom_base body)
 
+  and inst_hom_clo_fib clo base fib =
+    match clo with
+    | D.Clo { env; body } ->
+      Eff.run ~env:(env #< base) (fun () -> eval_hom_fib body fib)
 
   and inst_clo2 clo v1 v2 =
     match clo with

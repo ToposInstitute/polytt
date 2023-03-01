@@ -69,6 +69,12 @@ struct
 
   let fib p x size =
     S.Fib (p size, x size)
+
+  let hom_base f base size =
+    S.HomBase (f size, base size)
+
+  let hom_fib f base fib size =
+    S.HomFib (f size, base size, fib size)
 end
 
 module Graft =

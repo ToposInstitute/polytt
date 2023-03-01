@@ -26,7 +26,7 @@ and t_ =
   | PolyHomIntro of t * t
   | PolyHomLam of Ident.t * t
   | HomBase of t * t
-  | HomFib of t * t * t * t
+  | HomFib of t * t * t
   | Tensor of t * t
   | TensorIntro of t * t
   | TensorElim of Ident.t * Ident.t * t * t * t

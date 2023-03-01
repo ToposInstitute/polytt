@@ -109,8 +109,8 @@ plain_term:
     { CS.Fib (p, x) }
   | HOM_BASE; f = atomic_term; x = atomic_term
     { CS.HomBase (f, x) }
-  | HOM_FIB;  p = atomic_term; f = atomic_term; x = atomic_term; qx = atomic_term
-    { CS.HomFib (p, f, x, qx) }
+  | HOM_FIB; f = atomic_term; x = atomic_term; qx = atomic_term
+    { CS.HomFib (f, x, qx) }
   | p = atomic_term; TENSOR; q = atomic_term
     { CS.Tensor (p, q) }
   | TENSOR_ELIM; mot = atomic_term; LPR; LAMBDA; p = name; q = name; RIGHT_ARROW; bdy = term; RPR; scrut = atomic_term

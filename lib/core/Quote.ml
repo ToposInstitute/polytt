@@ -1,6 +1,4 @@
 open Bwd
-open Errors
-
 module S = Syntax
 module D = Domain
 module Sem = Semantics
@@ -159,8 +157,8 @@ struct
       S.Base tm
     | D.Fib {tp; base} ->
       S.Fib (tm, quote tp base)
-    | D.HomBase {poly; base} ->
-      S.HomBase (quote D.Poly poly, tm, quote (Sem.do_base poly) base)
+    | D.HomBase {p; base} ->
+      S.HomBase (tm, quote (Sem.do_base p) base)
     | D.TensorElim {p; q; mot; bdy} ->
       bind p @@ fun var_p ->
       bind q @@ fun var_q ->

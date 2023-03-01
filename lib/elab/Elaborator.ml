@@ -87,6 +87,8 @@ struct
       Poly.fib (chk p) (chk x)
     | CS.HomBase (f, x) ->
       PolyHom.base (syn f) (chk x)
+    | CS.HomFib (f, base, fib) ->
+      PolyHom.fib (syn f) (chk base) (chk fib)
     | CS.TensorElim (p_name, q_name, mot, bdy, scrut) ->
       Tensor.elim ~p_name ~q_name (chk mot) (fun _ _ -> chk bdy) (syn scrut)
     | _ ->

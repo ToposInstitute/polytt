@@ -35,8 +35,8 @@ type t = Data.syn =
   | PolyHom of t * t
   | PolyHomIntro of t * t
   | PolyHomLam of Ident.t * t
-  | HomBase of t * t * t
-  | HomFib of t * t * t * t
+  | HomBase of t * t
+  | HomFib of t * t * t
   | Tensor of t * t
   | TensorIntro of t * t
   | TensorElim of t * t * t
@@ -195,11 +195,11 @@ let rec pp env =
     Format.fprintf fmt "λ %a → %a"
       Ident.pp name
       (pp (env #< name) (P.right_of arrow)) body
-  | HomBase (_, f, x) ->
+  | HomBase (f, x) ->
     Format.fprintf fmt "hom-base %a %a"
       (pp env (P.right_of juxtaposition)) f
       (pp env (P.right_of juxtaposition)) x
-  | HomFib (_, f, x, qx) ->
+  | HomFib (f, x, qx) ->
     Format.fprintf fmt "hom-fib %a %a %a"
       (pp env (P.right_of juxtaposition)) f
       (pp env (P.right_of juxtaposition)) x

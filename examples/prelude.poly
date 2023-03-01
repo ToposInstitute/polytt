@@ -39,7 +39,11 @@ def test : nyan ⇒ nyan ⊗ nyan :=
 
 #debug on
 
+-- (x : base P × base Q) → (fib Q (snd x) × fib P (fst x)) → fib P (fst x) × fib Q (snd x)
+
+-- 
 def swap : (P : poly) → (Q : poly) → (P ⊗ Q ⇒ Q ⊗ P) :=
   λ P Q pq → ⊗-elim (Q ⊗ P) (λ p q → (q , p)) pq
 
 #normalize hom-base (swap nyan nyan) (1 , 2)
+#normalize hom-fib (swap nyan nyan) (1 , 2) (2 , 3)
