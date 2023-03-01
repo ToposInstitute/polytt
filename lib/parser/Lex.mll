@@ -29,7 +29,7 @@ let commands =
 let keywords =
   make_table 0 [
     ("def", DEF);
-    ("type", TYPE);
+    ("Type", TYPE);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);
@@ -43,11 +43,11 @@ type span =
   {start : position;
    stop : position}
 
-let last_token lexbuf = 
+let last_token lexbuf =
   let tok = lexeme lexbuf in
   if tok = "" then None else Some tok
 
-let current_span lexbuf = 
+let current_span lexbuf =
   {start = lexbuf.lex_start_p; stop = lexbuf.lex_curr_p}
 
 }
@@ -70,7 +70,7 @@ let number =
   ['0'-'9']+
 
 let type =
-  "type" number
+  "Type" number
 
 (* Whitespace/comments *)
 rule line_comment kont = parse

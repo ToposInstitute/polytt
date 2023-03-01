@@ -65,6 +65,7 @@ let to_numeral =
 (** Precedence levels *)
 let atom = P.nonassoc 11
 let juxtaposition = P.left 10
+let star = P.right 4
 let arrow = P.right 3
 let equals = P.right 2
 
@@ -74,6 +75,7 @@ let classify_tm =
   | Univ -> atom
   | Var _ -> atom
   | Pi _ -> arrow
+  | Sigma (`Anon, _, _) -> star
   | Sigma _ -> arrow
   | Pair _ -> atom
   | Fst _ -> juxtaposition
@@ -122,7 +124,7 @@ let rec pp env =
     end
   | Pi (`Anon, a, b) -> Format.fprintf fmt "%a → %a" (pp env (P.left_of this)) a (pp (env #< `Anon) (P.right_of this)) b
   | Pi (nm, a, b) -> Format.fprintf fmt "(%a : %a) → %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
-  | Sigma (`Anon, a, b) -> Format.fprintf fmt "%a × %a" (pp env P.isolated) a (pp (env #< `Anon) (P.right_of this)) b
+  | Sigma (`Anon, a, b) -> Format.fprintf fmt "%a × %a" (pp env (P.left_of this)) a (pp (env #< `Anon) (P.right_of this)) b
   | Sigma (nm, a, b) -> Format.fprintf fmt "(%a : %a) × %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
   | Pair (a, b) -> Format.fprintf fmt "(%a , %a)" (pp env P.isolated) a (pp env P.isolated) b
   | Fst a -> Format.fprintf fmt "fst %a" (pp env (P.right_of this)) a
@@ -141,10 +143,10 @@ let rec pp env =
         Format.fprintf fmt "succ %a" (pp env (P.right_of juxtaposition)) n'
     end
   | NatElim r -> Format.fprintf fmt "nat-elim %a %a %a %a"(pp env (P.right_of this)) r.mot (pp env (P.right_of this)) r.zero (pp env (P.right_of this)) r.succ (pp env (P.right_of this)) r.scrut
-  | Univ -> Format.fprintf fmt "type"
+  | Univ -> Format.fprintf fmt "Type"
   | FinSet [] -> Format.fprintf fmt "#{}"
   | FinSet ls -> Format.fprintf fmt "#{ %a }" (pp_sep_list Format.pp_print_string) ls
-  | Label (_ls, l) -> Format.fprintf fmt "#%a" Format.pp_print_string l
+  | Label (_ls, l) -> Format.fprintf fmt ".%a" Format.pp_print_string l
   | Cases (_, [], case) -> Format.fprintf fmt "{} %a" (pp env (P.right_of this)) case
   | Cases (_, cases, case) -> Format.fprintf fmt "{ %a } %a" (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l (pp env P.isolated) v)) cases (pp env (P.right_of this)) case
   | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
