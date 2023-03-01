@@ -19,3 +19,9 @@ and t_ =
   | NatElim of t * t * t * t
   | Lit of int
   | Univ
+  | Poly
+  | Base of t
+  | Fib of t * t
+  | Tensor of t * t
+  | Tri of t * t
+  | Frown of t * t * t

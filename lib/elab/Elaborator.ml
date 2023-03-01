@@ -17,7 +17,7 @@ struct
     | CS.Sigma (name, a, b) ->
       Sigma.formation ~name (chk a) (fun _ -> chk b)
     | CS.Pair (a, b) ->
-      Sigma.intro (chk a) (chk b)
+      chk_pair a b
     | CS.Nat ->
       Nat.formation
     | CS.Zero ->
@@ -28,6 +28,14 @@ struct
       Nat.lit n
     | CS.Univ ->
       Univ.formation
+    | CS.Poly ->
+      Poly.formation
+    | CS.Tensor (p, q) ->
+      Tensor.formation (chk p) (chk q)
+    | CS.Tri (p, q) ->
+      Tri.formation (chk p) (chk q)
+    | CS.Frown (p, q, f) ->
+      Frown.formation (chk p) (chk q) (chk f)
     | _ ->
       T.Chk.syn (syn tm)
 
@@ -37,12 +45,19 @@ struct
     | name :: names ->
       Pi.intro ~name @@ fun _ -> chk_lams names tm
 
+  and chk_pair (a : CS.t) (b : CS.t) =
+    T.match_goal @@
+    function
+    | D.Sigma _ -> Sigma.intro (chk a) (chk b)
+    | D.Poly -> Poly.intro (chk a) (chk b)
+    | _ ->
+      T.Error.error `TypeError "Can only use pair notation to make a sigma or a poly."
+
   and syn (tm : CS.t) =
     T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.Var path ->
       syn_var path
-    (* R.Var.resolve path *)
     | CS.Ap (fn, args) ->
       List.fold_left (fun tac arg -> Pi.ap tac (chk arg)) (syn fn) args
     | CS.Fst tm ->
@@ -51,6 +66,10 @@ struct
       Sigma.fst (syn tm)
     | CS.NatElim (mot, zero, succ, scrut) ->
       Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
+    | CS.Base p ->
+      Poly.base (chk p)
+    | CS.Fib (p, x) ->
+      Poly.fib (chk p) (chk x)
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 

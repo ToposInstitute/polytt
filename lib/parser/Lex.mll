@@ -30,6 +30,9 @@ let keywords =
   make_table 0 [
     ("def", DEF);
     ("type", TYPE);
+    ("poly", POLY);
+    ("base", BASE);
+    ("fib", FIB);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);
@@ -101,6 +104,12 @@ and real_token = parse
     { RIGHT_ARROW }
   | "*" | "×"
     { TIMES }
+  | "⊗"
+    { TENSOR }
+  | "◁"
+    { TRI }
+  | "⌢["
+    { FROWN_LSQ }
   | ':'
      { COLON }
   | "::"

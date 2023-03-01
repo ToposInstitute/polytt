@@ -58,3 +58,8 @@ struct
     Locals.abstract ~name tp @@ fun value ->
     k {tp; value}
 end
+
+let match_goal k =
+  Chk.rule @@ fun goal ->
+  Chk.run (k goal) goal
+

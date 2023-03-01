@@ -23,6 +23,7 @@ let ap_or_atomic =
 %token FORALL LAMBDA
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
+%token POLY BASE FIB TENSOR TRI FROWN_LSQ
 (* Delimiters *)
 %token LPR RPR LSQ RSQ
 (* Keywords *)
@@ -95,14 +96,22 @@ plain_term:
     { CS.Sigma (name, base, fam) }
   | base = term; TIMES; fam = term
     { CS.Sigma (`Anon, base, fam) }
-  | LPR; t1 = term; COMMA; t2 = term; RPR
-    { CS.Pair (t1, t2) }
   | FST; tm = atomic_term
     { CS.Fst tm }
   | SND; tm = atomic_term
     { CS.Snd tm }
   | SUCC; tm = atomic_term
     { CS.Succ tm }
+  | BASE; p = atomic_term
+    { CS.Base p }
+  | FIB; p = atomic_term; x = atomic_term
+    { CS.Fib (p, x) }
+  | p = atomic_term; TENSOR; q = atomic_term
+    { CS.Tensor (p, q) }
+  | p = atomic_term; TRI; q = atomic_term
+    { CS.Tri (p, q) }
+  | p = atomic_term; FROWN_LSQ; f = term; RSQ; q = atomic_term
+    { CS.Frown (p, q, f) }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
   | tm = arrow
@@ -123,6 +132,8 @@ atomic_term:
 plain_atomic_term:
   | LPR; tm = plain_term; RPR
     { tm }
+  | LPR; t1 = term; COMMA; t2 = term; RPR
+    { CS.Pair (t1, t2) }
   | path = path
     { CS.Var path }
   | NAT
@@ -133,3 +144,5 @@ plain_atomic_term:
     { CS.Lit n }
   | TYPE
     { CS.Univ }
+  | POLY
+    { CS.Poly }

@@ -62,6 +62,14 @@ struct
       S.Univ
     | _, D.Poly ->
       S.Poly
+    | _, D.PolyIntro (base, fib) ->
+      let fib_tp =
+        Sem.graft_value @@
+        Graft.value base @@ fun base ->
+        Graft.build @@
+        TB.pi base @@ fun _ -> TB.univ
+      in
+      S.PolyIntro (quote D.Univ base, quote fib_tp fib)
     | _, D.Tensor (p, q) ->
       S.Tensor (quote D.Poly p, quote D.Poly q)
     | _, D.Tri (p, q) ->

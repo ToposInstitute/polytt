@@ -27,20 +27,12 @@ let intro base_tac fib_tac =
 
 let base p_tac =
   Syn.rule @@ fun () ->
-  let (p_tp, p) = Syn.run p_tac in
-  match p_tp with
-  | D.Poly ->
-    D.Univ, S.Base p
-  | _ ->
-    Error.error `TypeError "base must eliminate out of a poly."
+  let p = Chk.run p_tac D.Poly in
+  D.Univ, S.Base p
 
 let fib p_tac x_tac =
   Syn.rule @@ fun () ->
-  let (p_tp, p) = Syn.run p_tac in
-  match p_tp with
-  | D.Poly ->
-    let vp = eval p in
-    let x = Chk.run x_tac (do_base vp) in
-    D.Univ, S.Fib (p, x)
-  | _ ->
-    Error.error `TypeError "base must eliminate out of a poly."
+  let p = Chk.run p_tac D.Poly in
+  let vp = eval p in
+  let x = Chk.run x_tac (do_base vp) in
+  D.Univ, S.Fib (p, x)

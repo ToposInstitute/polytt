@@ -17,7 +17,21 @@ def sigma : (A : type) → (A → type) → type :=
 def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
   λ n m → (n , m)
 
+def p : poly :=
+  (ℕ, λ _ → ℕ)
+
 def projl : (ℕ × ℕ) → ℕ :=
   λ x → fst x
 
 #normalize double 1000
+
+def nyan : poly :=
+  (ℕ , λ _ → ℕ)
+
+-- #normalize base (nyan ⊗ (nyan ◁ (nyan ⌢[ id ℕ ] nyan))) 
+
+#normalize base (nyan ⌢[ id ℕ ] nyan)
+#normalize base (nyan ◁ nyan)
+#normalize base (nyan ⊗ nyan)
+#normalize fib (nyan ◁ nyan) (2 , λ _ → 3)
+#normalize fib (nyan ⌢[ id ℕ ] nyan) (2 , 3)
