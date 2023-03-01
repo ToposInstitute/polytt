@@ -64,7 +64,8 @@ struct
     | D.Neu (Pi(_t, a, clo), neu) ->
       let fib = inst_clo clo arg in
       D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
-    | _ ->
+    | d ->
+      Debug.print "Tried to do_ap against %a@." D.dump d;
       invalid_arg "bad do_ap"
 
   and do_aps f args =
@@ -90,13 +91,15 @@ struct
       invalid_arg "bad do_snd"
 
   and do_cases mot cases case =
-    match case with
-    | D.Label (_, l) ->
+    match mot, case with
+    | _, D.Label (_, l) ->
       MS.find l (MS.of_seq (List.to_seq cases))
-    | D.Neu (D.FinSet _, neu) as n ->
-      let fib = do_ap mot n in
+    | (D.Pi (_, _, clo) as p), (D.Neu (D.FinSet _, neu) as n) ->
+      Debug.print "do_cases %a %a@." D.dump p D.dump n;
+      let fib = n in
       D.Neu (fib, D.push_frm neu (D.Cases { mot; cases }))
-    | _ ->
+    | _, d ->
+      Debug.print "Tried to do_cases against %a@." D.dump d;
       invalid_arg "bad do_cases"
 
   and do_nat_elim mot zero succ scrut =

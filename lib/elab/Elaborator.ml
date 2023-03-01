@@ -32,6 +32,14 @@ struct
     | CS.Hole ->
       (* call refiner hole rule *)
       Hole.unleash
+    | CS.FinSet ls ->
+      FinSet.formation ls
+    | CS.Label l ->
+      FinSet.label l
+    | CS.Record cases ->
+      FinSet.record (List.map (fun (l, v) -> l, chk v) cases)
+    | CS.RecordLit cases ->
+      FinSet.record_lit (List.map (fun (l, v) -> l, chk v) cases)
     | _ ->
       T.Chk.syn (syn tm)
 

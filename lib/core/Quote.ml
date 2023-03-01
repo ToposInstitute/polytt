@@ -32,17 +32,17 @@ struct
       in
       S.Lam(nm, body)
     | _, D.Pi (nm, a, clo) ->
-      let a = quote D.Univ a in
-      let b = bind D.Univ @@ fun arg ->
+      let qa = quote D.Univ a in
+      let b = bind a @@ fun arg ->
         quote D.Univ (Sem.inst_clo clo arg)
       in
-      S.Pi (nm, a, b)
+      S.Pi (nm, qa, b)
     | _, D.Sigma (nm, a, clo) ->
-      let a = quote D.Univ a in
-      let b = bind D.Univ @@ fun arg ->
+      let qa = quote D.Univ a in
+      let b = bind a @@ fun arg ->
         quote D.Univ (Sem.inst_clo clo arg)
       in
-      S.Sigma (nm, a, b)
+      S.Sigma (nm, qa, b)
     | D.Sigma (_, a, tp_clo), D.Pair (v1, v2) ->
       let t1 = quote a v1 in
       let t2 = quote (Sem.inst_clo tp_clo v1) v2 in
