@@ -26,6 +26,10 @@ type syn =
   | Label of labelset * label (* .foo *)
   | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
   | Univ (* A *)
+  | Poly
+  | PolyIntro of syn * syn
+  | Base of syn
+  | Fib of syn * syn
   | Hole of syn * int
 
 and value =
@@ -40,6 +44,8 @@ and value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
+  | Poly
+  | PolyIntro of value * clo
 
 and neu = { hd : hd; spine : frame bwd }
 
@@ -53,6 +59,18 @@ and frame =
   | Snd
   | NatElim of { mot : value; zero : value; succ : value }
   | Cases of { mot : value; cases : (string * value) list }
+  | Base
+  | Fib of { base : value; value : value }
+
+(** {1 Instructions} *)
+and instr =
+  | Const of { out_addr : int; value : value }
+  (** Write [value] to [out_addr] *)
+  | Ap of { out_addr : int; in_addr : int; fn : value }
+  (** Read a value from [in_addr], apply [fn] to it,
+      and write the resulting value to [out_addr] *)
+  | Pair of { out_addr : int; fst_addr : int; snd_addr : int; }
+  (** Read a pair of values from [fst_addr] and [snd_addr], and write their pair to [out_addr] *)
 
 and env = value bwd
 and clo = Clo of { env : env; body : syn }

@@ -60,6 +60,20 @@ struct
       S.Succ (quote D.Nat n)
     | _, D.Univ ->
       S.Univ
+    | _, D.Poly ->
+      S.Poly
+    | D.Poly, D.PolyIntro (vbase, vfib) ->
+      let base = quote D.Univ vbase in
+      let fib = bind vbase @@ fun arg ->
+        quote D.Univ (Sem.inst_clo vfib arg)
+      in
+      S.PolyIntro (base, fib)
+    | D.Poly, v ->
+      let base = Sem.do_base v in
+      let qbase = quote D.Univ base in
+      let fib = bind base @@ fun i ->
+        quote D.Univ (Sem.do_fib v i)
+      in S.PolyIntro (qbase, fib)
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->
@@ -109,6 +123,10 @@ struct
       let ls = List.map fst cases in
       let quote_key (l, v) = l, quote (Sem.do_ap mot (D.Label (ls, l))) v in
       S.Cases (quote (Sem.graft_value (Graft.build (TB.pi (TB.finset ls) (fun _ -> TB.univ)))) mot, List.map quote_key cases, tm)
+    | D.Base ->
+      S.Base tm
+    | D.Fib {base; value} ->
+      S.Fib (tm, quote base value)
 end
 
 let quote ~size ~tp v =

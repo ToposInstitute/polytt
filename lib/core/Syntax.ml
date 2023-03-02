@@ -28,6 +28,10 @@ type t = Data.syn =
   | Label of labelset * label
   | Cases of t * t labeled * t
   | Univ
+  | Poly
+  | PolyIntro of t * t
+  | Base of t
+  | Fib of t * t
   | Hole of t * int
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
@@ -53,6 +57,19 @@ let rec dump fmt =
   | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
   | Cases (mot, cases, case) -> Format.fprintf fmt "cases[%a, %a, %a]" dump mot (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
+  | Poly ->
+    Format.fprintf fmt "poly"
+  | PolyIntro (base, fib) ->
+    Format.fprintf fmt "poly-intro[%a, %a]"
+      dump base
+      dump fib
+  | Base p ->
+    Format.fprintf fmt "base[%a]"
+      dump p
+  | Fib (p, i) ->
+    Format.fprintf fmt "fib[%a, %a]"
+      dump p
+      dump i
   | Hole (tp, n) -> Format.fprintf fmt "hole[%a, %d]" dump tp n
 
 let to_numeral =
@@ -75,13 +92,17 @@ let equals = P.right 2
 let classify_tm =
   function
   | Univ -> atom
+  | Poly -> atom
   | Var _ -> atom
   | Pi _ -> arrow
   | Sigma (`Anon, _, _) -> star
   | Sigma _ -> arrow
   | Pair _ -> atom
+  | PolyIntro _ -> atom
   | Fst _ -> juxtaposition
   | Snd _ -> juxtaposition
+  | Base _ -> juxtaposition
+  | Fib _ -> juxtaposition
   | Lam _ -> arrow
   | Let _ -> atom
   | Ap _ -> juxtaposition
@@ -125,34 +146,94 @@ let rec pp env =
       with Failure _ ->
         Format.fprintf fmt "![bad index %d]!" i
     end
-  | Pi (`Anon, a, b) -> Format.fprintf fmt "%a → %a" (pp env (P.left_of this)) a (pp (env #< `Anon) (P.right_of this)) b
-  | Pi (nm, a, b) -> Format.fprintf fmt "(%a : %a) → %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
-  | Sigma (`Anon, a, b) -> Format.fprintf fmt "%a × %a" (pp env (P.left_of this)) a (pp (env #< `Anon) (P.right_of this)) b
-  | Sigma (nm, a, b) -> Format.fprintf fmt "(%a : %a) × %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
-  | Pair (a, b) -> Format.fprintf fmt "(%a , %a)" (pp env P.isolated) a (pp env P.isolated) b
-  | Fst a -> Format.fprintf fmt "fst %a" (pp env (P.right_of this)) a
-  | Snd a -> Format.fprintf fmt "snd %a" (pp env (P.right_of this)) a
+  | Pi (`Anon, a, b) ->
+    Format.fprintf fmt "%a → %a"
+      (pp env (P.left_of this)) a
+      (pp (env #< `Anon) (P.right_of this)) b
+  | Pi (nm, a, b) ->
+    Format.fprintf fmt "(%a : %a) → %a"
+      Ident.pp nm
+      (pp env P.isolated) a
+      (pp (env #< nm) (P.right_of this)) b
+  | Sigma (`Anon, a, b) ->
+    Format.fprintf fmt "%a × %a"
+      (pp env (P.left_of this)) a
+      (pp (env #< `Anon) (P.right_of this)) b
+  | Sigma (nm, a, b) ->
+    Format.fprintf fmt "(%a : %a) × %a"
+      Ident.pp nm
+      (pp env P.isolated) a
+      (pp (env #< nm) (P.right_of this)) b
+  | Pair (a, b) ->
+    Format.fprintf fmt "(%a , %a)"
+      (pp env P.isolated) a
+      (pp env P.isolated) b
+  | Fst a ->
+    Format.fprintf fmt "fst %a"
+      (pp env (P.right_of this)) a
+  | Snd a ->
+    Format.fprintf fmt "snd %a"
+      (pp env (P.right_of this)) a
   | Lam (nm, t) ->
     let (env , nms, body) = collect_lams env [] (Lam (nm, t)) in
-    Format.fprintf fmt "λ %a → %a" (pp_sep_list ~sep:" " Ident.pp) nms  (pp env (P.right_of this)) body
+    Format.fprintf fmt "λ %a → %a"
+      (pp_sep_list ~sep:" " Ident.pp) nms
+      (pp env (P.right_of this)) body
   | Let (nm, t1, t2) -> 
-    Format.fprintf fmt "let %a = %a in %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t1 (pp (env #< nm) (P.right_of this)) t2
-  | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
-  | Nat -> Format.fprintf fmt "ℕ"
-  | Zero -> Format.fprintf fmt "0"
+    Format.fprintf fmt "let %a = %a in %a"
+      Ident.pp nm
+      (pp (env #< nm) (P.right_of this)) t1
+      (pp (env #< nm) (P.right_of this)) t2
+  | Ap (f, a) ->
+    Format.fprintf fmt "%a %a"
+      (pp env (P.left_of this)) f
+      (pp env (P.right_of this)) a
+  | Nat ->
+    Format.fprintf fmt "ℕ"
+  | Zero ->
+    Format.fprintf fmt "0"
   | (Succ n') as n ->
     begin
       try Format.fprintf fmt "%d" (to_numeral n)
       with Failure _ ->
         Format.fprintf fmt "succ %a" (pp env (P.right_of juxtaposition)) n'
     end
-  | NatElim r -> Format.fprintf fmt "nat-elim %a %a %a %a"(pp env (P.right_of this)) r.mot (pp env (P.right_of this)) r.zero (pp env (P.right_of this)) r.succ (pp env (P.right_of this)) r.scrut
-  | Univ -> Format.fprintf fmt "Type"
-  | FinSet [] -> Format.fprintf fmt "#{}"
-  | FinSet ls -> Format.fprintf fmt "#{ %a }" (pp_sep_list Format.pp_print_string) ls
-  | Label (_ls, l) -> Format.fprintf fmt ".%a" Format.pp_print_string l
-  | Cases (_, [], case) -> Format.fprintf fmt "{} %a" (pp env (P.right_of this)) case
-  | Cases (_, cases, case) -> Format.fprintf fmt "{ %a } %a" (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l (pp env P.isolated) v)) cases (pp env (P.right_of this)) case
+  | NatElim r ->
+    Format.fprintf fmt "nat-elim %a %a %a %a"
+      (pp env (P.right_of this)) r.mot
+      (pp env (P.right_of this)) r.zero
+      (pp env (P.right_of this)) r.succ
+      (pp env (P.right_of this)) r.scrut
+  | Univ ->
+    Format.fprintf fmt "Type"
+  | FinSet [] ->
+    Format.fprintf fmt "#{}"
+  | FinSet ls ->
+    Format.fprintf fmt "#{ %a }"
+      (pp_sep_list Format.pp_print_string) ls
+  | Label (_ls, l) ->
+    Format.fprintf fmt ".%a"
+      Format.pp_print_string l
+  | Cases (_, [], case) ->
+    Format.fprintf fmt "{} %a"
+      (pp env (P.right_of this)) case
+  | Cases (_, cases, case) ->
+    Format.fprintf fmt "{ %a } %a"
+      (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l (pp env P.isolated) v)) cases
+      (pp env (P.right_of this)) case
+  | Poly ->
+    Format.fprintf fmt "poly"
+  | PolyIntro (base, fib) ->
+    Format.fprintf fmt "(%a , %a)"
+      (pp env P.isolated) base
+      (pp env P.isolated) fib
+  | Base p ->
+    Format.fprintf fmt "base %a"
+      (pp env (P.right_of juxtaposition)) p
+  | Fib (p, fib) ->
+    Format.fprintf fmt "fib %a %a"
+      (pp env (P.right_of juxtaposition)) p
+      (pp env (P.right_of juxtaposition)) fib
   | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
 
 let pp_toplevel = pp Emp P.isolated

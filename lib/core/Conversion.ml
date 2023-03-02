@@ -52,6 +52,14 @@ struct
       ()
     | _, D.Univ, D.Univ ->
       ()
+    | _, D.Poly, D.Poly ->
+      ()
+    | D.Poly, v1, v2 ->
+      let base1 = Sem.do_base v1 in
+      let base2 = Sem.do_base v2 in
+      equate D.Univ base1 base2;
+      bind base1 @@ fun i ->
+      equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
     | _, _, _ ->
       raise Unequal
 
@@ -110,6 +118,10 @@ struct
       let m2 = MS.of_seq (List.to_seq r2.cases) in
       let _ = equate_maps apply_motives m1 m2 in
       ()
+    | D.Base, D.Base ->
+      ()
+    | D.Fib fib1, D.Fib fib2 ->
+      equate fib1.base fib1.value fib2.value
     | _ ->
       raise Unequal
 

@@ -22,6 +22,8 @@ type t = Data.value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
+  | Poly
+  | PolyIntro of t * clo
 
 and tp = t
 
@@ -37,6 +39,8 @@ and frame = Data.frame =
   | Snd
   | NatElim of { mot : t; zero : t; succ : t }
   | Cases of { mot : t; cases : t labeled }
+  | Base
+  | Fib of { base : t; value : t }
 
 and env = t bwd
 and clo = Data.clo = Clo of { env : env; body : Data.syn }
@@ -66,6 +70,12 @@ let rec dump fmt =
   | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
   | Univ -> Format.fprintf fmt "univ"
+  | Poly ->
+    Format.fprintf fmt "poly"
+  | PolyIntro (base, fib) ->
+    Format.fprintf fmt "poly-intro[%a, %a]"
+      dump base
+      dump_clo fib
 
 and dump_neu fmt { hd = Var i; spine } =
   Format.fprintf fmt "var[%i %a]" i dump_spine spine

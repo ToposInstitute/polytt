@@ -10,14 +10,21 @@ open TermBuilder
 module Internal =
 struct
   type env = D.env
-  module Eff = Algaeff.Reader.Make (struct type nonrec env = env end)
+  type state = {
+    instrs : Data.instr bwd;
+    (** The current program, used to perform reverse evaluation. *)
+    cells : int;
+    (** The number of memory cells required to execute the program. *)
+  }
+  module Env = Algaeff.Reader.Make (struct type nonrec env = env end)
+  module Instrs = Algaeff.State.Make (struct type nonrec state = state end)
 
   let var ix =
-    let env = Eff.read () in
+    let env = Env.read () in
     Bwd.nth env ix
 
   let clo body =
-    let env = Eff.read () in
+    let env = Env.read () in
     D.Clo { env; body }
 
   let rec eval (tm : S.t) : D.t =
@@ -56,6 +63,14 @@ struct
       do_cases (eval mot) (List.map (fun (l, v) -> l, eval v) cases) (eval case)
     | S.Univ ->
       D.Univ
+    | S.Poly ->
+      D.Poly
+    | S.PolyIntro (base, fib) ->
+      D.PolyIntro (eval base, clo fib)
+    | S.Base p ->
+      do_base (eval p)
+    | S.Fib (p, i) ->
+      do_fib (eval p) (eval i)
     | S.Hole (tp, n) ->
       D.hole (eval tp) n
 
@@ -117,18 +132,37 @@ struct
         invalid_arg "bad do_nat_elim"
     in rec_nat_elim scrut
 
+  and do_base p =
+    match p with
+    | D.PolyIntro (base, _) ->
+      base
+    | D.Neu (D.Poly, neu) ->
+      D.Neu (D.Univ, D.push_frm neu D.Base)
+    | _ ->
+      invalid_arg "bad do_base"
+
+  and do_fib p i =
+    match p with
+    | D.PolyIntro (_, fib) ->
+      inst_clo fib i
+    | D.Neu (D.Poly, neu) ->
+      let base = do_base p in
+      D.Neu (D.Univ, D.push_frm neu (D.Fib { base; value = i }))
+    | _ ->
+      invalid_arg "bad do_base"
+
   and inst_clo clo v =
     match clo with
     | D.Clo { env; body } ->
-      Eff.run ~env:(env #< v) (fun () -> eval body)
+      Env.run ~env:(env #< v) (fun () -> eval body)
 
   and graft_value (gtm : S.t Graft.t) =
     let tm, env = Graft.graft gtm in
-    Eff.run ~env @@ fun () -> eval tm
+    Env.run ~env @@ fun () -> eval tm
 end
 
 let eval ~env tm =
-  Internal.Eff.run ~env @@ fun () ->
+  Internal.Env.run ~env @@ fun () ->
   Internal.eval tm
 
 let eval_top tm =
@@ -145,6 +179,12 @@ let do_fst =
 
 let do_snd =
   Internal.do_snd
+
+let do_base =
+  Internal.do_base
+
+let do_fib =
+  Internal.do_fib
 
 let do_nat_elim ~mot ~zero ~succ ~scrut =
   Internal.do_nat_elim mot zero succ scrut
