@@ -9,6 +9,22 @@ open Elab
 
 exception Quit
 
+let profile f x =
+  let start = Unix.gettimeofday () in
+  let pre = Gc.allocated_bytes () in
+  let res = f x in
+  let post = Gc.allocated_bytes () in
+  let stop = Unix.gettimeofday () in
+  let () = Printf.printf "Allocated Bytes: %f\n%!" (post -. pre) in
+  let () = Printf.printf "Execution time: %fs\n%!" (stop -. start) in
+  res
+
+let normalize tm =
+  let (tp, tm) = Elaborator.syn tm in
+  let ntm = Quote.quote_top ~tp:tp (Sem.eval_top tm) in
+  Format.printf "Normal Form: %a@."
+    S.pp_toplevel ntm
+
 let execute_cmd  (cmd : CS.cmd) =
   match cmd.node with
   | CS.Def {name; tp = Some tp; tm} ->
@@ -34,10 +50,7 @@ let execute_cmd  (cmd : CS.cmd) =
       failwith "FIXME: better error"
     end
   | CS.Normalize tm ->
-    let (tp, tm) = Elaborator.syn tm in
-    let ntm = Quote.quote_top ~tp:tp (Sem.eval_top tm) in
-    Format.printf "Normal Form: %a@."
-      S.pp_toplevel ntm
+    profile normalize tm
   | CS.Print tm ->
     let (vtp, tm) = Elaborator.syn tm in
     let tp = Quote.quote_top ~tp:D.Univ vtp in
@@ -48,7 +61,6 @@ let execute_cmd  (cmd : CS.cmd) =
     Debug.debug_mode b
   | CS.Quit ->
     raise Quit
-
 
 let execute (debug : bool) cmds =
   Debug.debug_mode debug;
