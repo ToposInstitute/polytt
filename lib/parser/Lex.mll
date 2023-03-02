@@ -148,8 +148,8 @@ and real_token = parse
       | tok -> tok
       | exception Not_found -> Printf.eprintf "Unknown Command: %s\n" (lexeme lexbuf); token lexbuf
     }
-  | "." atom
-    { LABEL (lexeme lexbuf) }
+  | "." (atom as label)
+    { LABEL label }
   | atom
     {
       let input = lexeme lexbuf in

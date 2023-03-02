@@ -157,7 +157,7 @@ let rec pp env =
   | NatElim r -> Format.fprintf fmt "nat-elim %a %a %a %a"(pp env (P.right_of this)) r.mot (pp env (P.right_of this)) r.zero (pp env (P.right_of this)) r.succ (pp env (P.right_of this)) r.scrut
   | Univ -> Format.fprintf fmt "Type"
   | FinSet [] -> Format.fprintf fmt "#{}"
-  | FinSet ls -> Format.fprintf fmt "#{ %a }" (pp_sep_list Format.pp_print_string) ls
+  | FinSet ls -> Format.fprintf fmt "#{ .%a }" (pp_sep_list Format.pp_print_string) ls
   | Label (_ls, l) -> Format.fprintf fmt ".%a" Format.pp_print_string l
   | Cases (_, [], case) -> Format.fprintf fmt "{} %a" (pp env (P.right_of this)) case
   | Cases (_, cases, case) -> Format.fprintf fmt "{ %a } %a" (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l (pp env P.isolated) v)) cases (pp env (P.right_of this)) case
