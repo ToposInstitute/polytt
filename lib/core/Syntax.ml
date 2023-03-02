@@ -37,7 +37,7 @@ let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
 let rec dump fmt =
   function
   | Univ -> Format.fprintf fmt "univ"
-  | Var i -> Format.fprintf fmt "var[%i]" i
+  | Var i -> Format.fprintf fmt "S.var[%i]" i
   | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a %a %a]" Ident.pp nm dump a dump b
   | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump b
   | Pair (a, b) -> Format.fprintf fmt "pair[%a %a]" dump a dump b

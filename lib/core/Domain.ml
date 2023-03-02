@@ -68,7 +68,7 @@ let rec dump fmt =
   | Univ -> Format.fprintf fmt "univ"
 
 and dump_neu fmt { hd = Var i; spine } =
-  Format.fprintf fmt "var[%i %a]" i dump_spine spine
+  Format.fprintf fmt "D.var[%i %a]" i dump_spine spine
 
 (* TODO *)
 and dump_spine fmt spine = Format.fprintf fmt "$SPINE"
