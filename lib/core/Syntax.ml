@@ -135,8 +135,8 @@ let rec pp env =
   | Lam (nm, t) ->
     let (env , nms, body) = collect_lams env [] (Lam (nm, t)) in
     Format.fprintf fmt "λ %a → %a" (pp_sep_list ~sep:" " Ident.pp) nms  (pp env (P.right_of this)) body
-  | Let (nm, t1, t2) -> 
-    Format.fprintf fmt "let %a = %a in %a" Ident.pp nm (pp (env #< nm) (P.right_of this)) t1 (pp (env #< nm) (P.right_of this)) t2
+  | Let (nm, t1, t2) ->
+    Format.fprintf fmt "let %a = %a in %a" Ident.pp nm (pp env (P.right_of this)) t1 (pp (env #< nm) (P.right_of this)) t2
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
   | Nat -> Format.fprintf fmt "ℕ"
   | Zero -> Format.fprintf fmt "0"

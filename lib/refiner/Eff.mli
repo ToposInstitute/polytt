@@ -20,7 +20,7 @@ module Cell : sig
 end
 
 module Globals : sig
-  type resolved = 
+  type resolved =
     | Def of { tm : D.t; tp : D.tp }
   val resolve : Ident.path -> resolved option
   val run : resolve:(Yuujinchou.Trie.path -> resolved option) -> (unit -> 'a) -> 'a
@@ -31,7 +31,7 @@ module Locals : sig
   val resolve : Ident.path -> Cell.t option
   val concrete : ?name:Ident.t -> D.tp -> D.t -> (unit -> 'a) -> 'a
   val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
-  val locals : unit -> Cell.t list
+  val local_types : unit -> D.tp bwd
   val ppenv : unit -> Ident.t bwd
   val size : unit -> int
 end

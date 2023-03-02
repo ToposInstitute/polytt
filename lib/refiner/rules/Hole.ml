@@ -4,7 +4,7 @@ open Core
 open Errors
 open Tactic
 
-module S = Syntax  
+module S = Syntax
 
 let pp_sequent ppenv fmt (ctx, goal) =
   let rec go ppenv size fmt (ctx, goal) =
@@ -12,9 +12,8 @@ let pp_sequent ppenv fmt (ctx, goal) =
     | [] ->
       Format.fprintf fmt "──────────────@.  ⊢ %a@."
         (S.pp ppenv Precedence.isolated) goal
-    | cell :: ctx ->
-      let tp = Quote.quote ~size ~tp:D.Univ (Cell.tp cell) in
-      let nm = Cell.name cell in
+    | (nm, tp) :: ctx ->
+      let tp = Quote.quote ~size ~tp:D.Univ tp in
       Format.fprintf fmt "  %a : %a@.%a"
         Ident.pp nm
         (S.pp ppenv Precedence.isolated) tp
@@ -26,8 +25,8 @@ let unleash = Chk.rule @@
   fun x ->
   let tp = quote ~tp:D.Univ x in
   let ppenv = Locals.ppenv () in
-  let ctx = Locals.locals () in
+  let ctx = Locals.local_types () in
   Format.printf "Encountered Hole!@.%a@."
-    (pp_sequent ppenv) (ctx, tp);
+    (pp_sequent Emp) (List.combine (Bwd.to_list ppenv) (Bwd.to_list ctx), tp);
 
   S.Hole (tp, Hole.fresh ())
