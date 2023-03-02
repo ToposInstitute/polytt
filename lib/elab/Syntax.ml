@@ -18,6 +18,8 @@ and t_ =
   | Pair of t * t
   | Fst of t
   | Snd of t
+  | Eq of t * t
+  | Refl of t
   | Nat
   | Zero
   | Succ of t

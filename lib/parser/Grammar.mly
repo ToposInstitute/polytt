@@ -31,6 +31,7 @@ let ap_or_atomic =
 %token LPR RPR LSQ RSQ LBR RBR
 (* Keywords *)
 %token TYPE
+%token REFL
 (* Commands *)
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
@@ -104,6 +105,10 @@ plain_term:
     { CS.Pair (t1, t2) }
   | FST; tm = atomic_term
     { CS.Fst tm }
+  | tm1 = atomic_term; EQUALS; tm2 = atomic_term
+    { CS.Eq (tm1, tm2) }
+  | REFL; tm = atomic_term
+    { CS.Refl tm }
   | SND; tm = atomic_term
     { CS.Snd tm }
   | SUCC; tm = atomic_term

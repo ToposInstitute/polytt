@@ -18,6 +18,16 @@ type syn =
   | Pair of syn * syn (* A × B *)
   | Fst of syn
   | Snd of syn
+  | Eq of syn * syn * syn
+  | Refl of syn
+  (* Axiom J
+    J : {A : Type} {x : A}
+      -> (P : (y : A) -> x = y -> Type)
+      -> P x refl
+      -> {y : A} (p : x = y)
+      -> P y p
+    *)
+  (* | AxiomJ of  *)
   | Nat (* ℕ *)
   | Zero (* zero *)
   | Succ of syn (* succ n *)
@@ -34,6 +44,8 @@ and value =
   | Lam of Ident.t * clo
   | Sigma of Ident.t * value * clo
   | Pair of value * value
+  | Eq of value * value * value
+  | Refl of value
   | Nat
   | Zero
   | Succ of value

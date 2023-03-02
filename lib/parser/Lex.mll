@@ -34,6 +34,7 @@ let keywords =
     ("zero", ZERO);
     ("succ", SUCC);
     ("elim", NAT_ELIM);
+    ("refl", REFL);
     ("fst", FST);
     ("snd", SND);
   ]

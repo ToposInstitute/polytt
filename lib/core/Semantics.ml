@@ -40,6 +40,10 @@ struct
       do_fst (eval tm)
     | S.Snd tm ->
       do_snd (eval tm)
+    | S.Eq (t, a, b) ->
+      D.Eq (eval t, eval a, eval b)
+    | S.Refl (a) ->
+      D.Refl (eval a)
     | S.Nat ->
       D.Nat
     | S.Zero ->

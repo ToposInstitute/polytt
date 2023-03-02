@@ -20,6 +20,8 @@ type t = Data.syn =
   | Pair of t * t
   | Fst of t
   | Snd of t
+  | Eq of t * t * t
+  | Refl of t
   | Nat
   | Zero
   | Succ of t
@@ -46,6 +48,8 @@ let rec dump fmt =
   | Lam (nm, t) -> Format.fprintf fmt "lam[%a, %a]" Ident.pp nm dump t
   | Let (nm, t1, t2) -> Format.fprintf fmt "let[%a = %a in %a ]" Ident.pp nm dump t1 dump t2
   | Ap (f, a) -> Format.fprintf fmt "ap[%a, %a]" dump f dump a
+  | Eq (t, a, b) -> Format.fprintf fmt "eq[%a, %a, %a]" dump t dump a dump b
+  | Refl (a) -> Format.fprintf fmt "refl[%a]" dump a
   | Nat -> Format.fprintf fmt "nat"
   | Zero -> Format.fprintf fmt "zero"
   | Succ n -> Format.fprintf fmt "succ[%a]" dump n
@@ -85,6 +89,8 @@ let classify_tm =
   | Lam _ -> arrow
   | Let _ -> atom
   | Ap _ -> juxtaposition
+  | Eq _ -> equals
+  | Refl _ -> juxtaposition
   | Nat -> atom
   | Zero -> atom
   | Succ n ->
@@ -138,6 +144,8 @@ let rec pp env =
   | Let (nm, t1, t2) ->
     Format.fprintf fmt "let %a = %a in %a" Ident.pp nm (pp env (P.right_of this)) t1 (pp (env #< nm) (P.right_of this)) t2
   | Ap (f, a) -> Format.fprintf fmt "%a %a" (pp env (P.left_of this)) f (pp env (P.right_of this)) a
+  | Eq (_, a, b) -> Format.fprintf fmt "%a = %a" (pp env (P.left_of this)) a (pp env (P.right_of this)) b
+  | Refl (a) -> Format.fprintf fmt "refl %a" (pp env (P.right_of this)) a
   | Nat -> Format.fprintf fmt "ℕ"
   | Zero -> Format.fprintf fmt "0"
   | (Succ n') as n ->
