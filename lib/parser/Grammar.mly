@@ -107,8 +107,8 @@ plain_term:
     { CS.Fst tm }
   | tm1 = atomic_term; EQUALS; tm2 = atomic_term
     { CS.Eq (tm1, tm2) }
-  | REFL; tm = atomic_term
-    { CS.Refl tm }
+  | REFL
+    { CS.Refl }
   | SND; tm = atomic_term
     { CS.Snd tm }
   | SUCC; tm = atomic_term

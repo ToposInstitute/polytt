@@ -18,8 +18,8 @@ struct
       Var.let_bind ~name:name tm1 (fun _ -> chk tm2)
     | CS.Pair (a, b) ->
       Sigma.intro (chk a) (chk b)
-    | CS.Refl a ->
-      Eq.intro (chk a)
+    | CS.Refl ->
+      Eq.intro
     | CS.Zero ->
       Nat.zero
     | CS.Succ n ->
@@ -61,7 +61,7 @@ struct
     | CS.Fst tm ->
       Sigma.fst (syn tm)
     | CS.Snd tm ->
-      Sigma.fst (syn tm)
+      Sigma.snd (syn tm)
     | CS.Eq (a, b) ->
       Eq.formation (syn a) (chk b)
     | CS.Nat ->

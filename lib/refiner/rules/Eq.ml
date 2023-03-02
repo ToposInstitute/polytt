@@ -12,15 +12,12 @@ let formation a b =
   let b = Chk.run b t in
   (D.Univ, S.Eq (quote ~tp:D.Univ t, a, b))
 
-let intro c =
+let intro =
   Chk.rule @@
   function
   | D.Eq (tp, va, vb) ->
-    let c = Chk.run c tp in
-    let vc = eval c in
-    equate ~tp vc va;
-    equate ~tp vc vb;
-    S.Refl c
+    equate ~tp va vb;
+    S.Refl (quote ~tp va)
   | t ->
     Debug.print "%a@." D.dump t;
     Error.error `TypeError "Expected element of eq."

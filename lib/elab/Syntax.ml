@@ -19,7 +19,7 @@ and t_ =
   | Fst of t
   | Snd of t
   | Eq of t * t
-  | Refl of t
+  | Refl
   | Nat
   | Zero
   | Succ of t
