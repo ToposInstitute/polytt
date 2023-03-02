@@ -1,8 +1,7 @@
-def id : (A : Type) → A → A :=
-  λ A x → x
+import Prelude
+import Data::Bool
 
-def const : (A : Type) → (B : Type) → A → B → A :=
-  λ _ _ x _ → x
+#normalize const
 
 def four : ℕ := 4
 
@@ -18,10 +17,7 @@ def sigma : (A : Type) → (A → Type) → Type :=
 def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
   λ n m → (n , m : ℕ)
 
-def projl : (ℕ × ℕ) → ℕ :=
-  λ x → fst x
 
-def Bool := #{ .true, .false }
 
 def Unit := (t : #{}) -> ({} : #{} -> Type) t
 
@@ -39,10 +35,10 @@ def let-example :=
 
 def Optic := (P : (Type → Type → Type)) → (S : Type) → (T : Type) → (A : Type) → (B : Type) → (P A B) → (P S T)
 
-def Lens : Type → Type → Type → Type → Type := λ S T A B → { get : S → A, set : S → B → T }
+def Lens : Type → Type → Type → Type → Type := λ S T A B → { .get : S → A, .set : S → B → T }
 
--- def _1 : (C : Type) → (A : Type) → (B : Type) → Lens (A × C) (B × C) A B :=
---   λ C A B →
---   { get = λ x → fst x
---   , set = ?
---   }
+def _1 : (C : Type) → (A : Type) → (B : Type) → Lens (A × C) (B × C) A B :=
+  λ C A B →
+  { .get = λ s → fst s
+  , .set = λ x y -> ?
+  }

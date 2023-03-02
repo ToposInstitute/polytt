@@ -21,7 +21,7 @@ let ap_or_atomic =
 %token <bool> FLAG
 %token <string> ATOM
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW UNDERSCORE EQUALS QUESTION
+%token COLON COLON_COLON COLON_EQUALS COMMA DOT RIGHT_ARROW UNDERSCORE EQUALS QUESTION
 (* Symbols *)
 %token FORALL LAMBDA LET IN
 %token TIMES FST SND
@@ -33,7 +33,7 @@ let ap_or_atomic =
 %token TYPE
 %token REFL
 (* Commands *)
-%token DEF FAIL NORMALIZE PRINT DEBUG QUIT
+%token DEF FAIL NORMALIZE PRINT DEBUG QUIT IMPORT
 %token EOF
 
 %right COLON
@@ -77,6 +77,8 @@ plain_command:
     { CS.Def {name; tp = Some tp; tm} }
   | DEF; name = name; COLON_EQUALS; tm = term
     { CS.Def {name; tp = None; tm} }
+  | IMPORT; name = path;
+    { CS.Import {shadowing = false; unitpath = name} }
   | FAIL; name = name; COLON; tp = term; COLON_EQUALS; tm = term
     { CS.Fail {name; tp = Some tp; tm} }
   | FAIL; name = name; COLON_EQUALS; tm = term

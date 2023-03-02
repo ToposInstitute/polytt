@@ -1,0 +1,5 @@
+def id : (A : Type) → A → A :=
+  λ A x → x
+
+def const : (A : Type) → (B : Type) → A → B → A :=
+  λ _ _ x _ → x

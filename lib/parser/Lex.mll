@@ -29,6 +29,7 @@ let commands =
 let keywords =
   make_table 0 [
     ("def", DEF);
+    ("import", IMPORT);
     ("Type", TYPE);
     ("ℕ", NAT);
     ("zero", ZERO);
@@ -116,6 +117,8 @@ and real_token = parse
     { COLON_EQUALS }
   | ","
     { COMMA }
+  | "."
+    { DOT }
   | "#"
     { HASH }
   | "="

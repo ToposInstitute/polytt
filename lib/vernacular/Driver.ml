@@ -3,6 +3,8 @@ module D = Core.Domain
 module S = Core.Syntax
 module Sem = Core.Semantics
 
+open Bantorra
+
 open Core
 
 open Elab
@@ -25,7 +27,37 @@ let normalize tm =
   Format.printf "Normal Form: %a@."
     S.pp_toplevel ntm
 
-let execute_cmd  (cmd : CS.cmd) =
+(* Imports *)
+
+module Terminal = Asai_unix.Make(Bantorra.ErrorCode)
+let run_bantorra f = Bantorra.Error.run f
+    ~emit:Terminal.display ~fatal:(fun d -> Terminal.display d; failwith "error")
+
+(** Get the current working directory. *)
+let cwd = run_bantorra File.get_cwd
+
+let router = run_bantorra @@ fun () ->
+  Router.dispatch @@
+  function
+  | "file" -> Option.some @@
+    Router.file ?relative_to:(Router.get_starting_dir ()) ~expanding_tilde:true
+  | _ -> None
+
+
+(** Get a library manager. *)
+let manager = run_bantorra @@ fun () -> Manager.init ~version:"1.0.0" ~anchor:"polytt-lib" router
+
+(** Load the library where the current directory belongs. *)
+let load_current_library ~file = 
+  run_bantorra @@ fun () -> Manager.load_library_from_root manager file
+
+let lib = load_current_library ~file:(FilePath.add_unit_seg cwd "stdlib")
+
+(** Resolve the path to a library module *)
+let resolve_source_path lib unitpath =
+  Bantorra.Manager.resolve manager lib unitpath ~suffix:".poly"
+
+let rec execute_cmd load_file (cmd : CS.cmd) =
   match cmd.node with
   | CS.Def {name; tp = Some tp; tm} ->
     let tp = Sem.eval_top @@ Elaborator.chk tp D.Univ in
@@ -35,6 +67,12 @@ let execute_cmd  (cmd : CS.cmd) =
     let (tp, tm) = Elaborator.syn tm in
     let tm = Sem.eval_top tm in
     Eff.define name (Def { tm; tp })
+  | CS.Import {unitpath; _} ->
+    let (_, _, fpath) = run_bantorra @@ fun () ->
+      resolve_source_path lib (UnitPath.of_list unitpath) in
+    let cmds = load_file (FilePath.to_string fpath) in
+    execute_ load_file cmds
+  (* raise Quit *)
   | CS.Fail {tp = Some tp; tm; _} ->
     begin
       try
@@ -62,10 +100,18 @@ let execute_cmd  (cmd : CS.cmd) =
   | CS.Quit ->
     raise Quit
 
-let execute (debug : bool) cmds =
+and execute_ load_file cmds =
+  match cmds with
+  | [] -> ()
+  | decl :: decls ->
+    execute_cmd load_file decl;
+    execute_ load_file decls
+(* List.iter (execute_cmd load_file) cmds *)
+
+let execute load_file (debug : bool) cmds =
   Debug.debug_mode debug;
   print_newline ();
   Eff.run @@ fun () ->
   try
-    List.iter execute_cmd cmds
+    execute_ load_file cmds
   with Quit -> ()
