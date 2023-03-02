@@ -80,7 +80,7 @@ struct
       S.Label (ls, l)
     | _, D.Neu (_, neu) ->
       quote_neu neu
-    | _ ->
+    | tp, tm ->
       invalid_arg "bad quote"
 
   and quote_neu {hd; spine} =

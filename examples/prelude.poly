@@ -38,3 +38,12 @@ def let-example :=
   in n
 
 #normalize let-example
+
+def nyan : Poly :=
+  (ℕ × ℕ)
+
+def tensor : Poly → Poly → Poly :=
+  λ P Q → (pq : base P × base Q) × (fib P (fst pq) × fib Q (snd pq))
+
+#normalize base (tensor nyan nyan)
+#normalize fib (tensor nyan nyan) (1 , 2)

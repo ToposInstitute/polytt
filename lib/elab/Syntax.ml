@@ -28,5 +28,8 @@ and t_ =
   | RecordLit of t labeled
   | Lit of int
   | Univ
+  | Poly
+  | Base of t
+  | Fib of t * t
   | Anno of t * t (* (t : ty) *)
   | Hole

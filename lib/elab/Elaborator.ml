@@ -16,6 +16,8 @@ struct
     | CS.Let (name, tm1, tm2) ->
       let tm1 = syn tm1 in
       Var.let_bind ~name:name tm1 (fun _ -> chk tm2)
+    | CS.Sigma (name, a, b) ->
+      chk_sigma ~name a b
     | CS.Pair (a, b) ->
       Sigma.intro (chk a) (chk b)
     | CS.Zero ->
@@ -31,6 +33,8 @@ struct
       FinSet.label l
     | CS.RecordLit cases ->
       FinSet.record_lit (List.map (fun (l, v) -> l, chk v) cases)
+    | CS.Poly ->
+      Poly.formation
     | _ ->
       T.Chk.syn (syn tm)
 
@@ -39,6 +43,13 @@ struct
     | [] -> chk tm
     | name :: names ->
       Pi.intro ~name @@ fun _ -> chk_lams names tm
+
+  and chk_sigma ?(name = `Anon) a b =
+    T.match_goal @@
+    function
+    | D.Univ -> T.Chk.syn @@ Sigma.formation ~name (chk a) (fun _ -> chk b)
+    | D.Poly -> Poly.intro ~name (chk a) (fun _ -> chk b)
+    | _ -> T.Error.error `TypeError "Pair syntax only works for sigma and poly."
 
   and syn (tm : CS.t) =
     T.Error.locate tm.loc @@ fun () ->
@@ -59,7 +70,7 @@ struct
     | CS.Fst tm ->
       Sigma.fst (syn tm)
     | CS.Snd tm ->
-      Sigma.fst (syn tm)
+      Sigma.snd (syn tm)
     | CS.Nat ->
       Nat.formation
     | CS.NatElim (mot, zero, succ, scrut) ->
@@ -72,6 +83,10 @@ struct
       FinSet.formation ls
     | CS.Record cases ->
       FinSet.record (List.map (fun (l, v) -> l, chk v) cases)
+    | CS.Base p ->
+      Poly.base (chk p)
+    | CS.Fib (p, i) ->
+      Poly.fib (chk p) (chk i)
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 

@@ -26,6 +26,7 @@ let ap_or_atomic =
 %token FORALL LAMBDA LET IN
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
+%token POLY BASE FIB
 %token HASH
 (* Delimiters *)
 %token LPR RPR LSQ RSQ LBR RBR
@@ -100,8 +101,6 @@ plain_term:
     { CS.Sigma (name, base, fam) }
   | base = term; TIMES; fam = term
     { CS.Sigma (`Anon, base, fam) }
-  | LPR; t1 = term; COMMA; t2 = term; RPR
-    { CS.Pair (t1, t2) }
   | FST; tm = atomic_term
     { CS.Fst tm }
   | SND; tm = atomic_term
@@ -110,6 +109,10 @@ plain_term:
     { CS.Succ tm }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
+  | BASE; p = atomic_term
+    { CS.Base p }
+  | FIB; p = atomic_term; i = atomic_term
+    { CS.Fib (p, i) }
   | tm = anno
     { tm }
   | tm = let_binding
@@ -146,6 +149,8 @@ atomic_term:
 plain_atomic_term:
   | LPR; tm = plain_term; RPR
     { tm }
+  | LPR; t1 = term; COMMA; t2 = term; RPR
+    { CS.Pair (t1, t2) }
   | path = path
     { CS.Var path }
   | NAT
@@ -156,6 +161,8 @@ plain_atomic_term:
     { CS.Lit n }
   | TYPE
     { CS.Univ }
+  | POLY
+    { CS.Poly }
   | QUESTION
     { CS.Hole }
   | HASH; LBR; labels = separated_list(COMMA, LABEL); RBR;

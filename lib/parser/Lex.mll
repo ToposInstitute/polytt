@@ -30,6 +30,9 @@ let keywords =
   make_table 0 [
     ("def", DEF);
     ("Type", TYPE);
+    ("Poly", POLY);
+    ("base", BASE);
+    ("fib", FIB);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);

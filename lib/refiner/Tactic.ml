@@ -1,8 +1,7 @@
 open Core
 include Eff
 
-module S = Syntax
-module D = Domain
+include TermBuilder
 
 module rec Chk : sig
   type tac
@@ -63,3 +62,7 @@ struct
     Eff.Locals.concrete ~name tp value @@ fun () ->
     k {tp; value}
 end
+
+let match_goal k =
+  Chk.rule @@ fun goal ->
+  Chk.run (k goal) goal
