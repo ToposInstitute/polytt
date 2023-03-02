@@ -37,4 +37,12 @@ def let-example :=
   let n = 5 : ℕ
   in n
 
-#normalize let-example
+def Optic := (P : (Type → Type → Type)) → (S : Type) → (T : Type) → (A : Type) → (B : Type) → (P A B) → (P S T)
+
+def Lens : Type → Type → Type → Type → Type := λ S T A B → { get : S → A, set : S → B → T }
+
+-- def _1 : (C : Type) → (A : Type) → (B : Type) → Lens (A × C) (B × C) A B :=
+--   λ C A B →
+--   { get = λ x → fst x
+--   , set = ?
+--   }
