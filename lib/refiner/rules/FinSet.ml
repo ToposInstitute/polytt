@@ -6,6 +6,7 @@ open TermBuilder
 module D = Domain
 module S = Syntax
 module Sem = Semantics
+module SS = Set.Make(String)
 
 type labelset = string list
 type label = string
@@ -13,6 +14,7 @@ type 'a labeled = (string * 'a) list
 
 let formation ls =
   Syn.rule @@ fun () ->
+  if SS.cardinal (SS.of_list ls) != List.length ls then Error.error `TypeError "Duplicate finset labels";
   (D.Univ, S.FinSet ls)
 
 let label l =
@@ -33,6 +35,7 @@ let record cases_tac =
   (* { a : Nat, b : bool } = (l : #{a,b}) -> { a = Nat, b = bool } l *)
   (* come up with the list of labels mentioned in the record type *)
   let ls = List.map fst cases_tac in
+  if SS.cardinal (SS.of_list ls) != List.length ls then Error.error `TypeError "Duplicate record labels";
   (* the motive for the cases is going to be constant: type *)
   let mot = S.Lam (Ident.anon, S.Univ) in
   (* for each case, we check that it is a type. We do this in an extended
@@ -48,9 +51,10 @@ let record cases_tac =
 let record_lit cases_tac =
   Chk.rule @@
   function
-  | D.Pi (nm, D.FinSet ls, clo) as tp ->
-    let ls' = List.map fst cases_tac in
-    if ls = ls'
+  | D.Pi (nm, D.FinSet ls', clo) as tp ->
+    let ls = List.map fst cases_tac in
+    if SS.cardinal (SS.of_list ls) != List.length ls then Error.error `TypeError "Duplicate record labels";
+    if SS.equal (SS.of_list ls) (SS.of_list ls')
     then
       let mot = D.Lam (nm, clo) in
       (* We bind an (anonymous) variable here, as we will be placing

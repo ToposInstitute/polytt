@@ -46,7 +46,7 @@ struct
       ()
     | _, D.Succ n1, D.Succ n2 ->
       equate D.Nat n1 n2
-    | _, D.FinSet s1, D.FinSet s2 when SS.of_list s1 = SS.of_list s2 ->
+    | _, D.FinSet s1, D.FinSet s2 when SS.equal (SS.of_list s1) (SS.of_list s2) ->
       ()
     | _, D.Label (_, l), D.Label (_, r) when l = r ->
       ()
