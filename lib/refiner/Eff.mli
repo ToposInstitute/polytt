@@ -8,15 +8,22 @@ module D := Domain
 module S := Syntax
 
 module Cell : sig
-  type t = {
-    name : Ident.t;
-    tp : D.tp;
-    value : D.t;
-  }
+  type pos = { name : Ident.t; tp : D.tp; value : D.t; }
+  type neg = { name : Ident.t; tp : D.tp; lvl : int }
+
+  type t =
+    | Pos of pos
+    | Neg of neg
 
   val name : t -> Ident.t
-  val tp : t -> D.t
-  val value : t -> D.t
+end
+
+module Linearity : sig
+  val run : (unit -> 'a) -> 'a
+  (** Marks a linear variable as being used, and returns [true]
+      if it had already been used. *)
+
+  val consume : Cell.neg -> bool
 end
 
 module Globals : sig
@@ -28,12 +35,15 @@ end
 
 module Locals : sig
   val run_top : (unit -> 'a) -> 'a
-  val resolve : Ident.path -> Cell.t option
+  val resolve : Ident.path -> Cell.pos option
+  val resolve_neg : Ident.path -> Cell.neg option
   val concrete : ?name:Ident.t -> D.tp -> D.t -> (unit -> 'a) -> 'a
   val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
   val locals : unit -> Cell.t list
   val ppenv : unit -> Ident.t bwd
   val size : unit -> int
+
+  val abstract_neg : ?name:Ident.t -> D.tp -> (int -> 'a) -> 'a
 end
 
 module Error : sig
@@ -50,7 +60,7 @@ end
 val quote : tp:D.tp -> D.t -> S.t
 val equate : tp:D.tp -> D.t -> D.t -> unit
 val eval : S.t -> D.t
-val inst_clo : D.clo -> D.t -> D.t
+val inst_clo : D.tm_clo -> D.t -> D.t
 val graft_value : S.t Graft.t -> D.t
 
 val do_ap : D.t -> D.t -> D.t

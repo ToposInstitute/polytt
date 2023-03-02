@@ -12,9 +12,9 @@ type 'a labeled = (string * 'a) list
 
 type t = Data.value =
   | Neu of t * neu
-  | Pi of Ident.t * t * clo
-  | Lam of Ident.t * clo
-  | Sigma of Ident.t * t * clo
+  | Pi of Ident.t * t * tm_clo
+  | Lam of Ident.t * tm_clo
+  | Sigma of Ident.t * t * tm_clo
   | Pair of t * t
   | Nat
   | Zero
@@ -23,8 +23,10 @@ type t = Data.value =
   | Label of labelset * label
   | Univ
   | Poly
-  | PolyIntro of t * clo
+  | PolyIntro of t * tm_clo
   | Hom of t * t
+  | HomLam of Ident.t * Ident.t * hom_clo
+  | FibLam of int * instr list
 
 and tp = t
 
@@ -42,9 +44,16 @@ and frame = Data.frame =
   | Cases of { mot : t; cases : t labeled }
   | Base
   | Fib of { base : t; value : t }
+  | HomElim of { base : t; value : t }
 
 and env = t bwd
-and clo = Data.clo = Clo of { env : env; body : Data.syn }
+and 'a clo = 'a Data.clo = Clo of { env : env; body : 'a }
+and tm_clo = Data.syn clo
+and hom_clo = Data.hom_syn clo
+
+and instr = Data.instr =
+  | Const of { write_addr : int; value : t }
+  | NegAp of { write_addr : int; read_addr : int; fn : t }
 
 let push_frm {hd; spine} frm =
   {hd; spine = spine #< frm}
@@ -81,6 +90,11 @@ let rec dump fmt =
     Format.fprintf fmt "hom[%a, %a]"
       dump p
       dump q
+  | HomLam (p_name, q_name, bdy) ->
+    Format.fprintf fmt "hom-lam[%a, %a, %a]"
+      Ident.pp p_name
+      Ident.pp q_name
+      dump_hom_clo bdy
 
 and dump_neu fmt { hd = Var i; spine } =
   Format.fprintf fmt "var[%i %a]" i dump_spine spine
@@ -90,3 +104,4 @@ and dump_spine fmt spine = Format.fprintf fmt "$SPINE"
 
 (* TODO *)
 and dump_clo fmt (Clo { env; body }) = Format.fprintf fmt "$ENV %a" S.dump body
+and dump_hom_clo fmt (Clo { env; body }) = Format.fprintf fmt "FIXME :)"

@@ -47,3 +47,10 @@ def tensor : Poly → Poly → Poly :=
 
 #normalize base (tensor nyan nyan)
 #normalize fib (tensor nyan nyan) (1 , 2)
+
+def succc : ℕ → ℕ :=
+  λ i → succ i
+
+def id : (P : Poly) → P ⇒ P :=
+  λ P → λ a⁺ a⁻ ⇝
+    a⁺ ⇜ a⁻

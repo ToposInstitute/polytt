@@ -31,13 +31,26 @@ type syn =
   | Base of syn
   | Fib of syn * syn
   | Hom of syn * syn
+  | HomLam of Ident.t * Ident.t * hom_syn
+  | HomElim of syn * syn
   | Hole of syn * int
+
+and neg_syn =
+  | Var of int
+  (** Variables are DeBruijn levels, even in the syntax! *)
+  | NegAp of neg_syn * syn
+  | Drop
+
+and hom_syn =
+  | Set of syn * neg_syn * hom_syn
+  | HomAp of syn * syn * neg_syn * Ident.t * Ident.t * hom_syn
+  | Done of syn * neg_syn
 
 and value =
   | Neu of value * neu
-  | Pi of Ident.t * value * clo
-  | Lam of Ident.t * clo
-  | Sigma of Ident.t * value * clo
+  | Pi of Ident.t * value * tm_clo
+  | Lam of Ident.t * tm_clo
+  | Sigma of Ident.t * value * tm_clo
   | Pair of value * value
   | Nat
   | Zero
@@ -46,8 +59,14 @@ and value =
   | Label of labelset * label
   | Univ
   | Poly
-  | PolyIntro of value * clo
+  | PolyIntro of value * tm_clo
   | Hom of value * value
+  | HomLam of Ident.t * Ident.t * hom_clo
+  | FibLam of int * instr list
+  (** A compiled program, created by reverse evaluation.
+      When applied, place the argument in the address of the
+      [int] parameter, execute the instructions, and then
+      read off the outputs off the 0th cell. *)
 
 and neu = { hd : hd; spine : frame bwd }
 
@@ -63,16 +82,15 @@ and frame =
   | Cases of { mot : value; cases : (string * value) list }
   | Base
   | Fib of { base : value; value : value }
+  | HomElim of { base : value; value : value }
 
 (** {1 Instructions} *)
 and instr =
-  | Const of { out_addr : int; value : value }
-  (** Write [value] to [out_addr] *)
-  | Ap of { out_addr : int; in_addr : int; fn : value }
-  (** Read a value from [in_addr], apply [fn] to it,
-      and write the resulting value to [out_addr] *)
-  | Pair of { out_addr : int; fst_addr : int; snd_addr : int; }
-  (** Read a pair of values from [fst_addr] and [snd_addr], and write their pair to [out_addr] *)
+  | Const of { write_addr : int; value : value }
+  (** Write [value] to [write_addr] *)
+  | NegAp of { write_addr : int; read_addr : int; fn : value }
 
 and env = value bwd
-and clo = Clo of { env : env; body : syn }
+and 'a clo = Clo of { env : env; body : 'a }
+and tm_clo = syn clo
+and hom_clo = hom_syn clo

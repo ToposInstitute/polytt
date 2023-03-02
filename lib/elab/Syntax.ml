@@ -32,5 +32,10 @@ and t_ =
   | Base of t
   | Fib of t * t
   | Hom of t * t
+  | HomLam of Ident.t * Ident.t * t
+  | Set of t * t * t
+  | NegAp of t * t list
+  | HomAp of t * t * t * Ident.t * Ident.t * t
+  | Done of t * t
   | Anno of t * t (* (t : ty) *)
   | Hole

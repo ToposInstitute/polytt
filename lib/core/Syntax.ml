@@ -33,7 +33,20 @@ type t = Data.syn =
   | Base of t
   | Fib of t * t
   | Hom of t * t
+  | HomLam of Ident.t * Ident.t * hom
+  | HomElim of t * t
   | Hole of t * int
+
+
+and neg = Data.neg_syn =
+  | Var of int
+  | NegAp of neg * t
+  | Drop
+
+and hom = Data.hom_syn =
+  | Set of t * neg * hom
+  | HomAp of t * t * neg * Ident.t * Ident.t * hom
+  | Done of t * neg
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
@@ -75,7 +88,47 @@ let rec dump fmt =
     Format.fprintf fmt "hom[%a, %a]"
       dump p
       dump q
+  | HomLam (p_name, q_name, bdy) ->
+    Format.fprintf fmt "hom-lam[%a, %a, %a]"
+      Ident.pp p_name
+      Ident.pp q_name
+      dump_hom bdy
+  | HomElim (hom, i) ->
+    Format.fprintf fmt "hom-elim[%a, %a]"
+      dump hom
+      dump i
   | Hole (tp, n) -> Format.fprintf fmt "hole[%a, %d]" dump tp n
+
+and dump_hom fmt =
+  function
+  | Set (pos, neg, steps) ->
+    Format.fprintf fmt "set[%a, %a];@.%a"
+      dump pos
+      dump_neg neg
+      dump_hom steps
+  | HomAp (hom, pos, neg, pos_name, neg_name, steps) ->
+    Format.fprintf fmt "hom-ap[%a, %a, %a, %a, %a];@.%a"
+      dump hom
+      dump pos
+      dump_neg neg
+      Ident.pp pos_name
+      Ident.pp neg_name
+      dump_hom steps
+  | Done (pos, neg) ->
+    Format.fprintf fmt "done[%a, %a]"
+      dump pos
+      dump_neg neg
+
+and dump_neg fmt : neg -> unit =
+  function
+  | Var ix ->
+    Format.fprintf fmt "neg-var[%d]" ix
+  | NegAp (neg, fn) ->
+    Format.fprintf fmt "neg-ap[%a, %a]"
+      dump_neg neg
+      dump fn
+  | Drop ->
+    Format.fprintf fmt "drop"
 
 let to_numeral =
   let rec go acc =
@@ -123,6 +176,8 @@ let classify_tm =
   | Label _ -> atom
   | Cases _ -> juxtaposition
   | Hom _ -> arrow
+  | HomLam _ -> arrow
+  | HomElim _ -> juxtaposition
   | Hole _ -> atom
 
 (** Wrap in parens with a pretty printer *)
@@ -139,7 +194,8 @@ let pp_braced_cond classify plain_pp penv fmt tm =
 
 let rec collect_lams env nms tm =
   match tm with
-  | Lam (nm, t) -> collect_lams (env #< nm) (nm :: nms) t
+  | Lam (nm, t) ->
+    collect_lams (env #< nm) (nm :: nms) t
   | body -> env, List.rev nms, body
 
 (** Pretty print a term *)
@@ -244,6 +300,17 @@ let rec pp env =
     Format.fprintf fmt "%a ⇒ %a"
       (pp env (P.left_of arrow)) p
       (pp env (P.right_of arrow)) q
+  | HomLam (p_name, q_name, bdy) ->
+    Format.fprintf fmt "λ %a %a → %a"
+      Ident.pp p_name
+      Ident.pp q_name
+      (pp_hom (env #< p_name #< q_name) (P.right_of arrow)) bdy
+  | HomElim (hom, i) ->
+    Format.fprintf fmt "%a %a"
+      (pp env (P.left_of juxtaposition)) hom
+      (pp env (P.right_of juxtaposition)) i
   | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
+
+and pp_hom _ _ fmt _ = Format.fprintf fmt "FIXME :)"
 
 let pp_toplevel = pp Emp P.isolated

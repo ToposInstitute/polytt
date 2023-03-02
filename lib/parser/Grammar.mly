@@ -15,18 +15,24 @@ let ap_or_atomic =
   | [] -> failwith "Impossible Internal Error"
   | [f] -> unlocate f
   | f :: args -> CS.Ap (f, args)
+
+let neg_ap_or_atomic neg fns =
+  match fns with
+  | None -> unlocate neg
+  | Some fns -> CS.NegAp (neg, fns)
 %}
 
 %token <int> NUMERAL
 %token <bool> FLAG
 %token <string> ATOM
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW THICK_RIGHT_ARROW UNDERSCORE EQUALS QUESTION
+%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW UNDERSCORE EQUALS QUESTION
 (* Symbols *)
 %token FORALL LAMBDA LET IN
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
-%token POLY BASE FIB
+%token POLY BASE FIB RIGHT_THICK_ARROW
+%token LEFT_SQUIGGLY_ARROW RIGHT_SQUIGGLY_ARROW RIGHT_ARROW_TAIL CIRC
 %token HASH
 (* Delimiters *)
 %token LPR RPR LSQ RSQ LBR RBR
@@ -36,9 +42,10 @@ let ap_or_atomic =
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
-%right COLON
+%right SEMICOLON COLON
 %right RIGHT_ARROW TIMES IN
-%nonassoc THICK_RIGHT_ARROW
+%left CIRC
+%nonassoc RIGHT_THICK_ARROW RIGHT_SQUIGGLY_ARROW
 
 %start <Vernacular.Syntax.cmd list> commands
 
@@ -138,12 +145,48 @@ labeled_field(sep):
 arrow:
   | LAMBDA; nms = list(name); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
+  | LAMBDA; pos = name; neg = name; RIGHT_SQUIGGLY_ARROW; body = hom_body
+    { CS.HomLam(pos, neg, body) }
   | LPR; name = name; COLON; base = term; RPR; RIGHT_ARROW; fam = term
     { CS.Pi (name, base, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi (`Anon, base, fam) }
-  | p = term; THICK_RIGHT_ARROW; q = term
+  | p = term; RIGHT_THICK_ARROW; q = term
     { CS.Hom (p, q) }
+
+hom_body:
+  | t = located(plain_hom_body)
+    { t }
+
+plain_hom_body:
+  | tm = atomic_term; RIGHT_ARROW; neg = neg_term; SEMICOLON; hom = hom_body
+    { CS.Set(tm, neg, hom) }
+  | LPR; pos = term; COMMA; neg = neg_term; RPR; RIGHT_ARROW_TAIL; hom = atomic_term; RIGHT_ARROW; LPR; pos_name = name; COMMA; neg_name = name; RPR; SEMICOLON; body = hom_body
+    { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
+  | pos = atomic_term; LEFT_SQUIGGLY_ARROW; neg = neg_term
+    { CS.Done (pos, neg) }
+
+neg_spine:
+  | CIRC; tms = separated_nonempty_list(CIRC, atomic_term)
+    { tms }
+
+neg_term:
+  | t = located(plain_neg_term)
+    { t }
+
+plain_neg_term:
+  | neg = atomic_neg_term; tms = option(neg_spine)
+    { neg_ap_or_atomic neg tms }
+
+atomic_neg_term:
+  | t = located(plain_atomic_neg_term)
+    { t }
+
+plain_atomic_neg_term:
+  | LPR; tm = plain_neg_term; RPR
+    { tm }
+  | path = path
+    { CS.Var path }
 
 atomic_term:
   | t = located(plain_atomic_term)

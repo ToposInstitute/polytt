@@ -12,13 +12,19 @@ let pp_sequent ppenv fmt (ctx, goal) =
     | [] ->
       Format.fprintf fmt "──────────────@.  ⊢ %a@."
         (S.pp ppenv Precedence.isolated) goal
-    | cell :: ctx ->
-      let tp = Quote.quote ~size ~tp:D.Univ (Cell.tp cell) in
-      let nm = Cell.name cell in
+    | Cell.Pos {name; tp; _} :: ctx ->
+      let tp = Quote.quote ~size ~tp:D.Univ tp in
       Format.fprintf fmt "  %a : %a@.%a"
-        Ident.pp nm
+        Ident.pp name
         (S.pp ppenv Precedence.isolated) tp
-        (go (ppenv #< nm) (size + 1)) (ctx, goal)
+        (go (ppenv #< name) (size + 1)) (ctx, goal)
+    | Cell.Neg {name; tp; _} :: ctx ->
+      (* FIXME: This code is wrong, and bad! *)
+      let tp = Quote.quote ~size ~tp:D.Univ tp in
+      Format.fprintf fmt "  %a : %a@.%a"
+        Ident.pp name
+        (S.pp ppenv Precedence.isolated) tp
+        (go (ppenv #< name) (size + 1)) (ctx, goal)
   in
   go ppenv (Locals.size ()) fmt (ctx, goal)
 

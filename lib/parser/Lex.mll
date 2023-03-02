@@ -107,11 +107,21 @@ and real_token = parse
   | "->" | "→"
     { RIGHT_ARROW }
   | "=>" | "⇒"
-    { THICK_RIGHT_ARROW }
+    { RIGHT_THICK_ARROW }
+  | "." | "∘"
+    { CIRC }
+  | "~>" | "⇝"
+    { RIGHT_SQUIGGLY_ARROW }
+  | "<~" | "⇜"
+    { LEFT_SQUIGGLY_ARROW }
+  | ">-" | "⤚"
+    { RIGHT_ARROW_TAIL }
   | "*" | "×"
     { TIMES }
   | ':'
      { COLON }
+  | ';'
+     { SEMICOLON }
   | "::"
     { COLON_COLON }
   | '_'

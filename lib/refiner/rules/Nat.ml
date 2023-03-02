@@ -1,14 +1,12 @@
 open Core
-open Errors
 open Tactic
-open TermBuilder
 
 module D = Domain
 module S = Syntax
 
 let formation =
   Syn.rule @@ fun () ->
-    (D.Univ, S.Nat)
+  (D.Univ, S.Nat)
 
 let zero =
   Chk.rule @@

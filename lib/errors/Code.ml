@@ -6,6 +6,9 @@ type t =
   | `TypeError
   | `ConversionError
   | `HoleInSynth
+  | `NotAHom
+  | `LinearVariableDoubleUse
+  | `LinearVariablesNotUsed
   ]
 
 let default_severity _ = Asai.Severity.Error
@@ -19,3 +22,6 @@ let to_string : t -> string =
   | `TypeError -> "E005"
   | `ConversionError -> "E006"
   | `HoleInSynth -> "E007"
+  | `NotAHom -> "E008"
+  | `LinearVariableDoubleUse -> "E009"
+  | `LinearVariablesNotUsed -> "E010"

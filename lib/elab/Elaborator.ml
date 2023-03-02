@@ -35,8 +35,14 @@ struct
       FinSet.record_lit (List.map (fun (l, v) -> l, chk v) cases)
     | CS.Poly ->
       Poly.formation
+    | CS.HomLam (pos_name, neg_name, bdy) ->
+      Hom.intro ~pos_name ~neg_name (fun _ _ -> hom bdy)
     | _ ->
       T.Chk.syn (syn tm)
+
+  and neg_chk (tm : CS.t) =
+    T.Error.locate tm.loc @@ fun () ->
+    T.NegChk.syn (neg_syn tm)
 
   and chk_lams names tm =
     match names with
@@ -56,7 +62,6 @@ struct
     match tm.node with
     | CS.Var path ->
       syn_var path
-    (* R.Var.resolve path *)
     | CS.Univ ->
       Univ.formation
     | CS.Pi (name, a, b) ->
@@ -92,6 +97,35 @@ struct
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 
+  and neg_syn (tm : CS.t) =
+    T.Error.locate tm.loc @@ fun () ->
+    match tm.node with
+    | CS.Var path ->
+      begin
+        match T.Locals.resolve_neg path with
+        | Some cell ->
+          Var.negative cell
+        | None ->
+          T.Error.error `UnboundVariable "Variable is not bound (or not negative, idk)."
+      end
+    | CS.NegAp (neg, fns) ->
+      List.fold_left (fun neg_tac fn -> Hom.neg_ap (T.NegChk.syn neg_tac) (syn fn)) (neg_syn neg) fns
+    | _ ->
+      T.Error.error `TypeError "Not a negative thingy."
+
+  and hom (tm : CS.t) =
+    T.Error.locate tm.loc @@ fun () ->
+    match tm.node with
+    | Set (pos, neg, steps) ->
+      Hom.set (syn pos) (neg_chk neg) (hom steps)
+    | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->
+      Hom.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> hom steps)
+    | Done (pos, neg) ->
+      Hom.done_ (chk pos) (neg_chk neg)
+    | _ ->
+      T.Error.error `NotAHom "Cannot be used to build a hom."
+
+
   and syn_var path =
     match T.Locals.resolve path with
     | Some cell ->
@@ -102,7 +136,7 @@ struct
         | Some res ->
           Refiner.Var.global res
         | None ->
-          T.Error.error `UnboundVariable "Variable is not bound."
+          T.Error.error `UnboundVariable "Variable is not bound (or is negative, idk)."
       end
 
   and syn_let ~name tm1 tm2 =

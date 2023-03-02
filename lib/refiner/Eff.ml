@@ -7,18 +7,37 @@ open Errors
 module D = Domain
 module S = Syntax
 
+module IntSet = Set.Make (Int)
 
 module Cell =
 struct
-  type t = {
-    name : Ident.t;
-    tp : D.tp;
-    value : D.t;
-  }
+  type pos = { name : Ident.t; tp : D.tp; value : D.t; }
+  type neg = { name : Ident.t; tp : D.tp; lvl : int }
 
-  let name cell = cell.name
-  let tp cell = cell.tp
-  let value cell = cell.value
+  type t =
+    | Pos of pos
+    | Neg of neg
+
+  let name =
+    function
+    | Pos {name; _} -> name
+    | Neg {name; _} -> name
+end
+
+
+module Error =
+struct
+  module Eff = Algaeff.Reader.Make(struct type nonrec env = Span.t end)
+
+  let error code fmt =
+    let loc = Eff.read () in
+    Logger.fatalf ~loc:loc code fmt
+
+  let locate loc k =
+    Eff.scope (fun _ -> loc) k
+
+  let run ~loc k =
+    Eff.run ~env:loc k
 end
 
 module Globals =
@@ -43,12 +62,37 @@ struct
     }
 end
 
+module Linearity =
+struct
+  module State = Algaeff.State.Make(struct type nonrec state = IntSet.t end)
+
+  let run k =
+    State.run ~init:IntSet.empty @@ fun () ->
+    let a = k () in
+    let can_use = State.get () in
+    if IntSet.is_empty can_use then
+      a
+    else
+      Error.error `LinearVariableDoubleUse "You didn't use all your variables!"
+
+  let obligation (neg : Cell.neg) =
+    State.modify @@ fun can_use ->
+    IntSet.add neg.lvl can_use
+
+  let consume (neg : Cell.neg) =
+    let can_use = State.get () in
+    let available = IntSet.mem neg.lvl can_use in
+    State.set @@ IntSet.remove neg.lvl can_use;
+    not available
+end
+
 module Locals =
 struct
   type env = {
     locals : D.t bwd;
     local_names : (Cell.t, unit) Yuujinchou.Trie.t;
     size : int;
+    neg_size : int;
     ppenv : Ident.t bwd
   }
 
@@ -56,80 +100,95 @@ struct
     locals = Emp;
     local_names = Yuujinchou.Trie.empty;
     size = 0;
+    neg_size = 0;
     ppenv = Emp
   }
 
-  module Eff = Algaeff.Reader.Make(struct type nonrec env = env end)
+  module Reader = Algaeff.Reader.Make(struct type nonrec env = env end)
 
   let run_top k =
-    Eff.run ~env:top_env k
+    Reader.run ~env:top_env k
 
   let env () =
-    Eff.read ()
+    Reader.read ()
 
   let locals () =
-    let env = Eff.read () in
+    let env = Reader.read () in
     Yuujinchou.Trie.to_seq_values env.local_names
     |> Seq.map fst
     |> List.of_seq
 
   let ppenv () =
-    let env = Eff.read () in
+    let env = Reader.read () in
     env.ppenv
 
   let size () =
-    let env = Eff.read () in
+    let env = Reader.read () in
     env.size
 
   let resolve path =
-    let env = Eff.read () in
+    let env = Reader.read () in
     Yuujinchou.Trie.find_singleton path env.local_names
-    |> Option.map @@ fun (cell, ()) -> cell
+    |> function
+    | Some (Pos pos, ()) -> Some pos
+    | _ -> None
+
+  let resolve_neg path =
+    let env = Reader.read () in
+    Yuujinchou.Trie.find_singleton path env.local_names
+    |> function
+    | Some (Neg neg, ()) -> Some neg
+    | _ -> None
 
   let fresh_var tp () =
-    let env = Eff.read () in
+    let env = Reader.read () in
     D.var tp env.size
 
+  let fresh_neg_var () =
+    let env = Reader.read () in
+    env.neg_size
+
   let bind_var cell env =
-    let name = Cell.name cell in
-    let value = Cell.value cell in
     let local_names =
-      match name with
+      match Cell.name cell with
       | `User path ->
         Yuujinchou.Trie.update_singleton path (fun _ -> Some (cell, ())) env.local_names
       | _ -> env.local_names
-    in {
-      locals = env.locals #< value;
-      local_names;
-      size = env.size + 1;
-      ppenv = env.ppenv #< name
-    }
+    in
+    match cell with
+    | Cell.Pos {name; value; _} -> {
+        env with
+        locals = env.locals #< value;
+        local_names;
+        size = env.size + 1;
+        ppenv = env.ppenv #< name
+      }
+    | Cell.Neg _ ->
+      {
+        env with
+        local_names;
+        neg_size = env.neg_size + 1;
+        (* FIXME: Update the negative ppenv *)
+      }
 
   let concrete ?(name = `Anon) tp tm k =
-    let cell = { Cell.name; tp; value = tm } in
-    Eff.scope (bind_var cell) @@ fun () ->
+    let cell = Cell.Pos { name; tp; value = tm } in
+    Reader.scope (bind_var cell) @@ fun () ->
     k ()
 
   let abstract ?(name = `Anon) tp k =
     let var = fresh_var tp () in
-    let cell = { Cell.name; tp; value = var } in
-    Eff.scope (bind_var cell) @@ fun () ->
+    let cell = Cell.Pos { name; tp; value = var } in
+    Reader.scope (bind_var cell) @@ fun () ->
     k var
-end
 
-module Error =
-struct
-  module Eff = Algaeff.Reader.Make(struct type nonrec env = Span.t end)
-
-  let error code fmt =
-    let loc = Eff.read () in
-    Logger.fatalf ~loc:loc code fmt
-
-  let locate loc k =
-    Eff.scope (fun _ -> loc) k
-
-  let run ~loc k =
-    Eff.run ~env:loc k
+  let abstract_neg ?(name = `Anon) tp k =
+    let lvl = fresh_neg_var () in
+    let neg_cell = { Cell.name; tp; lvl } in
+    let cell = Cell.Neg neg_cell in
+    Linearity.obligation neg_cell;
+    Reader.scope (bind_var cell) @@ fun () ->
+    k lvl
 end
 
 module Hole =
