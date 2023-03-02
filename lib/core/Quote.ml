@@ -74,6 +74,8 @@ struct
       let fib = bind base @@ fun i ->
         quote D.Univ (Sem.do_fib v i)
       in S.PolyIntro (qbase, fib)
+    | _, D.Hom (p, q) ->
+      S.Hom (quote D.Poly p, quote D.Poly q)
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->

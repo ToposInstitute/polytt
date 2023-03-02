@@ -71,6 +71,8 @@ struct
       do_base (eval p)
     | S.Fib (p, i) ->
       do_fib (eval p) (eval i)
+    | S.Hom (p, q) ->
+      D.Hom (eval p, eval q)
     | S.Hole (tp, n) ->
       D.hole (eval tp) n
 

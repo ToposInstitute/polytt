@@ -21,7 +21,7 @@ let ap_or_atomic =
 %token <bool> FLAG
 %token <string> ATOM
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW UNDERSCORE EQUALS QUESTION
+%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW THICK_RIGHT_ARROW UNDERSCORE EQUALS QUESTION
 (* Symbols *)
 %token FORALL LAMBDA LET IN
 %token TIMES FST SND
@@ -38,6 +38,7 @@ let ap_or_atomic =
 
 %right COLON
 %right RIGHT_ARROW TIMES IN
+%nonassoc THICK_RIGHT_ARROW
 
 %start <Vernacular.Syntax.cmd list> commands
 
@@ -141,6 +142,8 @@ arrow:
     { CS.Pi (name, base, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi (`Anon, base, fam) }
+  | p = term; THICK_RIGHT_ARROW; q = term
+    { CS.Hom (p, q) }
 
 atomic_term:
   | t = located(plain_atomic_term)

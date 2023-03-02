@@ -106,6 +106,8 @@ and real_token = parse
     { FORALL }
   | "->" | "→"
     { RIGHT_ARROW }
+  | "=>" | "⇒"
+    { THICK_RIGHT_ARROW }
   | "*" | "×"
     { TIMES }
   | ':'

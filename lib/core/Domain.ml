@@ -24,6 +24,7 @@ type t = Data.value =
   | Univ
   | Poly
   | PolyIntro of t * clo
+  | Hom of t * t
 
 and tp = t
 
@@ -76,6 +77,10 @@ let rec dump fmt =
     Format.fprintf fmt "poly-intro[%a, %a]"
       dump base
       dump_clo fib
+  | Hom (p, q) ->
+    Format.fprintf fmt "hom[%a, %a]"
+      dump p
+      dump q
 
 and dump_neu fmt { hd = Var i; spine } =
   Format.fprintf fmt "var[%i %a]" i dump_spine spine

@@ -60,6 +60,9 @@ struct
       equate D.Univ base1 base2;
       bind base1 @@ fun i ->
       equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
+    | _, D.Hom (p1, q1), D.Hom (p2, q2) ->
+      equate D.Univ p1 p2;
+      equate D.Univ q1 q2;
     | _, _, _ ->
       raise Unequal
 

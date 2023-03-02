@@ -87,6 +87,8 @@ struct
       Poly.base (chk p)
     | CS.Fib (p, i) ->
       Poly.fib (chk p) (chk i)
+    | CS.Hom (p, q) ->
+      Hom.formation (chk p) (chk q)
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 

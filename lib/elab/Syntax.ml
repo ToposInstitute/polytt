@@ -31,5 +31,6 @@ and t_ =
   | Poly
   | Base of t
   | Fib of t * t
+  | Hom of t * t
   | Anno of t * t (* (t : ty) *)
   | Hole

@@ -30,6 +30,7 @@ type syn =
   | PolyIntro of syn * syn
   | Base of syn
   | Fib of syn * syn
+  | Hom of syn * syn
   | Hole of syn * int
 
 and value =
@@ -46,6 +47,7 @@ and value =
   | Univ
   | Poly
   | PolyIntro of value * clo
+  | Hom of value * value
 
 and neu = { hd : hd; spine : frame bwd }
 

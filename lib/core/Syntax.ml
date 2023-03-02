@@ -32,6 +32,7 @@ type t = Data.syn =
   | PolyIntro of t * t
   | Base of t
   | Fib of t * t
+  | Hom of t * t
   | Hole of t * int
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
@@ -70,6 +71,10 @@ let rec dump fmt =
     Format.fprintf fmt "fib[%a, %a]"
       dump p
       dump i
+  | Hom (p, q) ->
+    Format.fprintf fmt "hom[%a, %a]"
+      dump p
+      dump q
   | Hole (tp, n) -> Format.fprintf fmt "hole[%a, %d]" dump tp n
 
 let to_numeral =
@@ -117,6 +122,7 @@ let classify_tm =
   | FinSet _ -> atom
   | Label _ -> atom
   | Cases _ -> juxtaposition
+  | Hom _ -> arrow
   | Hole _ -> atom
 
 (** Wrap in parens with a pretty printer *)
@@ -234,6 +240,10 @@ let rec pp env =
     Format.fprintf fmt "fib %a %a"
       (pp env (P.right_of juxtaposition)) p
       (pp env (P.right_of juxtaposition)) fib
+  | Hom (p, q) ->
+    Format.fprintf fmt "%a ⇒ %a"
+      (pp env (P.left_of arrow)) p
+      (pp env (P.right_of arrow)) q
   | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
 
 let pp_toplevel = pp Emp P.isolated
