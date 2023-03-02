@@ -19,7 +19,7 @@ let pp_sequent ppenv fmt (ctx, goal) =
         (S.pp ppenv Precedence.isolated) tp
         (go (ppenv #< nm) (size + 1)) (ctx, goal)
   in
-  go ppenv (Locals.size ()) fmt (ctx, goal)
+  go ppenv 0 fmt (ctx, goal)
 
 let unleash = Chk.rule @@
   fun x ->
