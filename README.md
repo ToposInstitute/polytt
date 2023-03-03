@@ -1,4 +1,4 @@
-# PolyTT
+# PolyTT 🦜
 
 <p align="center">
   <img src="./poly.png" />
