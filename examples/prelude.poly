@@ -39,4 +39,7 @@ def let-example :=
 
 def Lens : (S T A B : Type) → Type := λ S T A B → { .get : S → A, .set : S → B → T }
 
-#normalize let-example
+def compose : (A B C : Type) → (B → C) → (A → B) → A → C :=
+  λ _ _ _ f g a → f (g a)
+
+#normalize Lens
