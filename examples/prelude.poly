@@ -53,9 +53,43 @@ def id : (P : Poly) → P ⇒ P :=
   λ P → λ a⁺ a⁻ ⇝
     a⁺ ⇜ a⁻
 
-def succc : ℕ → ℕ :=
-  λ i → succ i
+def nyan-hom : ℕ → nyan ⇒ nyan :=
+  λ n → λ a⁺ a⁻ ⇝
+    (a⁺ , a⁻) ⤚ (id nyan) → (b⁺ , b⁻);
+    n ⇜ (b⁻ ∘ succ ∘ succ)
 
-def nyan-hom : nyan ⇒ nyan :=
+#normalize nyan-hom 42 1
+
+def nyan-hom2 : nyan ⇒ nyan :=
   λ a⁺ a⁻ ⇝
-    (succ a⁺) ⇜ (a⁻ ∘ succc ∘ succc)
+    (a⁺ , a⁻) ⤚ (nyan-hom 12) → (b⁺ , b⁻);
+    b⁺ ⇜ b⁻
+
+#normalize nyan-hom2 1
+
+def compose : (P : Poly) → (Q : Poly) → (R : Poly) → Q ⇒ R → P ⇒ Q → P ⇒ R :=
+  λ P Q R f g → λ p⁺ p⁻ ⇝
+    (p⁺ , p⁻) ⤚ g → (q⁺ , q⁻);
+    (q⁺ , q⁻) ⤚ f → (r⁺ , r⁻);
+    r⁺ ⇜ r⁻
+
+
+-- 🐈🌈
+#normalize (compose nyan nyan nyan nyan-hom2 nyan-hom2) 1
+
+def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
+  λ n⁺ n⁻ ⇝
+    n⁺ ⇜ (n⁻ ∘ (const ℕ #{ .single } (succ n⁺)))
+
+#normalize counter 2
+#quit
+
+def Moore : Type → Type → Type → Type :=
+  λ S I O → (S × S) ⇒ (O × I)
+ 
+def mds : (A : Type) → (B : Type) → (A → B) → Moore B A B :=
+  λ A B f → λ b⁺ b⁻ ⇝
+    b⁺ ⇜ (b⁻ ∘ f)
+
+def Gate : Type → Type → Type :=
+  λ I O → Moore O I O

@@ -5,6 +5,7 @@ val formation : Chk.tac -> Chk.tac -> Syn.tac
 val intro : ?pos_name:Ident.t -> ?neg_name:Ident.t
   -> (Var.tac -> NegVar.tac -> Hom.tac)
   -> Chk.tac
+val elim : Syn.tac -> Chk.tac -> Syn.tac
 
 val neg_ap : NegChk.tac -> Syn.tac -> NegSyn.tac
 

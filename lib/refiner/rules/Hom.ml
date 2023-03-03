@@ -23,6 +23,25 @@ let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.t
   | _ ->
     Error.error `TypeError "Must do a hom lambda in hom."
 
+let elim hom_tac arg_tac =
+  Syn.rule @@ fun () ->
+  let hom_tp, hom = Syn.run hom_tac in
+  match hom_tp with
+  | D.Hom (p, q) ->
+    let p_base = Chk.run arg_tac (do_base p) in
+    let tp =
+      graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value q @@ fun q ->
+      Graft.value (eval p_base) @@ fun p_base ->
+      Graft.build @@
+      TB.sigma (TB.base q) @@ fun q_base ->
+      TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
+    in
+    tp, S.HomElim (hom, p_base)
+  | _ ->
+    Error.error `TypeError "Tried to eliminate from non-hom."
+
 let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   NegSyn.rule @@ fun () ->
   let fn_tp, fn = Syn.run fn_tac in

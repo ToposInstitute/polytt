@@ -28,7 +28,7 @@ type t = Data.value =
   | PolyIntro of t * tm_clo
   | Hom of t * t
   | HomLam of Ident.t * Ident.t * hom_clo
-  | FibLam of int * instr list
+  | FibLam of prog
 
 and tp = t
 
@@ -57,6 +57,8 @@ and hom_clo = Data.hom_syn clo
 and instr = Data.instr =
   | Const of { write_addr : int; value : t }
   | NegAp of { write_addr : int; read_addr : int; fn : t }
+
+and prog = Data.prog = { addr : int; capacity : int; instrs : instr list }
 
 let push_frm {hd; spine} frm =
   {hd; spine = spine #< frm}
@@ -103,6 +105,26 @@ let rec dump fmt =
       Ident.pp p_name
       Ident.pp q_name
       dump_hom_clo bdy
+  | FibLam _ ->
+    Format.fprintf fmt "its a fib lam :)"
+
+and dump_instr fmt =
+  function
+  | Const {write_addr; value} ->
+    Format.fprintf fmt "set[%d <- %a]"
+      write_addr
+      dump value
+  | NegAp {write_addr; read_addr; fn} ->
+    Format.fprintf fmt "neg-ap[%d <- %d, %a]"
+      write_addr
+      read_addr
+      dump fn
+
+and dump_instrs fmt instrs =
+  Format.pp_print_list
+    ~pp_sep:(fun fmt () -> Format.fprintf fmt ";@.")
+    dump_instr fmt instrs
+
 
 and dump_neu fmt { hd = Var i; spine } =
   Format.fprintf fmt "D.var[%i %a]" i dump_spine spine

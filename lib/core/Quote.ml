@@ -80,6 +80,17 @@ struct
       in S.PolyIntro (qbase, fib)
     | _, D.Hom (p, q) ->
       S.Hom (quote D.Poly p, quote D.Poly q)
+    | D.Hom (p, q), D.HomLam (pos_name, neg_name, clo) ->
+      bind (Sem.do_base p) @@ fun p_base ->
+      let v = Sem.inst_hom_clo clo p_base in
+      let q_base = Sem.do_fst v in
+      let qq_base = quote (Sem.do_base q) q_base in
+      let qp_fib =
+        bind (Sem.do_fib q q_base) @@ fun q_fib ->
+        quote (Sem.do_fib p p_base) (Sem.do_ap (Sem.do_snd v) q_fib)
+      in
+      (* let prog = S.Lam (p_name, S.Pair(qq_base, S.Lam (q_name, qp_fib))) in *)
+      S.HomLam (pos_name, neg_name, S.Done (qq_base, S.NegAp (S.Var 0, S.Lam(`Anon, qp_fib))))
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->
@@ -87,6 +98,7 @@ struct
     | _, D.Neu (_, neu) ->
       quote_neu neu
     | tp, tm ->
+      Debug.print "Bad quote: %a@." D.dump tm;
       invalid_arg "bad quote"
 
   and quote_neu {hd; spine} =
@@ -135,6 +147,8 @@ struct
       S.Base tm
     | D.Fib {base; value} ->
       S.Fib (tm, quote base value)
+    | D.HomElim {base; value} ->
+      S.HomElim (tm, quote base value)
 end
 
 let quote ~size ~tp v =

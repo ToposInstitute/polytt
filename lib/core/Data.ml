@@ -21,12 +21,12 @@ type syn =
   | Eq of syn * syn * syn
   | Refl of syn
   (* Axiom J
-    J : {A : Type} {x : A}
+     J : {A : Type} {x : A}
       -> (P : (y : A) -> x = y -> Type)
       -> P x refl
       -> {y : A} (p : x = y)
       -> P y p
-    *)
+  *)
   (* | AxiomJ of  *)
   | Nat (* ℕ *)
   | Zero (* zero *)
@@ -76,11 +76,7 @@ and value =
   | PolyIntro of value * tm_clo
   | Hom of value * value
   | HomLam of Ident.t * Ident.t * hom_clo
-  | FibLam of int * instr list
-  (** A compiled program, created by reverse evaluation.
-      When applied, place the argument in the address of the
-      [int] parameter, execute the instructions, and then
-      read off the outputs off the 0th cell. *)
+  | FibLam of prog
 
 and neu = { hd : hd; spine : frame bwd }
 
@@ -104,6 +100,12 @@ and instr =
   | Const of { write_addr : int; value : value }
   (** Write [value] to [write_addr] *)
   | NegAp of { write_addr : int; read_addr : int; fn : value }
+
+and prog = { addr : int; capacity : int; instrs : instr list }
+(** A compiled program, created by reverse evaluation.
+    When applied, place the argument in the address of the
+    [int] parameter, execute the instructions, and then
+    read off the outputs off the 0th cell. *)
 
 and env = value bwd
 and 'a clo = Clo of { env : env; body : 'a }

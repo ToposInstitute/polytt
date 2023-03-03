@@ -75,10 +75,12 @@ let record_lit_syn cases_tac =
   (* We bind an (anonymous) variable here, as we will be placing
      the cases underneath a lambda binder. *)
   let cases_tp_tm =
-    List.map (fun (l, case_tac) -> l,
-                                   Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun _ ->
-                                   let r = Syn.run case_tac in
-                                   r) cases_tac in
+    cases_tac
+    |> List.map @@ fun (l, case_tac) ->
+    l, Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun _ ->
+    let r = Syn.run case_tac in
+    r
+  in
   let cases_tp = List.map (fun (l, (tp, _)) -> l, tp) cases_tp_tm in
   let cases_tm = List.map (fun (l, (_, tm)) -> l, tm) cases_tp_tm in
   let mot_tp = S.Lam (Ident.anon, S.Univ) in

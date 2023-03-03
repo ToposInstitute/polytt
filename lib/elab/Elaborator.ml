@@ -69,7 +69,7 @@ struct
     | CS.Pi (name, a, b) ->
       Pi.formation ~name (chk a) (fun _ -> chk b)
     | CS.Ap (fn, args) ->
-      List.fold_left (fun tac arg -> Pi.ap tac (chk arg)) (syn fn) args
+      syn_aps fn args
     | CS.Let (nm, tm1, tm2) ->
       syn_let ~name:nm tm1 tm2
     | CS.Sigma (name, a, b) ->
@@ -158,6 +158,19 @@ struct
     let vtm = Eff.eval etm1 in
     let body = T.Chk.run (T.Var.concrete ~name vtp1 vtm (fun _ -> chk tm2)) vtp1 in
     (vtp1, body)
+
+  and syn_ap fn arg =
+    T.match_syn fn @@ fun fn_tac ->
+    function
+    | D.Pi _ ->
+      Pi.ap fn_tac arg
+    | D.Hom _ ->
+      Hom.elim fn_tac arg
+    | _ ->
+      T.Error.error `TypeError "Tried to apply something that wasn't a function-like."
+
+  and syn_aps fn args =
+    List.fold_left (fun tac arg -> syn_ap tac (chk arg)) (syn fn) args
 end
 
 let chk (tm : CS.t) (tp : D.tp) =

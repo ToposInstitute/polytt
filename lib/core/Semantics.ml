@@ -29,6 +29,7 @@ struct
 
   (** Allocate [n] cells, and return the address of the first cell allocated. *)
   let allocate n =
+    Debug.print "Allocating %d cells.@." n;
     let st = Instrs.get () in
     Instrs.set { st with cells = st.cells + n };
     st.cells
@@ -138,31 +139,36 @@ struct
         let in_addr = eval_neg neg in
         eval pos, in_addr
     in
-    Instrs.run ~init:{ instrs = []; cells = 0 } @@ fun () ->
+    Instrs.run ~init:{ instrs = []; cells = 1 } @@ fun () ->
     let base, addr = eval_steps steps in
     let st = Instrs.get () in
-    base, addr, st.instrs
+    Debug.print "Compiled program, requires %d cells to evalute, initial addr %d@." st.cells addr;
+    base, { D.addr; capacity = st.cells; instrs = st.instrs }
 
   and eval_instr cells =
     function
     | D.Const { write_addr; value } ->
+      Debug.print "Running CONST at %d@." write_addr;
       CCVector.set cells write_addr (Some value)
     | D.NegAp { write_addr; read_addr; fn } ->
       let v = Option.get @@ CCVector.get cells read_addr in
+      Debug.print "Running NEG AP at %d@." write_addr;
       CCVector.set cells write_addr (Some (do_ap fn v))
 
-  and eval_instrs addr instrs arg =
-    let cells = CCVector.make (addr + 1) None in
-    CCVector.set cells addr (Some arg);
-    List.iter (eval_instr cells) instrs;
+  and eval_prog (prog : D.prog) arg =
+    let cells = CCVector.make prog.capacity None in
+    Debug.print "Evaluating Program:@.%a@." D.dump_instrs prog.instrs;
+    Debug.print "Writing Initial value at %d@." prog.addr;
+    CCVector.set cells prog.addr (Some arg);
+    List.iter (eval_instr cells) prog.instrs;
     Option.get @@ CCVector.get cells 0 
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with
     | D.Lam (_t, clo) ->
       inst_clo clo arg
-    | D.FibLam (addr, instrs) ->
-      eval_instrs addr instrs arg
+    | D.FibLam prog ->
+      eval_prog prog arg
     | D.Neu (Pi(_t, a, clo), neu) ->
       let fib = inst_clo clo arg in
       D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
@@ -264,8 +270,8 @@ struct
     match clo with
     | D.Clo { env; body } ->
       Env.run ~env:(env #< v) @@ fun () ->
-      let base, addr, instrs = eval_hom body in
-      D.Pair (base, D.FibLam (addr, instrs))
+      let base, prog = eval_hom body in
+      D.Pair (base, D.FibLam prog)
 
   and graft_value (gtm : S.t Graft.t) =
     let tm, env = Graft.graft gtm in
@@ -302,6 +308,9 @@ let do_nat_elim ~mot ~zero ~succ ~scrut =
 
 let inst_clo =
   Internal.inst_clo
+
+let inst_hom_clo =
+  Internal.inst_hom_clo
 
 let graft_value =
   Internal.graft_value

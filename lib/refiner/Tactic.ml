@@ -116,3 +116,8 @@ end
 let match_goal k =
   Chk.rule @@ fun goal ->
   Chk.run (k goal) goal
+
+let match_syn tac k =
+  Syn.rule @@ fun () ->
+  let tp, tm = Syn.run tac in
+  Syn.run @@ k (Syn.rule @@ fun () -> tp, tm) tp
