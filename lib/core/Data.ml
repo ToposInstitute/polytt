@@ -10,6 +10,7 @@ type 'a labeled = (string * 'a) list
 
 type syn =
   | Var of int
+  | GlobalVar of string * int
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
   | Lam of Ident.t * syn (* λ x. e *)
   | Let of Ident.t * syn * syn (* let x = e in t *)
@@ -21,12 +22,12 @@ type syn =
   | Eq of syn * syn * syn
   | Refl of syn
   (* Axiom J
-    J : {A : Type} {x : A}
+     J : {A : Type} {x : A}
       -> (P : (y : A) -> x = y -> Type)
       -> P x refl
       -> {y : A} (p : x = y)
       -> P y p
-    *)
+  *)
   (* | AxiomJ of  *)
   | Nat (* ℕ *)
   | Zero (* zero *)

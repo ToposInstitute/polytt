@@ -10,7 +10,6 @@ end
 module Modifier = Yuujinchou.Modifier.Make(Param)
 module Scope = Yuujinchou.Scope.Make(Param)(Modifier)
 
-
 let define name defn =
   match name with
   | `User path ->

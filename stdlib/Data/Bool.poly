@@ -1,15 +1,15 @@
 def Bool := #{ .true, .false }
 
-def bool : (A : Type) → A → A → Bool → A :=
-  λ A p q →
-    { .true = p
-    , .false = q
-    }
-
-def not : Bool → Bool :=
-  { .true = .false
-  , .false = .true
-  }
+-- def bool : (A : Type) → A → A → Bool → A :=
+--   λ A p q →
+--     { .true = p
+--     , .false = q
+--     }
+-- 
+-- def not : Bool → Bool :=
+--   { .true = .false
+--   , .false = .true
+--   }
 
 -- def and : Bool → Bool → Bool :=
 --   { .true = { .true = .true , .false = .false }

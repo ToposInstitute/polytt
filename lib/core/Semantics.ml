@@ -24,6 +24,8 @@ struct
     match tm with
     | S.Var ix ->
       var ix
+    (* TODO: Implement Effect for requesting global var name from the vernacular *)
+    | S.GlobalVar (_tbl, _ix) -> failwith "Unimplemented fetch of global var"
     | S.Pi (nm, a, b) ->
       D.Pi (nm, eval a, clo b)
     | S.Lam (nm, b) ->

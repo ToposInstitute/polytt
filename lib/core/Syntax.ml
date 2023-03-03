@@ -12,6 +12,7 @@ type 'a labeled = (string * 'a) list
 
 type t = Data.syn =
   | Var of int
+  | GlobalVar of string * int
   | Pi of Ident.t * t * t
   | Lam of Ident.t * t
   | Let of Ident.t * t * t
@@ -40,6 +41,7 @@ let rec dump fmt =
   function
   | Univ -> Format.fprintf fmt "univ"
   | Var i -> Format.fprintf fmt "S.var[%i]" i
+  | GlobalVar (tbl, i) -> Format.fprintf fmt "S.GlobalVar[%s, %i]" tbl i
   | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a %a %a]" Ident.pp nm dump a dump b
   | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump b
   | Pair (a, b) -> Format.fprintf fmt "pair[%a %a]" dump a dump b
@@ -80,6 +82,7 @@ let classify_tm =
   function
   | Univ -> atom
   | Var _ -> atom
+  | GlobalVar _ -> atom
   | Pi _ -> arrow
   | Sigma (`Anon, _, _) -> star
   | Sigma _ -> arrow
@@ -131,6 +134,8 @@ let rec pp env =
       with Failure _ ->
         Format.fprintf fmt "![bad index %d]!" i
     end
+  (* TODO: Implement Effect for requesting global var name from the vernacular *)
+  | GlobalVar (tbl, i) -> Format.fprintf fmt "S.GlobalVar[%s, %i]" tbl i 
   | Pi (`Anon, a, b) -> Format.fprintf fmt "%a → %a" (pp env (P.left_of this)) a (pp (env #< `Anon) (P.right_of this)) b
   | Pi (nm, a, b) -> Format.fprintf fmt "(%a : %a) → %a" Ident.pp nm (pp env P.isolated) a (pp (env #< nm) (P.right_of this)) b
   | Sigma (`Anon, a, b) -> Format.fprintf fmt "%a × %a" (pp env (P.left_of this)) a (pp (env #< `Anon) (P.right_of this)) b
