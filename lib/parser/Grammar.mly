@@ -166,6 +166,8 @@ plain_hom_body:
     { CS.Set(tm, neg, hom) }
   | LPR; pos = term; COMMA; neg = neg_term; RPR; RIGHT_ARROW_TAIL; hom = atomic_term; RIGHT_ARROW; LPR; pos_name = name; COMMA; neg_name = name; RPR; SEMICOLON; body = hom_body
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
+  | p = atomic_neg_term; LSQ; tm = term; RSQ; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
+    { CS.NegUnpack (p, tm, a_name, b_name, body) }
   | pos = atomic_term; LEFT_SQUIGGLY_ARROW; neg = neg_term
     { CS.Done (pos, neg) }
 
@@ -180,6 +182,8 @@ neg_term:
 plain_neg_term:
   | neg = atomic_neg_term; tms = option(neg_spine)
     { neg_ap_or_atomic neg tms }
+  | LPR; a = neg_term; COMMA; LAMBDA; a_name = name; RIGHT_ARROW; b = neg_term; RPR
+    { CS.NegPair (a, a_name, b) }
 
 atomic_neg_term:
   | t = located(plain_atomic_neg_term)

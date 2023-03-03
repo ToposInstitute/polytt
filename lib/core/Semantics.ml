@@ -28,10 +28,10 @@ struct
     { st with instrs = instr :: st.instrs }
 
   (** Allocate [n] cells, and return the address of the first cell allocated. *)
-  let allocate n =
-    Debug.print "Allocating %d cells.@." n;
+  let allocate () =
+    Debug.print "Allocating cell@.";
     let st = Instrs.get () in
-    Instrs.set { st with cells = st.cells + n };
+    Instrs.set { st with cells = st.cells + 1 };
     st.cells
 
   let clo (body : 'a) : 'a D.clo =
@@ -81,6 +81,12 @@ struct
       do_cases (eval mot) (List.map (fun (l, v) -> l, eval v) cases) (eval case)
     | S.Univ ->
       D.Univ
+    | S.NegUniv ->
+      D.NegUniv
+    | S.Negate tp ->
+      do_negate (eval tp)
+    | S.NegSigma (name, a, b_neg) ->
+      D.NegSigma (name, eval a, clo b_neg)
     | S.Poly ->
       D.Poly
     | S.PolyIntro (base, fib) ->
@@ -112,12 +118,18 @@ struct
          in the syntax. *)
       ix
     | S.NegAp (neg, fn) ->
-      let read_addr = allocate 1 in
+      let read_addr = allocate () in
       let write_addr = eval_neg neg in
       emit @@ D.NegAp { write_addr; read_addr; fn = eval fn };
       read_addr
+    | S.NegPair (a_neg, _, b_neg) ->
+      let read_addr = allocate () in
+      let write_fst_addr = eval_neg a_neg in
+      let write_snd_addr = allocate () in
+      emit @@ D.Unpair { read_addr; write_fst_addr; write_snd_addr; clo = clo b_neg };
+      read_addr
     | S.Drop ->
-      allocate 1
+      allocate ()
 
   (** Calling convention: The value returned by [eval_hom]
       is the address to write the initial value to. *)
@@ -129,12 +141,14 @@ struct
         emit @@ D.Const { write_addr; value = eval pos };
         eval_steps steps
       | S.HomAp (hom, pos, neg, _, _, steps) ->
-        let read_addr = allocate 1 in
+        let read_addr = allocate () in
         let write_addr = eval_neg neg in
         let r = do_hom_elim (eval hom) (eval pos) in
         append [do_fst r] @@ fun () ->
         emit @@ D.NegAp { write_addr; read_addr; fn = do_snd r };
         eval_steps steps
+      | S.Unpack _ ->
+        failwith "FIXME"
       | S.Done (pos, neg) ->
         let in_addr = eval_neg neg in
         eval pos, in_addr
@@ -154,6 +168,15 @@ struct
       let v = Option.get @@ CCVector.get cells read_addr in
       Debug.print "Running NEG AP at %d@." write_addr;
       CCVector.set cells write_addr (Some (do_ap fn v))
+    | D.Unpair { read_addr; write_fst_addr; write_snd_addr; clo } ->
+      Debug.print "Running UNPAIR.@.";
+      let v = Option.get @@ CCVector.get cells read_addr in
+      let v1 = do_fst v in
+      let v2 = do_snd v in
+      let b_prog = inst_neg_clo clo v1 in
+      let bv = eval_prog b_prog v2 in
+      CCVector.set cells write_fst_addr (Some v1);
+      CCVector.set cells write_snd_addr (Some bv);
 
   and eval_prog (prog : D.prog) arg =
     let cells = CCVector.make prog.capacity None in
@@ -223,6 +246,18 @@ struct
         invalid_arg "bad do_nat_elim"
     in rec_nat_elim scrut
 
+  and do_negate tp =
+    match tp with
+    | D.Sigma (name, a, clo) ->
+      graft_value @@
+      Graft.value a @@ fun a ->
+      Graft.clo clo @@ fun b ->
+      Graft.build @@
+      TB.neg_sigma ~name a @@ fun x ->
+      TB.negate (TB.ap b x)
+    | _ ->
+      D.negate tp
+
   and do_base p =
     match p with
     | D.PolyIntro (base, _) ->
@@ -266,6 +301,15 @@ struct
     | D.Clo { env; body } ->
       Env.run ~env:(env #< v) (fun () -> eval body)
 
+  and inst_neg_clo clo v =
+    match clo with
+    | D.Clo { env; body } ->
+      Env.run ~env:(env #< v) @@ fun () ->
+      Instrs.run ~init:{ instrs = []; cells = 1 } @@ fun () ->
+      let addr = eval_neg body in
+      let st = Instrs.get () in
+      { D.addr; capacity = st.cells; instrs = st.instrs }
+
   and inst_hom_clo clo v =
     match clo with
     | D.Clo { env; body } ->
@@ -296,6 +340,9 @@ let do_fst =
 
 let do_snd =
   Internal.do_snd
+
+let do_negate =
+  Internal.do_negate
 
 let do_base =
   Internal.do_base

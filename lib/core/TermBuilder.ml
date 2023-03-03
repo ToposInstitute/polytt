@@ -58,6 +58,12 @@ struct
   let univ _ =
     S.Univ
 
+  let negate tp size =
+    S.Negate (tp size)
+
+  let neg_sigma ?(name = `Anon) base fam size =
+    S.NegSigma(name, base size, scope fam size)
+
   let base p size =
     S.Base (p size)
 
@@ -76,6 +82,9 @@ struct
     let x = var (Bwd.length env) in
     let env = env #< v in
     k x env
+
+  let clo (clo : D.tm_clo) (k : S.t tb -> 'a t) : 'a t =
+    value (D.Lam (`Anon, clo)) k
 
   let build (builder : 'a tb) : 'a t =
     fun env -> (builder, env)

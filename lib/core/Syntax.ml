@@ -30,6 +30,9 @@ type t = Data.syn =
   | Label of labelset * label
   | Cases of t * t labeled * t
   | Univ
+  | NegUniv
+  | Negate of t
+  | NegSigma of Ident.t * t * t
   | Poly
   | PolyIntro of t * t
   | Base of t
@@ -43,11 +46,13 @@ type t = Data.syn =
 and neg = Data.neg_syn =
   | Var of int
   | NegAp of neg * t
+  | NegPair of neg * Ident.t * neg
   | Drop
 
 and hom = Data.hom_syn =
   | Set of t * neg * hom
   | HomAp of t * t * neg * Ident.t * Ident.t * hom
+  | Unpack of { scrut : neg; pos : t; a_name : Ident.t; b_name : Ident.t; case : hom; }
   | Done of t * neg
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
@@ -316,10 +321,10 @@ let rec pp env =
       (pp env (P.left_of arrow)) p
       (pp env (P.right_of arrow)) q
   | HomLam (p_name, q_name, bdy) ->
-    Format.fprintf fmt "λ %a %a → %a"
+    Format.fprintf fmt "λ %a %a → FIXME :)"
       Ident.pp p_name
       Ident.pp q_name
-      (pp_hom (env #< p_name #< q_name) (P.right_of arrow)) bdy
+  (* (pp_hom (env #< p_name #< q_name) (P.right_of arrow)) bdy *)
   | HomElim (hom, i) ->
     Format.fprintf fmt "%a %a"
       (pp env (P.left_of juxtaposition)) hom
@@ -327,6 +332,22 @@ let rec pp env =
   | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
   | Skolem _ -> Format.fprintf fmt "skolem"
 
-and pp_hom _ _ fmt _ = Format.fprintf fmt "FIXME :)"
+(* and pp_hom ppenv prec fmt = *)
+(*   function *)
+(*   | Set (pos, neg, steps) -> *)
+(*     Format.fprintf fmt "%a → %a;@.%a" *)
+(*       (pp ppenv (P.left_of arrow)) pos *)
+(*       (pp_neg ppenv (P.right_of arrow)) neg *)
+(*       (pp_hom ppenv P.isolated) steps *)
+(*   | HomAp (phi, pos, neg, pos_var, neg_var, steps) -> *)
+(*     Format.fprintf fmt "(%a, %a) ⤚ %a → (%a, %a);@.%a" *)
+(*       (pp ppenv (P.left_of arrow)) pos *)
+(*       (pp_neg ppenv (P.right_of arrow)) neg *)
+(*       __ __ *)
+(*       Ident.pp pos_var *)
+(*       Ident.pp neg_var *)
+(*       (pp_hom ppenv P.isolated) steps *)
+(*   | Done (pos, neg) -> *)
+(*     __ *)
 
 let pp_toplevel = pp Emp P.isolated

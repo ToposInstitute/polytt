@@ -244,6 +244,9 @@ let do_snd tm =
 let do_nat_elim ~mot ~zero ~succ ~scrut =
   Semantics.do_nat_elim ~mot ~zero ~succ ~scrut
 
+let do_negate tp =
+  Semantics.do_negate tp
+
 let do_base p =
   Semantics.do_base p
 

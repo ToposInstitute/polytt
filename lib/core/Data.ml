@@ -35,7 +35,10 @@ type syn =
   | FinSet of labelset (* #{ foo, bar } *)
   | Label of labelset * label (* .foo *)
   | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
-  | Univ (* A *)
+  | Univ
+  | NegUniv
+  | Negate of syn
+  | NegSigma of Ident.t * syn * syn
   | Poly
   | PolyIntro of syn * syn
   | Base of syn
@@ -51,11 +54,13 @@ and neg_syn =
   | Var of int
   (** Variables are DeBruijn levels, even in the syntax! *)
   | NegAp of neg_syn * syn
+  | NegPair of neg_syn * Ident.t * neg_syn
   | Drop
 
 and hom_syn =
   | Set of syn * neg_syn * hom_syn
   | HomAp of syn * syn * neg_syn * Ident.t * Ident.t * hom_syn
+  | Unpack of { scrut : neg_syn; pos : syn; a_name : Ident.t; b_name : Ident.t; case : hom_syn; }
   | Done of syn * neg_syn
 
 and value =
@@ -72,6 +77,8 @@ and value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
+  | NegUniv
+  | NegSigma of Ident.t * value * tm_clo
   | Poly
   | PolyIntro of value * tm_clo
   | Hom of value * value
@@ -84,6 +91,7 @@ and hd =
   | Var of int
   | Hole of value * int
   | Skolem of value
+  | Negate of value
 
 and frame =
   | Ap of { tp : value; arg : value }
@@ -100,6 +108,11 @@ and instr =
   | Const of { write_addr : int; value : value }
   (** Write [value] to [write_addr] *)
   | NegAp of { write_addr : int; read_addr : int; fn : value }
+  (** Read a value from [read_addr], apply [fn] to it, and write the result to [write_addr]. *)
+  | Unpair of { read_addr : int; write_fst_addr : int; clo : neg_clo; write_snd_addr : int }
+  (** Read a pair from [read_addr], write its first component to [write_fst_addr],
+      instantiate and the closure with the first component, execute with the second
+      component, and then write the result of this execution to [write_snd_addr]. *)
 
 and prog = { addr : int; capacity : int; instrs : instr list }
 (** A compiled program, created by reverse evaluation.
@@ -110,4 +123,5 @@ and prog = { addr : int; capacity : int; instrs : instr list }
 and env = value bwd
 and 'a clo = Clo of { env : env; body : 'a }
 and tm_clo = syn clo
+and neg_clo = neg_syn clo
 and hom_clo = hom_syn clo

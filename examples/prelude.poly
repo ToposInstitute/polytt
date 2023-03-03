@@ -81,7 +81,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
   λ n⁺ n⁻ ⇝
     n⁺ ⇜ (n⁻ ∘ (const ℕ #{ .single } (succ n⁺)))
 
-#normalize counter 2
+#normalize counter
 #quit
 
 def Moore : Type → Type → Type → Type :=
@@ -93,3 +93,8 @@ def mds : (A : Type) → (B : Type) → (A → B) → Moore B A B :=
 
 def Gate : Type → Type → Type :=
   λ I O → Moore O I O
+
+-- def test-pair : nyan ⇒ (tensor nyan nyan) :=
+--   λ n⁺ n⁻ ⇝
+--     (n⁺ , n⁺) ⇜ ?
+--     

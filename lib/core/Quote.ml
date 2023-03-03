@@ -112,6 +112,8 @@ struct
       S.Hole (quote D.Univ tp, n)
     | D.Skolem tp ->
       S.Skolem (quote D.Univ tp)
+    | D.Negate tp ->
+      S.Negate (quote D.Univ tp)
 
   and quote_frm tm frm =
     match frm with

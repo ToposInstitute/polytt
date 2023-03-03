@@ -30,6 +30,8 @@ and t_ =
   | RecordLit of t labeled
   | Lit of int
   | Univ
+  | NegPair of t * Ident.t * t
+  | NegUnpack of t * t * Ident.t * Ident.t * t
   | Poly
   | Base of t
   | Fib of t * t

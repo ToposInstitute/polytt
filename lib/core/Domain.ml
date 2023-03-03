@@ -24,6 +24,8 @@ type t = Data.value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
+  | NegUniv
+  | NegSigma of Ident.t * t * tm_clo
   | Poly
   | PolyIntro of t * tm_clo
   | Hom of t * t
@@ -38,6 +40,7 @@ and hd = Data.hd =
   | Var of int
   | Hole of tp * int
   | Skolem of tp
+  | Negate of tp
 
 and frame = Data.frame =
   | Ap of { tp : t; arg : t }
@@ -52,11 +55,13 @@ and frame = Data.frame =
 and env = t bwd
 and 'a clo = 'a Data.clo = Clo of { env : env; body : 'a }
 and tm_clo = Data.syn clo
+and neg_clo = Data.neg_syn clo
 and hom_clo = Data.hom_syn clo
 
 and instr = Data.instr =
   | Const of { write_addr : int; value : t }
   | NegAp of { write_addr : int; read_addr : int; fn : t }
+  | Unpair of { read_addr : int; write_fst_addr : int; clo : neg_clo; write_snd_addr : int }
 
 and prog = Data.prog = { addr : int; capacity : int; instrs : instr list }
 
@@ -71,6 +76,9 @@ let hole tp n =
 
 let skolem tp =
   Data.Neu (tp, { hd = Skolem tp; spine = Emp })
+
+let negate tp =
+  Data.Neu (NegUniv, { hd = Negate tp; spine = Emp })
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs

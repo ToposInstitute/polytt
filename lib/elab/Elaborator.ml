@@ -44,7 +44,11 @@ struct
 
   and neg_chk (tm : CS.t) =
     T.Error.locate tm.loc @@ fun () ->
-    T.NegChk.syn (neg_syn tm)
+    match tm.node with
+    | CS.NegPair (a, name, b) ->
+      NegSigma.intro (neg_chk a) ~name (fun _ -> neg_chk b)
+    | _ ->
+      T.NegChk.syn (neg_syn tm)
 
   and chk_lams names tm =
     match names with
@@ -132,6 +136,8 @@ struct
       Hom.set (syn pos) (neg_chk neg) (hom steps)
     | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->
       Hom.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> hom steps)
+    | NegUnpack (scrut, pos, a_name, b_name, body) ->
+      NegSigma.elim (neg_syn scrut) (chk pos) ~a_name ~b_name (fun _ _ -> hom body)
     | Done (pos, neg) ->
       Hom.done_ (chk pos) (neg_chk neg)
     | _ ->
