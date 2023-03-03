@@ -4,4 +4,7 @@
   (libraries polytt.vernacular asai))
 
 (ocamllex Lex)
-(menhir (modules Grammar))
+(menhir
+  (modules Grammar)
+  (flags --explain --dump)
+  (infer true))

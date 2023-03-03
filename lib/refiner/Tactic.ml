@@ -44,6 +44,7 @@ and Var : sig
   val value : tac -> D.t
   val syn : tac -> Syn.tac
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val abstracts : ?names:Ident.t list -> D.tp -> (tac list -> 'a) -> 'a
   val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
 end =
 struct
@@ -54,6 +55,15 @@ struct
     Syn.rule @@ fun () ->
     let tm = Eff.quote ~tp value in
     tp, tm
+
+  let abstracts ?(names = [`Anon]) tp k =
+    Locals.abstracts ~names tp @@ fun values ->
+    let tacs =
+      values
+      |> List.map @@ fun value -> { tp; value }
+    in
+    k tacs
+
 
   let abstract ?(name = `Anon) tp k =
     Locals.abstract ~name tp @@ fun value ->

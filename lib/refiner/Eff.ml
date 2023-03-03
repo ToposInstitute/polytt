@@ -106,6 +106,9 @@ struct
       ppenv = env.ppenv #< name
     }
 
+  let bind_vars cells env =
+    List.fold_left (fun env cell -> bind_var cell env) env cells 
+
   let concrete ?(name = `Anon) tp tm k =
     let cell = { Cell.name; tp; value = tm } in
     Eff.scope (bind_var cell) @@ fun () ->
@@ -116,6 +119,16 @@ struct
     let cell = { Cell.name; tp; value = var } in
     Eff.scope (bind_var cell) @@ fun () ->
     k var
+
+  let abstracts ?(names = [`Anon]) tp k =
+    let cells =
+      names
+      |> List.map @@ fun name ->
+      { Cell.name; tp; value = fresh_var tp () } 
+    in
+    let vars = List.map Cell.value cells in
+    Eff.scope (bind_vars cells) @@ fun () ->
+    k vars
 end
 
 module Error =

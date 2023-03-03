@@ -31,6 +31,7 @@ module Locals : sig
   val resolve : Ident.path -> Cell.t option
   val concrete : ?name:Ident.t -> D.tp -> D.t -> (unit -> 'a) -> 'a
   val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
+  val abstracts : ?names:Ident.t list -> D.tp -> (D.t list -> 'a) -> 'a
   val local_types : unit -> D.tp bwd
   val ppenv : unit -> Ident.t bwd
   val size : unit -> int

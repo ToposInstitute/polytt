@@ -51,14 +51,14 @@ struct
     (* R.Var.resolve path *)
     | CS.Univ ->
       Univ.formation
-    | CS.Pi (name, a, b) ->
-      Pi.formation ~name (chk a) (fun _ -> chk b)
+    | CS.Pi (names, a, b) ->
+      Pi.formation ~names (chk a) (fun _ -> chk b)
     | CS.Ap (fn, args) ->
       List.fold_left (fun tac arg -> Pi.ap tac (chk arg)) (syn fn) args
     | CS.Let (nm, tm1, tm2) ->
       syn_let ~name:nm tm1 tm2
-    | CS.Sigma (name, a, b) ->
-      Sigma.formation ~name (chk a) (fun _ -> chk b)
+    | CS.Sigma (names, a, b) ->
+      Sigma.formation ~names (chk a) (fun _ -> chk b)
     | CS.Fst tm ->
       Sigma.fst (syn tm)
     | CS.Snd tm ->

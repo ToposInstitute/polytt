@@ -95,12 +95,22 @@ term:
     { t }
 
 plain_term:
+  | tm = plain_unannotated_term
+    { tm }
+  | tm = term; COLON; ty = term;
+    { CS.Anno (tm, ty) }
+
+unannotated_term:
+  | t = located(plain_unannotated_term)
+    { t }
+
+plain_unannotated_term:
   | tms = nonempty_list(atomic_term)
     { ap_or_atomic tms }
-  | LPR; name = name; COLON; base = term; RPR; TIMES; fam = term
-    { CS.Sigma (name, base, fam) }
+  | LPR; names = nonempty_list(name); COLON; base = term; RPR; TIMES; fam = term
+    { CS.Sigma (names, base, fam) }
   | base = term; TIMES; fam = term
-    { CS.Sigma (`Anon, base, fam) }
+    { CS.Sigma ([`Anon], base, fam) }
   | LPR; t1 = term; COMMA; t2 = term; RPR
     { CS.Pair (t1, t2) }
   | FST; tm = atomic_term
@@ -113,16 +123,10 @@ plain_term:
     { CS.Snd tm }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
-  | tm = anno
-    { tm }
   | tm = let_binding
     { tm }
   | tm = arrow
     { tm }
-
-anno:
-  | tm = term; COLON; ty = term;
-    { CS.Anno (tm, ty) }
 
 let_binding:
   | LET; nm = name; EQUALS; tm1 = term; IN; tm2 = term
@@ -135,12 +139,12 @@ labeled_field(sep):
     { (label, term) }
 
 arrow:
-  | LAMBDA; nms = list(name); RIGHT_ARROW; tm = term
+  | LAMBDA; nms = nonempty_list(name); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
-  | LPR; name = name; COLON; base = term; RPR; RIGHT_ARROW; fam = term
-    { CS.Pi (name, base, fam) }
+  | LPR; names = nonempty_list(name); COLON; base = term; RPR; RIGHT_ARROW; fam = term
+    { CS.Pi (names, base, fam) }
   | base = term; RIGHT_ARROW; fam = term
-    { CS.Pi (`Anon, base, fam) }
+    { CS.Pi ([`Anon], base, fam) }
 
 atomic_term:
   | t = located(plain_atomic_term)

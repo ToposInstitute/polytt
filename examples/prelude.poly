@@ -1,7 +1,7 @@
 def id : (A : Type) → A → A :=
   λ A x → x
 
-def const : (A : Type) → (B : Type) → A → B → A :=
+def const : (A B : Type) → A → B → A :=
   λ _ _ x _ → x
 
 def four : ℕ := 4
@@ -36,5 +36,7 @@ def Anything := (T : Type) * T
 def let-example :=
   let n = 5 : ℕ
   in n
+
+def Lens : (S T A B : Type) → Type := λ S T A B → { .get : S → A, .set : S → B → T }
 
 #normalize let-example
