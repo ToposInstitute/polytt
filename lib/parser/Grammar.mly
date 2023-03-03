@@ -118,8 +118,6 @@ plain_term:
     { CS.Refl }
   | SND; tm = atomic_term
     { CS.Snd tm }
-  | SUCC
-    { CS.Succ }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
   | BASE; p = atomic_term
@@ -208,6 +206,8 @@ plain_atomic_term:
     { CS.Nat }
   | ZERO
     { CS.Zero }
+  | SUCC
+    { CS.Succ }
   | n = NUMERAL
     { CS.Lit n }
   | TYPE
