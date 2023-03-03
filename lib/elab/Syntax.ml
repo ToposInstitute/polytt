@@ -18,9 +18,11 @@ and t_ =
   | Pair of t * t
   | Fst of t
   | Snd of t
+  | Eq of t * t
+  | Refl
   | Nat
   | Zero
-  | Succ of t
+  | Succ
   | NatElim of t * t * t * t
   | FinSet of labelset
   | Label of label

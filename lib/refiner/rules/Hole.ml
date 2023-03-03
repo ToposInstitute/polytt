@@ -4,7 +4,7 @@ open Core
 open Errors
 open Tactic
 
-module S = Syntax  
+module S = Syntax
 
 let pp_sequent ppenv fmt (ctx, goal) =
   let rec go ppenv size fmt (ctx, goal) =
@@ -12,28 +12,23 @@ let pp_sequent ppenv fmt (ctx, goal) =
     | [] ->
       Format.fprintf fmt "──────────────@.  ⊢ %a@."
         (S.pp ppenv Precedence.isolated) goal
-    | Cell.Pos {name; tp; _} :: ctx ->
-      let tp = Quote.quote ~size ~tp:D.Univ tp in
-      Format.fprintf fmt "  %a : %a@.%a"
-        Ident.pp name
-        (S.pp ppenv Precedence.isolated) tp
-        (go (ppenv #< name) (size + 1)) (ctx, goal)
-    | Cell.Neg {name; tp; _} :: ctx ->
-      (* FIXME: This code is wrong, and bad! *)
+    | (name, tp) :: ctx ->
+      (* FIXME this does not include negatives *)
       let tp = Quote.quote ~size ~tp:D.Univ tp in
       Format.fprintf fmt "  %a : %a@.%a"
         Ident.pp name
         (S.pp ppenv Precedence.isolated) tp
         (go (ppenv #< name) (size + 1)) (ctx, goal)
   in
-  go ppenv (Locals.size ()) fmt (ctx, goal)
+  go ppenv 0 fmt (ctx, goal)
 
 let unleash = Chk.rule @@
   fun x ->
   let tp = quote ~tp:D.Univ x in
   let ppenv = Locals.ppenv () in
-  let ctx = Locals.locals () in
+  let ctx = Locals.local_types () in
   Format.printf "Encountered Hole!@.%a@."
-    (pp_sequent ppenv) (ctx, tp);
+    (* FIXME this does not include negatives *)
+    (pp_sequent Emp) (List.combine (Bwd.to_list ppenv) (Bwd.to_list ctx), tp);
 
   S.Hole (tp, Hole.fresh ())

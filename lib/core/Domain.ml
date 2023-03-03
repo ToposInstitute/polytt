@@ -16,6 +16,8 @@ type t = Data.value =
   | Lam of Ident.t * tm_clo
   | Sigma of Ident.t * t * tm_clo
   | Pair of t * t
+  | Eq of t * t * t
+  | Refl of t
   | Nat
   | Zero
   | Succ of t
@@ -78,6 +80,8 @@ let rec dump fmt =
   | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump_clo b
   | Pair (a, b) -> Format.fprintf fmt "pair[%a %a]" dump a dump b
   | Lam (nm, t) -> Format.fprintf fmt "lam[%a, %a]" Ident.pp nm dump_clo t
+  | Eq (t, a, b) -> Format.fprintf fmt "eq[%a, %a, %a]" dump t dump a dump b
+  | Refl (a) -> Format.fprintf fmt "refl[%a]" dump a
   | Nat -> Format.fprintf fmt "nat"
   | Zero -> Format.fprintf fmt "zero"
   | Succ n -> Format.fprintf fmt "succ[%a]" dump n
@@ -101,7 +105,7 @@ let rec dump fmt =
       dump_hom_clo bdy
 
 and dump_neu fmt { hd = Var i; spine } =
-  Format.fprintf fmt "var[%i %a]" i dump_spine spine
+  Format.fprintf fmt "D.var[%i %a]" i dump_spine spine
 
 (* TODO *)
 and dump_spine fmt spine = Format.fprintf fmt "$SPINE"

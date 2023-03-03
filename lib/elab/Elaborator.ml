@@ -20,10 +20,12 @@ struct
       chk_sigma ~name a b
     | CS.Pair (a, b) ->
       Sigma.intro (chk a) (chk b)
+    | CS.Refl ->
+      Eq.intro
     | CS.Zero ->
       Nat.zero
-    | CS.Succ n ->
-      Nat.succ (chk n)
+    | CS.Succ ->
+      Nat.succ
     | CS.Lit n ->
       Nat.lit n
     | CS.Hole ->
@@ -76,8 +78,16 @@ struct
       Sigma.fst (syn tm)
     | CS.Snd tm ->
       Sigma.snd (syn tm)
+    | CS.Eq (a, b) ->
+      Eq.formation (syn a) (chk b)
     | CS.Nat ->
       Nat.formation
+    | CS.Zero ->
+      Nat.zero_syn
+    | CS.Succ ->
+      Nat.succ_syn
+    | CS.Lit n ->
+      Nat.lit_syn n
     | CS.NatElim (mot, zero, succ, scrut) ->
       Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
     | CS.Anno (tm, tp) ->
@@ -94,6 +104,8 @@ struct
       Poly.fib (chk p) (chk i)
     | CS.Hom (p, q) ->
       Hom.formation (chk p) (chk q)
+    | CS.RecordLit cases ->
+      FinSet.record_lit_syn (List.map (fun (l, v) -> l, syn v) cases)
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 

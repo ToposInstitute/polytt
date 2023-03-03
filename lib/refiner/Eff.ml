@@ -42,7 +42,7 @@ end
 
 module Globals =
 struct
-  type resolved = 
+  type resolved =
     | Def of { tm : D.t; tp : D.tp }
 
   type _ Effect.t += Resolve : Ident.path -> resolved option Effect.t
@@ -90,6 +90,7 @@ module Locals =
 struct
   type env = {
     locals : D.t bwd;
+    local_types : D.tp bwd;
     local_names : (Cell.t, unit) Yuujinchou.Trie.t;
     size : int;
     neg_size : int;
@@ -98,6 +99,7 @@ struct
 
   let top_env = {
     locals = Emp;
+    local_types = Emp;
     local_names = Yuujinchou.Trie.empty;
     size = 0;
     neg_size = 0;
@@ -112,11 +114,9 @@ struct
   let env () =
     Reader.read ()
 
-  let locals () =
+  let local_types () =
     let env = Reader.read () in
-    Yuujinchou.Trie.to_seq_values env.local_names
-    |> Seq.map fst
-    |> List.of_seq
+    env.local_types
 
   let ppenv () =
     let env = Reader.read () in
@@ -156,9 +156,10 @@ struct
       | _ -> env.local_names
     in
     match cell with
-    | Cell.Pos {name; value; _} -> {
+    | Cell.Pos {name; value; tp} -> {
         env with
         locals = env.locals #< value;
+        local_types = env.local_types #< tp;
         local_names;
         size = env.size + 1;
         ppenv = env.ppenv #< name

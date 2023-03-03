@@ -37,6 +37,7 @@ let keywords =
     ("zero", ZERO);
     ("succ", SUCC);
     ("elim", NAT_ELIM);
+    ("refl", REFL);
     ("fst", FST);
     ("snd", SND);
   ]
@@ -162,8 +163,8 @@ and real_token = parse
       | tok -> tok
       | exception Not_found -> Printf.eprintf "Unknown Command: %s\n" (lexeme lexbuf); token lexbuf
     }
-  | "." atom
-    { LABEL (lexeme lexbuf) }
+  | "." (atom as label)
+    { LABEL label }
   | atom
     {
       let input = lexeme lexbuf in

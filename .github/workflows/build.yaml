@@ -1,0 +1,33 @@
+name: dune::build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - ocaml-compiler: "ocaml-base-compiler.5.0.0~alpha1"
+            with-doc: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+
+      - name: 🚒 Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - name: ⌛ install dependencies
+        run: opam install . --deps-only --with-test
+
+      - name: 🔨 Dune Build 
+        run: opam exec -- dune build
+
+      - name: 🧪 Run Tests
+        run: opam exec -- dune runtest 

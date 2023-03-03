@@ -52,6 +52,10 @@ struct
       let t1 = quote a v1 in
       let t2 = quote (Sem.inst_clo tp_clo v1) (Sem.do_snd v) in
       S.Pair (t1, t2)
+    | _, D.Eq (tp, tm1, tm2) ->
+      S.Eq (quote D.Univ tp, quote tp tm1, quote tp tm2)
+    | D.Eq (tp, _, _), D.Refl tm ->
+      S.Refl (quote tp tm)
     | _, D.Nat ->
       S.Nat
     | _, D.Zero ->

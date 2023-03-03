@@ -38,6 +38,7 @@ let neg_ap_or_atomic neg fns =
 %token LPR RPR LSQ RSQ LBR RBR
 (* Keywords *)
 %token TYPE
+%token REFL
 (* Commands *)
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
@@ -111,10 +112,14 @@ plain_term:
     { CS.Sigma (`Anon, base, fam) }
   | FST; tm = atomic_term
     { CS.Fst tm }
+  | tm1 = atomic_term; EQUALS; tm2 = atomic_term
+    { CS.Eq (tm1, tm2) }
+  | REFL
+    { CS.Refl }
   | SND; tm = atomic_term
     { CS.Snd tm }
-  | SUCC; tm = atomic_term
-    { CS.Succ tm }
+  | SUCC
+    { CS.Succ }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
   | BASE; p = atomic_term
