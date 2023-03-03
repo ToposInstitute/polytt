@@ -37,8 +37,8 @@ def Optic := (P : (Type → Type → Type)) → (S : Type) → (T : Type) → (A
 
 def Lens : Type → Type → Type → Type → Type := λ S T A B → { .get : S → A, .set : S → B → T }
 
-def _1 : (C : Type) → (A : Type) → (B : Type) → Lens (A × C) (B × C) A B :=
-  λ C A B →
-  { .get = λ s → fst s
-  , .set = λ x y -> ?
-  }
+-- def _1 : (C : Type) → (A : Type) → (B : Type) → Lens (A × C) (B × C) A B :=
+--   λ C A B →
+--   { .get = λ s → fst s
+--   , .set = λ x y -> ?
+--   }
