@@ -22,8 +22,8 @@ struct
       Eq.intro
     | CS.Zero ->
       Nat.zero
-    | CS.Succ n ->
-      Nat.succ (chk n)
+    | CS.Succ ->
+      Nat.succ
     | CS.Lit n ->
       Nat.lit n
     | CS.Hole ->
@@ -43,6 +43,7 @@ struct
       Pi.intro ~name @@ fun _ -> chk_lams names tm
 
   and syn (tm : CS.t) =
+    Core.Debug.print "syn@.";
     T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.Var path ->
@@ -66,6 +67,12 @@ struct
       Eq.formation (syn a) (chk b)
     | CS.Nat ->
       Nat.formation
+    | CS.Zero ->
+      Nat.zero_syn
+    | CS.Succ ->
+      Nat.succ_syn
+    | CS.Lit n ->
+      Nat.lit_syn n
     | CS.NatElim (mot, zero, succ, scrut) ->
       Nat.elim (chk mot) (chk zero) (chk succ) (syn scrut)
     | CS.Anno (tm, tp) ->
@@ -76,6 +83,8 @@ struct
       FinSet.formation ls
     | CS.Record cases ->
       FinSet.record (List.map (fun (l, v) -> l, chk v) cases)
+    | CS.RecordLit cases ->
+      FinSet.record_lit_syn (List.map (fun (l, v) -> l, syn v) cases)
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 

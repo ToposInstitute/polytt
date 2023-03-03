@@ -22,7 +22,7 @@ and t_ =
   | Refl
   | Nat
   | Zero
-  | Succ of t
+  | Succ
   | NatElim of t * t * t * t
   | FinSet of labelset
   | Label of label

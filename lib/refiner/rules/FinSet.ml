@@ -70,3 +70,22 @@ let record_lit cases_tac =
       Error.error `TypeError "Record labels did not match expected type."
   | _ ->
     Error.error `TypeError "Expected element of record."
+
+let record_lit_syn cases_tac =
+  Syn.rule @@ fun () ->
+  let ls = List.map fst cases_tac in
+  (* We bind an (anonymous) variable here, as we will be placing
+     the cases underneath a lambda binder. *)
+  let cases_tp_tm =
+    List.map (fun (l, case_tac) -> l,
+                                   Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun _ ->
+                                   let r = Syn.run case_tac in
+                                   r) cases_tac in
+  let cases_tp = List.map (fun (l, (tp, _)) -> l, tp) cases_tp_tm in
+  let cases_tm = List.map (fun (l, (_, tm)) -> l, tm) cases_tp_tm in
+  let mot_tp = S.Lam (Ident.anon, S.Univ) in
+  let thingy = S.Cases (mot_tp, List.map (fun (l, tp) -> l, quote ~tp:D.Univ tp) cases_tp, S.Var 0) in
+  let mot =
+    S.Lam (Ident.anon, thingy) in
+  let tp = eval (S.Pi (Ident.anon, S.FinSet ls, thingy)) in
+  tp , S.Lam (Ident.anon, S.Cases (mot, cases_tm, S.Var 0))
