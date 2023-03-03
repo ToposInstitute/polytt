@@ -43,8 +43,12 @@ struct
       T.Chk.syn (syn tm)
 
   and neg_chk (tm : CS.t) =
-    T.Error.locate tm.loc @@ fun () ->
-    T.NegChk.syn (neg_syn tm)
+    match tm.node with
+    | CS.Drop ->
+      Hom.drop
+    | _ ->
+      T.Error.locate tm.loc @@ fun () ->
+      T.NegChk.syn (neg_syn tm)
 
   and chk_lams names tm =
     match names with
@@ -122,6 +126,8 @@ struct
       end
     | CS.NegAp (neg, fns) ->
       List.fold_left (fun neg_tac fn -> Hom.neg_ap (T.NegChk.syn neg_tac) (syn fn)) (neg_syn neg) fns
+    | CS.Drop ->
+      T.Error.error `TypeError "Cannot synthesize type of drop."
     | _ ->
       T.Error.error `TypeError "Not a negative thingy."
 

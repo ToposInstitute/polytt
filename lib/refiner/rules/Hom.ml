@@ -40,6 +40,10 @@ let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   | _ ->
     Error.error `TypeError "Must do a neg ap against a function."
 
+let drop : NegChk.tac =
+  NegChk.rule @@ fun _ ->
+  S.Drop
+
 let set (pos_tac : Syn.tac) (neg_tac : NegChk.tac) (steps_tac : Hom.tac) : Hom.tac =
   Hom.rule @@ fun q ->
   let pos_tp, pos = Syn.run pos_tac in
@@ -74,4 +78,3 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   (* FIXME: When we add tensor, we need to do some conversion into a negative type here! *)
   let neg = NegChk.run neg_tac (do_fib r (eval pos)) in
   S.Done (pos, neg)
-

@@ -37,6 +37,7 @@ and t_ =
   | HomLam of Ident.t * Ident.t * t
   | Set of t * t * t
   | NegAp of t * t list
+  | Drop
   | HomAp of t * t * t * Ident.t * Ident.t * t
   | Done of t * t
   | Anno of t * t (* (t : ty) *)

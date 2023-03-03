@@ -7,6 +7,7 @@ val intro : ?pos_name:Ident.t -> ?neg_name:Ident.t
   -> Chk.tac
 
 val neg_ap : NegChk.tac -> Syn.tac -> NegSyn.tac
+val drop : NegChk.tac
 
 val set : Syn.tac -> NegChk.tac -> Hom.tac -> Hom.tac
 val ap : Chk.tac -> NegChk.tac

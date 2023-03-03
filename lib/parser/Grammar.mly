@@ -190,6 +190,8 @@ plain_atomic_neg_term:
     { tm }
   | path = path
     { CS.Var path }
+  | UNDERSCORE
+    { CS.Drop }
 
 atomic_term:
   | t = located(plain_atomic_term)
