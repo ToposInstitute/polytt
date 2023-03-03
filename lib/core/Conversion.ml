@@ -77,6 +77,11 @@ struct
       ()
     | D.Hole (_, n) , D.Hole (_, m) when n = m ->
       ()
+    | D.Skolem _, D.Skolem _ ->
+      (* Skolems don't equate with themselves. This is used
+         in the skolem check, as we equate something with itself to
+         flush out any skolems. *)
+      raise Unequal
     | _ -> raise Unequal
 
   and equate_frm frm1 frm2 =

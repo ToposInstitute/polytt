@@ -92,6 +92,8 @@ struct
       do_hom_elim (eval hom) (eval i)
     | S.Hole (tp, n) ->
       D.hole (eval tp) n
+    | S.Skolem tp ->
+      D.skolem (eval tp)
 
   (** Interpret a negative expression as a sequence of instructions.
       Returns the input address of the sequence of instructions. *)

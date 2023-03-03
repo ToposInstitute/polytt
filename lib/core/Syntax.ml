@@ -36,7 +36,7 @@ type t = Data.syn =
   | HomLam of Ident.t * Ident.t * hom
   | HomElim of t * t
   | Hole of t * int
-
+  | Skolem of t
 
 and neg = Data.neg_syn =
   | Var of int
@@ -98,6 +98,7 @@ let rec dump fmt =
       dump hom
       dump i
   | Hole (tp, n) -> Format.fprintf fmt "hole[%a, %d]" dump tp n
+  | Skolem _ -> Format.fprintf fmt "skolem"
 
 and dump_hom fmt =
   function
@@ -179,6 +180,7 @@ let classify_tm =
   | HomLam _ -> arrow
   | HomElim _ -> juxtaposition
   | Hole _ -> atom
+  | Skolem _ -> atom
 
 (** Wrap in parens with a pretty printer *)
 let pp_braced pp fmt a = Format.fprintf fmt "(%a)" pp a
@@ -310,6 +312,7 @@ let rec pp env =
       (pp env (P.left_of juxtaposition)) hom
       (pp env (P.right_of juxtaposition)) i
   | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
+  | Skolem _ -> Format.fprintf fmt "skolem"
 
 and pp_hom _ _ fmt _ = Format.fprintf fmt "FIXME :)"
 

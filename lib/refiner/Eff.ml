@@ -217,6 +217,10 @@ let equate ~tp v1 v2 =
       (S.pp env.ppenv (Precedence.left_of S.equals)) tm1
       (S.pp env.ppenv (Precedence.right_of S.equals)) tm2
 
+let inst_const_clo ~tp clo =
+  let env = Locals.env () in
+  Skolem.inst_const_clo ~size:env.size ~tp clo
+
 let eval tm =
   let env = Locals.env () in
   Semantics.eval ~env:env.locals tm

@@ -60,6 +60,7 @@ end
 val quote : tp:D.tp -> D.t -> S.t
 val equate : tp:D.tp -> D.t -> D.t -> unit
 val eval : S.t -> D.t
+val inst_const_clo : tp:D.t -> D.tm_clo -> D.t option
 val inst_clo : D.tm_clo -> D.t -> D.t
 val graft_value : S.t Graft.t -> D.t
 

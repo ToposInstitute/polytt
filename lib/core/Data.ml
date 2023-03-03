@@ -34,6 +34,8 @@ type syn =
   | HomLam of Ident.t * Ident.t * hom_syn
   | HomElim of syn * syn
   | Hole of syn * int
+  | Skolem of syn
+  (** Used for ensuring that pi types are not dependent, see Skolem.ml *)
 
 and neg_syn =
   | Var of int
@@ -73,6 +75,7 @@ and neu = { hd : hd; spine : frame bwd }
 and hd =
   | Var of int
   | Hole of value * int
+  | Skolem of value
 
 and frame =
   | Ap of { tp : value; arg : value }

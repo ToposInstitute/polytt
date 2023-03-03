@@ -29,7 +29,7 @@ let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   match fn_tp with
   | D.Pi (_, a, clo) ->
     begin
-      match Skolem.inst_const_clo clo with
+      match inst_const_clo ~tp:a clo with
       | Some b ->
         (* FIXME: When we add tensor, we need to do some conversion into a negative type here! *)
         let neg = NegChk.run neg_tac b in

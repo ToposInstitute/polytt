@@ -94,6 +94,8 @@ struct
       S.Var (quote_lvl lvl)
     | D.Hole (tp, n) ->
       S.Hole (quote D.Univ tp, n)
+    | D.Skolem tp ->
+      S.Skolem (quote D.Univ tp)
 
   and quote_frm tm frm =
     match frm with

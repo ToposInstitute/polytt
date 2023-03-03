@@ -35,6 +35,7 @@ and neu = Data.neu = { hd : hd; spine : frame bwd }
 and hd = Data.hd =
   | Var of int
   | Hole of tp * int
+  | Skolem of tp
 
 and frame = Data.frame =
   | Ap of { tp : t; arg : t }
@@ -63,6 +64,9 @@ let var tp lvl =
 
 let hole tp n =
   Data.Neu (tp, { hd = Hole (tp, n); spine = Emp })
+
+let skolem tp =
+  Data.Neu (tp, { hd = Skolem tp; spine = Emp })
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
