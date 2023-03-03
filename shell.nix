@@ -1,4 +1,4 @@
 { pkgs ? import <nixpkgs> {} }:
   pkgs.mkShell {
-    nativeBuildInputs = [ pkgs.opam ];
+    nativeBuildInputs = [ pkgs.opam pkgs.pkg-config ];
 }
