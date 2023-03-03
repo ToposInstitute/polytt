@@ -25,7 +25,7 @@ Once you have `opam` you can install all the dev dependencies and then build `po
 ```bash
 $ opam init
 $ opam switch create . ocaml-base-compiler.5.0.0
-$ opam install
+$ opam install --deps-only --locked .
 $ dune build
 ```
 
