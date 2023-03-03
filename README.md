@@ -4,7 +4,7 @@
   <img src="./poly.png" />
 </p>
 
-An implementation of [Polynomial Functors](https://topos.site/poly-book.pdf) on top of Martin-Lof Type Theory.
+A type theory with native support for [Polynomial Functors](https://topos.site/poly-book.pdf).
 
 For examples, see `examples/` directory.
 
@@ -34,3 +34,9 @@ $ dune build
 ```bash
 $ dune exec polytt examples/prelude.poly
 ```
+
+
+# References
+ 
+- [A reference for categorical structures on Poly](https://arxiv.org/abs/2202.00534 )
+- [Polynomial Functors: A General Theory of Interaction](https://topos.site/poly-book.pdf)
