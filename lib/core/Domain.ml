@@ -103,9 +103,18 @@ let rec dump fmt =
       Ident.pp p_name
       Ident.pp q_name
       dump_hom_clo bdy
+  | FibLam _ ->
+    Format.fprintf fmt "fib-lam[!TODO!]"
 
-and dump_neu fmt { hd = Var i; spine } =
-  Format.fprintf fmt "D.var[%i %a]" i dump_spine spine
+
+and dump_neu fmt { hd; spine } =
+  match hd with
+  | Var i ->
+    Format.fprintf fmt "D.var[%i %a]" i dump_spine spine
+  | Hole (tp, i) ->
+    Format.fprintf fmt "D.hole[%a %i %a]" dump tp i dump_spine spine
+  | Skolem tp ->
+    Format.fprintf fmt "D.hole[%a]" dump tp
 
 (* TODO *)
 and dump_spine fmt spine = Format.fprintf fmt "$SPINE"

@@ -97,7 +97,7 @@ struct
     | CS.Anno (tm, tp) ->
       T.Syn.ann (chk tm) (chk tp)
     | CS.Hole ->
-      T.Error.error `HoleInSynth "Cannot synthesize type of hole."
+      Hole.unleash_syn
     | CS.FinSet ls ->
       FinSet.formation ls
     | CS.Record cases ->
