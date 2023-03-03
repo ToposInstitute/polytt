@@ -1,0 +1,107 @@
+opam-version: "2.0"
+name: "polytt"
+version: "~dev"
+synopsis: "A short synopsis"
+description: "A longer description"
+maintainer: "Maintainer Name"
+authors: "Author Name"
+license: "LICENSE"
+tags: ["topics" "to describe" "your" "project"]
+homepage: "https://github.com/username/reponame"
+doc: "https://url/to/documentation"
+bug-reports: "https://github.com/username/reponame/issues"
+depends: [
+  "alcotest" {= "1.7.0"}
+  "algaeff" {= "0.2.1"}
+  "angstrom" {= "0.15.0"}
+  "asai" {= "0.1.0~dev"}
+  "astring" {= "0.8.5"}
+  "bantorra" {= "0.2.0~dev"}
+  "base-bigarray" {= "base"}
+  "base-domains" {= "base"}
+  "base-nnp" {= "base"}
+  "base-threads" {= "base"}
+  "base-unix" {= "base"}
+  "bigarray-compat" {= "1.1.0"}
+  "bigstringaf" {= "0.9.0"}
+  "bos" {= "0.2.1"}
+  "bwd" {= "2.1.0"}
+  "cmdliner" {= "1.1.1"}
+  "conf-git" {= "1.1"}
+  "conf-pkg-config" {= "2"}
+  "cppo" {= "1.6.9"}
+  "csexp" {= "1.5.1"}
+  "cstruct" {= "6.1.1"}
+  "ctypes" {= "0.20.1"}
+  "curly" {= "0.3.0"}
+  "dune" {= "3.7.0"}
+  "dune-configurator" {= "3.7.0"}
+  "eio" {= "0.8.1"}
+  "eio_linux" {= "0.8.1"}
+  "eio_luv" {= "0.8.1"}
+  "eio_main" {= "0.8.1"}
+  "ezjsonm" {= "1.3.0"}
+  "fmt" {= "0.9.0"}
+  "fpath" {= "0.7.3"}
+  "hex" {= "1.5.0"}
+  "hmap" {= "0.8.1"}
+  "integers" {= "0.7.0"}
+  "json-data-encoding" {= "0.12.1"}
+  "jsonm" {= "1.0.1"}
+  "jsonrpc" {= "1.15.1-5.0"}
+  "logs" {= "0.7.0"}
+  "lsp" {= "1.15.1-5.0"}
+  "luv" {= "0.5.11"}
+  "luv_unix" {= "0.5.0"}
+  "lwt-dllist" {= "1.0.1"}
+  "menhir" {= "20220210"}
+  "menhirLib" {= "20220210"}
+  "menhirSdk" {= "20220210"}
+  "mtime" {= "2.0.0"}
+  "notty" {= "0.2.3"}
+  "ocaml" {= "5.0.0"}
+  "ocaml-base-compiler" {= "5.0.0"}
+  "ocaml-config" {= "3"}
+  "ocaml-options-vanilla" {= "1"}
+  "ocaml-syntax-shims" {= "1.0.0"}
+  "ocamlbuild" {= "0.14.2"}
+  "ocamlfind" {= "1.9.5"}
+  "optint" {= "0.3.0"}
+  "ppx_yojson_conv_lib" {= "v0.15.0"}
+  "psq" {= "0.2.1"}
+  "re" {= "1.10.4"}
+  "result" {= "1.5"}
+  "rresult" {= "0.7.0"}
+  "seq" {= "base"}
+  "sexplib0" {= "v0.15.1"}
+  "stdlib-shims" {= "0.3.0"}
+  "stringext" {= "1.6.0"}
+  "topkg" {= "1.0.7"}
+  "uchar" {= "0.0.2"}
+  "uri" {= "4.2.0"}
+  "uring" {= "0.5"}
+  "uutf" {= "1.0.3"}
+  "yojson" {= "2.0.2"}
+  "yuujinchou" {= "4.0.0"}
+]
+build: [
+  ["dune" "subst"] {dev}
+  [
+    "dune"
+    "build"
+    "-p"
+    name
+    "-j"
+    jobs
+    "@install"
+    "@runtest" {with-test}
+    "@doc" {with-doc}
+  ]
+]
+dev-repo: "git+https://github.com/username/reponame.git"
+pin-depends: [
+  ["algaeff.0.2.1" "git+https://github.com/redPRL/algaeff"]
+  ["asai.0.1.0~dev" "git+https://github.com/RedPRL/asai"]
+  ["bantorra.0.2.0~dev" "git+https://github.com/RedPRL/bantorra"]
+  ["yuujinchou.4.0.0" "git+https://github.com/RedPRL/yuujinchou"]
+]
