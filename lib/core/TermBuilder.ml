@@ -61,6 +61,9 @@ struct
   let negate tp size =
     S.Negate (tp size)
 
+  let unnegate tp size =
+    S.UnNegate (tp size)
+
   let neg_sigma ?(name = `Anon) base fam size =
     S.NegSigma(name, base size, scope fam size)
 

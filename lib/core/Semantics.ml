@@ -85,6 +85,8 @@ struct
       D.NegUniv
     | S.Negate tp ->
       do_negate (eval tp)
+    | S.UnNegate tp ->
+      undo_negate (eval tp)
     | S.NegSigma (name, a, b_neg) ->
       D.NegSigma (name, eval a, clo b_neg)
     | S.Poly ->
@@ -116,6 +118,7 @@ struct
          (IE: by eliminating a tensor), then they will be in cells 1...n.
          This forces us to use DeBruijin levels for negative variables, even
          in the syntax. *)
+      Debug.print "Encountered variable, read_addr is %d@." ix;
       ix
     | S.NegAp (neg, fn) ->
       let read_addr = allocate () in
@@ -124,11 +127,11 @@ struct
       read_addr
     | S.NegPair (a_neg, _, b_neg) ->
       let read_addr = allocate () in
-      let write_fst_addr = eval_neg a_neg in
-      let write_snd_addr = allocate () in
-      emit @@ D.Unpair { read_addr; write_fst_addr; write_snd_addr; clo = clo b_neg };
+      let write_addr = eval_neg a_neg in
+      emit @@ D.Unpair { read_addr; write_addr; clo = clo b_neg };
       read_addr
     | S.Drop ->
+      Debug.print "Encountered drop@.";
       allocate ()
 
   (** Calling convention: The value returned by [eval_hom]
@@ -147,8 +150,14 @@ struct
         append [do_fst r] @@ fun () ->
         emit @@ D.NegAp { write_addr; read_addr; fn = do_snd r };
         eval_steps steps
-      | S.Unpack _ ->
-        failwith "FIXME"
+      | S.Unpack {scrut; case; _} ->
+        (* We will write a pair to the address of scrut. *)
+        let write_addr = eval_neg scrut in
+        (* Body of the case has 2 free variables, so we need to allocate 2 cells. *)
+        let read_fst_addr = allocate () in
+        let read_snd_addr = allocate () in
+        emit @@ D.Pack { write_addr; read_fst_addr; read_snd_addr };
+        eval_steps case
       | S.Done (pos, neg) ->
         let in_addr = eval_neg neg in
         eval pos, in_addr
@@ -168,15 +177,17 @@ struct
       let v = Option.get @@ CCVector.get cells read_addr in
       Debug.print "Running NEG AP at %d@." write_addr;
       CCVector.set cells write_addr (Some (do_ap fn v))
-    | D.Unpair { read_addr; write_fst_addr; write_snd_addr; clo } ->
+    | D.Unpair { read_addr; write_addr; clo } ->
       Debug.print "Running UNPAIR.@.";
       let v = Option.get @@ CCVector.get cells read_addr in
       let v1 = do_fst v in
       let v2 = do_snd v in
-      let b_prog = inst_neg_clo clo v1 in
-      let bv = eval_prog b_prog v2 in
-      CCVector.set cells write_fst_addr (Some v1);
-      CCVector.set cells write_snd_addr (Some bv);
+      CCVector.set cells write_addr (Some v1);
+      inst_neg_clo cells clo v1 v2
+    | D.Pack { write_addr; read_fst_addr; read_snd_addr } ->
+      let a = Option.get @@ CCVector.get cells read_fst_addr in
+      let b = Option.get @@ CCVector.get cells read_snd_addr in
+      CCVector.set cells write_addr (Some (D.Pair (a, b)))
 
   and eval_prog (prog : D.prog) arg =
     let cells = CCVector.make prog.capacity None in
@@ -184,6 +195,7 @@ struct
     Debug.print "Writing Initial value at %d@." prog.addr;
     CCVector.set cells prog.addr (Some arg);
     List.iter (eval_instr cells) prog.instrs;
+    Debug.print "Reading final value from 0.@.";
     Option.get @@ CCVector.get cells 0 
 
   and do_ap (f : D.t) (arg : D.t) =
@@ -255,8 +267,26 @@ struct
       Graft.build @@
       TB.neg_sigma ~name a @@ fun x ->
       TB.negate (TB.ap b x)
+    | D.Neu (D.Univ, { hd; spine = Snoc(spine, D.UnNegate) }) ->
+      D.Neu (D.NegUniv, { hd; spine })
     | _ ->
       D.negate tp
+
+  and undo_negate tp =
+    match tp with
+    | D.NegSigma (name, a, clo) ->
+      graft_value @@
+      Graft.value a @@ fun a ->
+      Graft.clo clo @@ fun b ->
+      Graft.build @@
+      TB.sigma ~name a @@ fun x ->
+      TB.unnegate (TB.ap b x)
+    | D.Neu (D.NegUniv, { hd = D.Negate tp; spine = Emp } ) ->
+      tp
+    | D.Neu (D.NegUniv, neu) ->
+      D.Neu (D.Univ, D.push_frm neu D.UnNegate)
+    | _ ->
+      invalid_arg "bad undo_negate"
 
   and do_base p =
     match p with
@@ -292,7 +322,7 @@ struct
         TB.sigma (TB.base q) @@ fun q_base ->
         TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
       in
-      D.Neu (fib, D.push_frm neu (D.HomElim { base = p_base; value = i }))
+      D.Neu (fib, D.push_frm neu (D.HomElim { tp = p_base; value = i }))
     | _ ->
       invalid_arg "bad do_hom_elim"
 
@@ -301,14 +331,21 @@ struct
     | D.Clo { env; body } ->
       Env.run ~env:(env #< v) (fun () -> eval body)
 
-  and inst_neg_clo clo v =
+  and inst_neg_clo cells clo v arg =
     match clo with
     | D.Clo { env; body } ->
       Env.run ~env:(env #< v) @@ fun () ->
-      Instrs.run ~init:{ instrs = []; cells = 1 } @@ fun () ->
-      let addr = eval_neg body in
-      let st = Instrs.get () in
-      { D.addr; capacity = st.cells; instrs = st.instrs }
+      let orig_length = CCVector.length cells in
+      let prog =
+        Instrs.run ~init:{ instrs = []; cells = orig_length } @@ fun () ->
+        let addr = eval_neg body in
+        let st = Instrs.get () in
+        { D.addr; capacity = st.cells; instrs = st.instrs }
+      in
+      CCVector.append cells (CCVector.make (prog.capacity - orig_length) None);
+      CCVector.set cells prog.addr (Some arg);
+      List.iter (eval_instr cells) prog.instrs;
+      CCVector.truncate cells orig_length;
 
   and inst_hom_clo clo v =
     match clo with
@@ -343,6 +380,9 @@ let do_snd =
 
 let do_negate =
   Internal.do_negate
+
+let undo_negate =
+  Internal.undo_negate
 
 let do_base =
   Internal.do_base

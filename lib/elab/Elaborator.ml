@@ -47,6 +47,8 @@ struct
     match tm.node with
     | CS.NegPair (a, name, b) ->
       NegSigma.intro (neg_chk a) ~name (fun _ -> neg_chk b)
+    | CS.Drop ->
+      Hom.drop
     | _ ->
       T.NegChk.syn (neg_syn tm)
 
@@ -97,7 +99,7 @@ struct
     | CS.Anno (tm, tp) ->
       T.Syn.ann (chk tm) (chk tp)
     | CS.Hole ->
-      T.Error.error `HoleInSynth "Cannot synthesize type of hole."
+      Hole.unleash_syn
     | CS.FinSet ls ->
       FinSet.formation ls
     | CS.Record cases ->
@@ -126,8 +128,12 @@ struct
       end
     | CS.NegAp (neg, fns) ->
       List.fold_left (fun neg_tac fn -> Hom.neg_ap (T.NegChk.syn neg_tac) (syn fn)) (neg_syn neg) fns
+    | CS.Drop ->
+      T.Error.error `TypeError "Cannot synthesize type of drop."
+    | CS.NegPairSimple (p, q) ->
+      NegSigma.intro_simple (neg_syn p) (neg_syn q)
     | _ ->
-      T.Error.error `TypeError "Not a negative thingy."
+      T.Error.error `TypeError "Cannot synthesize (negative) type."
 
   and hom (tm : CS.t) =
     T.Error.locate tm.loc @@ fun () ->
@@ -138,6 +144,8 @@ struct
       Hom.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> hom steps)
     | NegUnpack (scrut, pos, a_name, b_name, body) ->
       NegSigma.elim (neg_syn scrut) (chk pos) ~a_name ~b_name (fun _ _ -> hom body)
+    | NegUnpackSimple (scrut, a_name, b_name, body) ->
+      NegSigma.rec_ (neg_syn scrut) ~a_name ~b_name (fun _ _ -> hom body)
     | Done (pos, neg) ->
       Hom.done_ (chk pos) (neg_chk neg)
     | _ ->

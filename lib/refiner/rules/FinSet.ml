@@ -49,21 +49,28 @@ let record cases_tac =
 let record_lit cases_tac =
   Chk.rule @@
   function
-  | D.Pi (nm, D.FinSet ls', clo) as tp ->
+  | D.Pi (nm, D.FinSet ls', clo) ->
     let ls = List.map fst cases_tac in
     if SS.cardinal (SS.of_list ls) != List.length ls then Error.error `TypeError "Duplicate record labels";
     if SS.equal (SS.of_list ls) (SS.of_list ls')
     then
+      let mot_tp =
+        graft_value @@
+        Graft.build @@
+        TB.pi ~name:nm (TB.finset ls') (fun _ -> TB.univ) in
       let mot = D.Lam (nm, clo) in
       (* We bind an (anonymous) variable here, as we will be placing
          the cases underneath a lambda binder. *)
       let cases =
-        List.map (fun (l, case_tac) -> l,
-                                       Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun v ->
-                                       let x = (Sem.inst_clo clo (Var.value v)) in
-                                       let r = Chk.run case_tac x in
-                                       r) cases_tac in
-      S.Lam (Ident.anon, S.Cases (quote ~tp mot, cases, S.Var 0))
+        cases_tac
+        |> List.map @@
+        function
+        | l, case_tac ->
+          l,
+          Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun v ->
+          Chk.run case_tac (Sem.inst_clo clo (Var.value v))
+      in
+      S.Lam (Ident.anon, S.Cases (quote ~tp:mot_tp mot, cases, S.Var 0))
     else
       Error.error `TypeError "Record labels did not match expected type."
   | _ ->

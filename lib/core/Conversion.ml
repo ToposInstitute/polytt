@@ -52,6 +52,12 @@ struct
       ()
     | _, D.Univ, D.Univ ->
       ()
+    | _, D.NegUniv, D.NegUniv ->
+      ()
+    | _, D.NegSigma (_, a1, b1), D.NegSigma (_, a2, b2) ->
+      equate D.Univ a1 a2;
+      bind a1 @@ fun v ->
+      equate D.Univ (Sem.inst_clo b1 v) (Sem.inst_clo b2 v)
     | _, D.Poly, D.Poly ->
       ()
     | D.Poly, v1, v2 ->
@@ -64,6 +70,9 @@ struct
       equate D.Poly p1 p2;
       equate D.Poly q1 q2;
     | _, _, _ ->
+      Debug.print "Could not equate %a and %a"
+        D.dump v1
+        D.dump v2;
       raise Unequal
 
   and equate_neu (neu1 : D.neu) (neu2 : D.neu) =
@@ -82,7 +91,11 @@ struct
          in the skolem check, as we equate something with itself to
          flush out any skolems. *)
       raise Unequal
-    | _ -> raise Unequal
+    | D.Negate tp1, D.Negate tp2 ->
+      equate D.Univ tp1 tp2
+    | _ ->
+      Debug.print "Could not equate heads.@.";
+      raise Unequal
 
   and equate_frm frm1 frm2 =
     match frm1, frm2 with
@@ -130,7 +143,14 @@ struct
       ()
     | D.Fib fib1, D.Fib fib2 ->
       equate fib1.base fib1.value fib2.value
+    | D.HomElim {tp; value = v1}, D.HomElim {value = v2; _} ->
+      equate tp v1 v2
+    | D.UnNegate, D.UnNegate ->
+      ()
     | _ ->
+      Debug.print "Could not equate frames %a and %a@."
+        D.dump_frm frm1
+        D.dump_frm frm2;
       raise Unequal
 
   and equate_maps apply_motives =

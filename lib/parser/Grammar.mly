@@ -168,6 +168,8 @@ plain_hom_body:
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
   | p = atomic_neg_term; LSQ; tm = term; RSQ; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
     { CS.NegUnpack (p, tm, a_name, b_name, body) }
+  | p = atomic_neg_term; LSQ; RSQ; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
+    { CS.NegUnpackSimple (p, a_name, b_name, body) }
   | pos = atomic_term; LEFT_SQUIGGLY_ARROW; neg = neg_term
     { CS.Done (pos, neg) }
 
@@ -182,8 +184,6 @@ neg_term:
 plain_neg_term:
   | neg = atomic_neg_term; tms = option(neg_spine)
     { neg_ap_or_atomic neg tms }
-  | LPR; a = neg_term; COMMA; LAMBDA; a_name = name; RIGHT_ARROW; b = neg_term; RPR
-    { CS.NegPair (a, a_name, b) }
 
 atomic_neg_term:
   | t = located(plain_atomic_neg_term)
@@ -192,8 +192,14 @@ atomic_neg_term:
 plain_atomic_neg_term:
   | LPR; tm = plain_neg_term; RPR
     { tm }
+  | LSQ; a = neg_term; COMMA; LAMBDA; a_name = name; RIGHT_ARROW; b = neg_term; RSQ
+    { CS.NegPair (a, a_name, b) }
+  | LSQ; a = neg_term; COMMA; b = neg_term; RSQ
+    { CS.NegPairSimple (a, b) }
   | path = path
     { CS.Var path }
+  | UNDERSCORE
+    { CS.Drop }
 
 atomic_term:
   | t = located(plain_atomic_term)

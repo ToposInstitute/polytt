@@ -32,6 +32,7 @@ type t = Data.syn =
   | Univ
   | NegUniv
   | Negate of t
+  | UnNegate of t
   | NegSigma of Ident.t * t * t
   | Poly
   | PolyIntro of t * t
@@ -52,7 +53,7 @@ and neg = Data.neg_syn =
 and hom = Data.hom_syn =
   | Set of t * neg * hom
   | HomAp of t * t * neg * Ident.t * Ident.t * hom
-  | Unpack of { scrut : neg; pos : t; a_name : Ident.t; b_name : Ident.t; case : hom; }
+  | Unpack of { scrut : neg; a_name : Ident.t; b_name : Ident.t; case : hom; }
   | Done of t * neg
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
@@ -65,9 +66,9 @@ let rec dump fmt =
   | Var i -> Format.fprintf fmt "S.var[%i]" i
   | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a %a %a]" Ident.pp nm dump a dump b
   | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump b
-  | Pair (a, b) -> Format.fprintf fmt "pair[%a %a]" dump a dump b
-  | Fst a -> Format.fprintf fmt "pair[%a]" dump a
-  | Snd a -> Format.fprintf fmt "pair[%a]" dump a
+  | Pair (a, b) -> Format.fprintf fmt "pair[%a, %a]" dump a dump b
+  | Fst a -> Format.fprintf fmt "fst[%a]" dump a
+  | Snd a -> Format.fprintf fmt "snd[%a]" dump a
   | Lam (nm, t) -> Format.fprintf fmt "lam[%a, %a]" Ident.pp nm dump t
   | Let (nm, t1, t2) -> Format.fprintf fmt "let[%a = %a in %a ]" Ident.pp nm dump t1 dump t2
   | Ap (f, a) -> Format.fprintf fmt "ap[%a, %a]" dump f dump a
@@ -80,6 +81,16 @@ let rec dump fmt =
   | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
   | Cases (mot, cases, case) -> Format.fprintf fmt "cases[%a, %a, %a]" dump mot (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
+  | NegUniv ->
+    Format.fprintf fmt "neg-type"
+  | Negate tp ->
+    Format.fprintf fmt "negate[%a]"
+      dump tp
+  | NegSigma (name, a, b) ->
+    Format.fprintf fmt "neg-sigma[%a, %a, %a]"
+      Ident.pp name
+      dump a
+      dump b
   | Poly ->
     Format.fprintf fmt "poly"
   | PolyIntro (base, fib) ->
@@ -160,11 +171,14 @@ let equals = P.right 2
 let classify_tm =
   function
   | Univ -> atom
+  | NegUniv -> atom
   | Poly -> atom
+  | Negate _ -> juxtaposition
   | Var _ -> atom
   | Pi _ -> arrow
   | Sigma (`Anon, _, _) -> star
   | Sigma _ -> arrow
+  | NegSigma _ -> arrow
   | Pair _ -> atom
   | PolyIntro _ -> atom
   | Fst _ -> juxtaposition
@@ -288,6 +302,17 @@ let rec pp env =
       (pp env (P.right_of this)) r.scrut
   | Univ ->
     Format.fprintf fmt "Type"
+  | NegUniv ->
+    Format.fprintf fmt "Type⁻"
+  | Negate tp ->
+    Format.fprintf fmt "(%a) ⁻"
+      (* FIXME: Reed just chose this randomly, use an actual precedence *)
+      (pp env (P.left_of arrow)) tp
+  | NegSigma (name, a, b) ->
+    Format.fprintf fmt "(%a : %a) ×⁻ %a"
+      Ident.pp name
+      (pp env P.isolated) a
+      (pp (env #< name) (P.right_of arrow)) b
   | FinSet [] ->
     Format.fprintf fmt "#{}"
   | FinSet ls ->

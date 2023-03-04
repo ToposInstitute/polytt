@@ -25,20 +25,6 @@ struct
 end
 
 
-module Error =
-struct
-  module Eff = Algaeff.Reader.Make(struct type nonrec env = Span.t end)
-
-  let error code fmt =
-    let loc = Eff.read () in
-    Logger.fatalf ~loc:loc code fmt
-
-  let locate loc k =
-    Eff.scope (fun _ -> loc) k
-
-  let run ~loc k =
-    Eff.run ~env:loc k
-end
 
 module Globals =
 struct
@@ -71,9 +57,9 @@ struct
     let a = k () in
     let can_use = State.get () in
     if IntSet.is_empty can_use then
-      a
+      Some a
     else
-      Error.error `LinearVariableDoubleUse "You didn't use all your variables!"
+      None
 
   let obligation (neg : Cell.neg) =
     State.modify @@ fun can_use ->
@@ -192,6 +178,31 @@ struct
     k lvl
 end
 
+
+module Error =
+struct
+  module Eff = Algaeff.Reader.Make(struct type nonrec env = Span.t end)
+
+  let error code fmt =
+    let loc = Eff.read () in
+    Logger.fatalf ~loc:loc code fmt
+
+  let type_error tp conn =
+    let loc = Eff.read () in
+    let size = Locals.size () in
+    let ppenv = Locals.ppenv () in
+    let qtp = Quote.quote ~size:size ~tp:D.Univ tp in
+    Logger.fatalf ~loc:loc `TypeError "Expected %a, but got %s@."
+      (S.pp ppenv Precedence.isolated) qtp
+      conn
+
+  let locate loc k =
+    Eff.scope (fun _ -> loc) k
+
+  let run ~loc k =
+    Eff.run ~env:loc k
+end
+
 module Hole =
 struct
   module Eff = Algaeff.State.Make(struct type nonrec state = int end)
@@ -246,6 +257,9 @@ let do_nat_elim ~mot ~zero ~succ ~scrut =
 
 let do_negate tp =
   Semantics.do_negate tp
+
+let undo_negate tp =
+  Semantics.undo_negate tp
 
 let do_base p =
   Semantics.do_base p

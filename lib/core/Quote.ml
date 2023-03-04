@@ -64,6 +64,14 @@ struct
       S.Succ (quote D.Nat n)
     | _, D.Univ ->
       S.Univ
+    | _, D.NegUniv ->
+      S.NegUniv
+    | _, D.NegSigma (name, a, b) ->
+      let qa = quote D.Univ a in
+      let b = bind a @@ fun arg ->
+        quote D.NegUniv (Sem.inst_clo b arg)
+      in
+      S.NegSigma (name, qa, b)
     | _, D.Poly ->
       S.Poly
     | D.Poly, D.PolyIntro (vbase, vfib) ->
@@ -149,8 +157,10 @@ struct
       S.Base tm
     | D.Fib {base; value} ->
       S.Fib (tm, quote base value)
-    | D.HomElim {base; value} ->
-      S.HomElim (tm, quote base value)
+    | D.HomElim {tp; value} ->
+      S.HomElim (tm, quote tp value)
+    | D.UnNegate ->
+      S.UnNegate tm
 end
 
 let quote ~size ~tp v =

@@ -38,6 +38,7 @@ type syn =
   | Univ
   | NegUniv
   | Negate of syn
+  | UnNegate of syn
   | NegSigma of Ident.t * syn * syn
   | Poly
   | PolyIntro of syn * syn
@@ -60,7 +61,7 @@ and neg_syn =
 and hom_syn =
   | Set of syn * neg_syn * hom_syn
   | HomAp of syn * syn * neg_syn * Ident.t * Ident.t * hom_syn
-  | Unpack of { scrut : neg_syn; pos : syn; a_name : Ident.t; b_name : Ident.t; case : hom_syn; }
+  | Unpack of { scrut : neg_syn; a_name : Ident.t; b_name : Ident.t; case : hom_syn; }
   | Done of syn * neg_syn
 
 and value =
@@ -101,7 +102,8 @@ and frame =
   | Cases of { mot : value; cases : (string * value) list }
   | Base
   | Fib of { base : value; value : value }
-  | HomElim of { base : value; value : value }
+  | HomElim of { tp : value; value : value }
+  | UnNegate
 
 (** {1 Instructions} *)
 and instr =
@@ -109,10 +111,11 @@ and instr =
   (** Write [value] to [write_addr] *)
   | NegAp of { write_addr : int; read_addr : int; fn : value }
   (** Read a value from [read_addr], apply [fn] to it, and write the result to [write_addr]. *)
-  | Unpair of { read_addr : int; write_fst_addr : int; clo : neg_clo; write_snd_addr : int }
-  (** Read a pair from [read_addr], write its first component to [write_fst_addr],
+  | Unpair of { read_addr : int; write_addr : int; clo : neg_clo; }
+  (** Read a pair from [read_addr], write its first component to [write_addr],
       instantiate and the closure with the first component, execute with the second
-      component, and then write the result of this execution to [write_snd_addr]. *)
+      component. *)
+  | Pack of { write_addr : int; read_fst_addr : int; read_snd_addr : int }
 
 and prog = { addr : int; capacity : int; instrs : instr list }
 (** A compiled program, created by reverse evaluation.

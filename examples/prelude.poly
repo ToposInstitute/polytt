@@ -15,6 +15,9 @@ def add : ℕ → ℕ → ℕ :=
 def sigma : (A : Type) → (A → Type) → Type :=
   λ A → λ B → (x : A) × B x
 
+def dup : (A : Type) → A → (A × A) :=
+  λ _ a → (a , a)
+
 def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
   λ n m → (n , m : ℕ)
 
@@ -82,7 +85,6 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
     n⁺ ⇜ (n⁻ ∘ (const ℕ #{ .single } (succ n⁺)))
 
 #normalize counter
-#quit
 
 def Moore : Type → Type → Type → Type :=
   λ S I O → (S × S) ⇒ (O × I)
@@ -94,7 +96,35 @@ def mds : (A : Type) → (B : Type) → (A → B) → Moore B A B :=
 def Gate : Type → Type → Type :=
   λ I O → Moore O I O
 
--- def test-pair : nyan ⇒ (tensor nyan nyan) :=
---   λ n⁺ n⁻ ⇝
---     (n⁺ , n⁺) ⇜ ?
---     
+def test-pair : nyan ⇒ (tensor nyan nyan) :=
+  λ n⁺ n⁻ ⇝
+    (n⁺ , n⁻) ⤚ (nyan-hom 12) → (b⁺ , b⁻);
+    ((n⁺ , b⁺)) ⇜ [_ , λ _ → b⁻ ∘ succ]
+
+#normalize (test-pair 1)
+
+def swap : (P : Poly) → (Q : Poly) → tensor P Q ⇒ tensor Q P :=
+  λ P Q → λ pq⁺ pq⁻ ⇝
+    pq⁻ [] → (p⁻ , q⁻);
+    ((snd pq⁺ , fst pq⁺)) ⇜ [q⁻ , λ _ → p⁻]
+
+-- λ (p⁺, q⁺) (p⁻, q⁻) ⇝ (q⁺ , p⁺) , (q⁻ , p⁻)
+
+#normalize swap nyan nyan (1, 2)
+
+def internal-hom : Poly → Poly → Poly :=
+  λ P Q → (f : P ⇒ Q) × ((p : base P) × fib Q (fst (f p)))
+
+    -- ? → (q⁻ ∘ (snd ((snd pf⁺) (fst pf⁺))));
+    -- (fst pf⁺ , p⁻) ⤚ (snd pf⁺) → (q₁⁺ , q₁⁻);
+    -- (fst pf⁺) → pb⁻;
+    -- q₁⁺ ⇜ q₁⁻
+
+def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
+  λ P Q → λ pf⁺ pf⁻ ⇝
+    pf⁻ [] → (p⁻ , f⁻);
+    f⁻ [ fst pf⁺ ] → (pb⁻ , q⁻);
+    (fst pf⁺) → pb⁻;
+    (fst ((snd pf⁺) (fst pf⁺))) ⇜ ([p⁻ ∘ (snd ((snd pf⁺) (fst pf⁺))) , q⁻] ∘ (dup (fib Q (fst ((snd pf⁺) (fst pf⁺))))))
+
+#normalize (eval nyan nyan) (3 , nyan-hom 12)

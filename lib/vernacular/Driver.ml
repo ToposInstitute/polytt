@@ -28,6 +28,9 @@ let normalize tm =
 let execute_cmd  (cmd : CS.cmd) =
   match cmd.node with
   | CS.Def {name; tp = Some tp; tm} ->
+    Debug.print "-------------------------------------------------@.";
+    Debug.print "> Elaborating %a@." Ident.pp name;
+    Debug.print "-------------------------------------------------@.";
     let tp = Sem.eval_top @@ Elaborator.chk tp D.Univ in
     let tm = Sem.eval_top @@ Elaborator.chk tm tp in
     Eff.define name (Def { tm; tp })
