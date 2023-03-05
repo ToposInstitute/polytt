@@ -88,7 +88,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
 
 def Moore : Type → Type → Type → Type :=
   λ S I O → (S × S) ⇒ (O × I)
- 
+
 def mds : (A : Type) → (B : Type) → (A → B) → Moore B A B :=
   λ A B f → λ b⁺ b⁻ ⇝
     b⁺ ⇜ (b⁻ ∘ f)
@@ -128,3 +128,12 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
     (fst ((snd pf⁺) (fst pf⁺))) ⇜ ([p⁻ ∘ (snd ((snd pf⁺) (fst pf⁺))) , q⁻] ∘ (dup (fib Q (fst ((snd pf⁺) (fst pf⁺))))))
 
 #normalize (eval nyan nyan) (3 , nyan-hom 12)
+
+def compose : Poly → Poly → Poly :=
+  λ P Q → (pf : (p : base P) × (fib P p → base Q)) × (i : fib P (fst pf)) × fib Q ((snd pf) i)
+
+def tensor-to-compose : (P : Poly) → (Q : Poly) → tensor P Q ⇒ compose P Q :=
+  λ P Q → λ pq⁺ pq⁻ ⇝
+    (fst pq⁺ , λ _ → snd pq⁺) ⇜ pq⁻
+
+
