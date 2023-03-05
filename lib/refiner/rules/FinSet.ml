@@ -91,8 +91,14 @@ let record_lit_syn cases_tac =
   let cases_tp = List.map (fun (l, (tp, _)) -> l, tp) cases_tp_tm in
   let cases_tm = List.map (fun (l, (_, tm)) -> l, tm) cases_tp_tm in
   let mot_tp = S.Lam (Ident.anon, S.Univ) in
-  let thingy = S.Cases (mot_tp, List.map (fun (l, tp) -> l, quote ~tp:D.Univ tp) cases_tp, S.Var 0) in
-  let mot =
-    S.Lam (Ident.anon, thingy) in
+  let is_univ = fun (l, tp) -> tp = S.Univ in
+  let cases_vtp = List.map (fun (l, tp) -> l, quote ~tp:D.Univ tp) cases_tp in
+  let thingy =
+    (* FIXME bad hack *)
+    if ((List.for_all is_univ cases_vtp) && (List.exists is_univ cases_vtp))
+      then S.Univ
+      else S.Cases (mot_tp, cases_vtp, S.Var 0)
+    in
+  let mot = S.Lam (Ident.anon, thingy) in
   let tp = eval (S.Pi (Ident.anon, S.FinSet ls, thingy)) in
   tp , S.Lam (Ident.anon, S.Cases (mot, cases_tm, S.Var 0))

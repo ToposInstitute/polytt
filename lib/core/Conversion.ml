@@ -17,7 +17,18 @@ struct
   let bind tp f =
     let arg = D.var tp @@ Eff.read() in
     Eff.scope (fun size -> size + 1) @@ fun () ->
-    f arg
+      match tp with
+      | D.FinSet ls when ls != [] ->
+        begin
+          try f arg with
+          | Unequal ->
+            Debug.print "CC FinSet ETA@.";
+            Eff.scope (fun size -> size + 1) @@ fun () ->
+              ls |> List.iter @@ fun l ->
+                f (D.Label (ls, l))
+        end
+      | _ ->
+        f arg
 
   let rec equate tp v1 v2 =
     match (tp, v1, v2) with
@@ -70,7 +81,7 @@ struct
       equate D.Poly p1 p2;
       equate D.Poly q1 q2;
     | _, _, _ ->
-      Debug.print "Could not equate %a and %a"
+      Debug.print "Could not equate %a and %a@."
         D.dump v1
         D.dump v2;
       raise Unequal

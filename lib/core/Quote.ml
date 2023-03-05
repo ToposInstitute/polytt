@@ -21,6 +21,18 @@ struct
 
   let rec quote (tp : D.t) (v : D.t) : S.t =
     match tp, v with
+    (* | D.Pi (_nm, D.FinSet ls, tp_clo), D.Lam (nm, clo) when ls != [] ->
+      (* Debug.print "Lam-FinSet ETA@."; *)
+      S.Lam (nm,
+        S.Cases
+          ( S.Lam (_nm, bind (D.FinSet ls) @@ fun arg -> quote D.Univ (Sem.inst_clo tp_clo arg))
+          , List.map (fun l ->
+                let arg = D.Label (ls, l) in
+                l, quote (Sem.inst_clo tp_clo arg) (Sem.inst_clo clo arg)
+            ) ls
+          , S.Var 0
+          )
+      ) *)
     | D.Pi (_, a, tp_clo), D.Lam (nm, clo) ->
       let body = bind a @@ fun arg ->
         quote (Sem.inst_clo tp_clo arg) (Sem.inst_clo clo arg)
@@ -31,6 +43,18 @@ struct
         quote (Sem.inst_clo clo arg) @@ Sem.do_ap v arg
       in
       S.Lam(nm, body)
+    (* | _, D.Pi (nm, D.FinSet ls, clo) when ls != [] ->
+      (* Debug.print "Pi-FinSet ETA@."; *)
+      S.Pi (nm, S.FinSet ls,
+        S.Cases
+          ( S.Lam (nm, S.Univ)
+          , List.map (fun l ->
+                let arg = D.Label (ls, l) in
+                l, quote D.Univ (Sem.inst_clo clo arg)
+            ) ls
+          , S.Var 0
+          )
+      ) *)
     | _, D.Pi (nm, a, clo) ->
       let qa = quote D.Univ a in
       let b = bind a @@ fun arg ->

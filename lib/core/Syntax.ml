@@ -317,7 +317,7 @@ let rec pp env =
     Format.fprintf fmt "#{}"
   | FinSet ls ->
     Format.fprintf fmt "#{ %a }"
-      (pp_sep_list Format.pp_print_string) ls
+      (pp_sep_list (fun fmt l -> Format.pp_print_string fmt ("." ^ l))) ls
   | Label (_ls, l) ->
     Format.fprintf fmt ".%a"
       Format.pp_print_string l
@@ -326,7 +326,7 @@ let rec pp env =
       (pp env (P.right_of this)) case
   | Cases (_, cases, case) ->
     Format.fprintf fmt "{ %a } %a"
-      (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l (pp env P.isolated) v)) cases
+      (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt ".%a = %a" Format.pp_print_string l (pp env P.isolated) v)) cases
       (pp env (P.right_of this)) case
   | Poly ->
     Format.fprintf fmt "poly"
