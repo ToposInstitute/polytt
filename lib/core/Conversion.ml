@@ -23,7 +23,6 @@ struct
           try f arg with
           | Unequal ->
             Debug.print "CC FinSet ETA@.";
-            Eff.scope (fun size -> size + 1) @@ fun () ->
               ls |> List.iter @@ fun l ->
                 f (D.Label (ls, l))
         end
@@ -49,8 +48,15 @@ struct
       equate D.Univ (Sem.inst_clo clo1 v) (Sem.inst_clo clo2 v)
     | D.Sigma (_, a, clo), v1, v2 ->
       equate a (Sem.do_fst v1) (Sem.do_fst v2);
-      let fib = Sem.inst_clo clo v1 in
+      let fib = Sem.inst_clo clo (Sem.do_fst v1) in
       equate fib (Sem.do_snd v1) (Sem.do_snd v2)
+    | _, D.Eq (t1, a1, b1), D.Eq (t2, a2, b2) ->
+      equate D.Univ t1 t2;
+      equate t1 a1 a2;
+      equate t1 b1 b2
+    | _, D.Refl _, D.Refl _ ->
+      (* They must have the same type by the time they got here *)
+      ()
     | _, D.Nat, D.Nat ->
       ()
     | _, D.Zero, D.Zero ->

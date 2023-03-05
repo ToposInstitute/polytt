@@ -58,7 +58,6 @@ let record_lit cases_tac =
         graft_value @@
         Graft.build @@
         TB.pi ~name:nm (TB.finset ls') (fun _ -> TB.univ) in
-      let mot = D.Lam (nm, clo) in
       (* We bind an (anonymous) variable here, as we will be placing
          the cases underneath a lambda binder. *)
       let cases =
@@ -70,7 +69,10 @@ let record_lit cases_tac =
           Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun v ->
           Chk.run case_tac (Sem.inst_clo clo (Var.value v))
       in
-      S.Lam (Ident.anon, S.Cases (quote ~tp:mot_tp mot, cases, S.Var 0))
+      S.Lam ( Ident.anon,
+              Locals.abstract (D.FinSet ls) @@ fun _ ->
+              S.Cases (quote ~tp:mot_tp (D.Lam (nm, clo)), cases, S.Var 0)
+            )
     else
       Error.error `TypeError "Record labels did not match expected type."
   | _ ->
@@ -85,20 +87,20 @@ let record_lit_syn cases_tac =
     cases_tac
     |> List.map @@ fun (l, case_tac) ->
     l, Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun _ ->
-    let r = Syn.run case_tac in
-    r
+    let tp, tm = Syn.run case_tac in
+    let tp = quote ~tp:D.Univ tp in
+    (tp, tm)
   in
   let cases_tp = List.map (fun (l, (tp, _)) -> l, tp) cases_tp_tm in
   let cases_tm = List.map (fun (l, (_, tm)) -> l, tm) cases_tp_tm in
   let mot_tp = S.Lam (Ident.anon, S.Univ) in
-  let is_univ = fun (l, tp) -> tp = S.Univ in
-  let cases_vtp = List.map (fun (l, tp) -> l, quote ~tp:D.Univ tp) cases_tp in
+  let is_univ = fun (_, tp) -> tp = S.Univ in
   let thingy =
     (* FIXME bad hack *)
-    if ((List.for_all is_univ cases_vtp) && (List.exists is_univ cases_vtp))
-      then S.Univ
-      else S.Cases (mot_tp, cases_vtp, S.Var 0)
-    in
+    if ((List.for_all is_univ cases_tp) && (List.exists is_univ cases_tp))
+    then S.Univ
+    else S.Cases (mot_tp, cases_tp, S.Var 0)
+  in
   let mot = S.Lam (Ident.anon, thingy) in
   let tp = eval (S.Pi (Ident.anon, S.FinSet ls, thingy)) in
   tp , S.Lam (Ident.anon, S.Cases (mot, cases_tm, S.Var 0))

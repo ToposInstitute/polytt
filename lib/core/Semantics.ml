@@ -100,7 +100,7 @@ struct
     | S.Hom (p, q) ->
       D.Hom (eval p, eval q)
     | S.HomLam (p_name, q_name, bdy) ->
-      D.HomLam (p_name, q_name, clo bdy) 
+      D.HomLam (p_name, q_name, clo bdy)
     | S.HomElim (hom, i) ->
       do_hom_elim (eval hom) (eval i)
     | S.Hole (tp, n) ->
@@ -196,7 +196,7 @@ struct
     CCVector.set cells prog.addr (Some arg);
     List.iter (eval_instr cells) prog.instrs;
     Debug.print "Reading final value from 0.@.";
-    Option.get @@ CCVector.get cells 0 
+    Option.get @@ CCVector.get cells 0
 
   and do_ap (f : D.t) (arg : D.t) =
     match f with

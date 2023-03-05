@@ -1,4 +1,6 @@
 open Core
+open Bwd
+open Bwd.Infix
 include Eff
 
 include TermBuilder
@@ -121,3 +123,30 @@ let match_syn tac k =
   Syn.rule @@ fun () ->
   let tp, tm = Syn.run tac in
   Syn.run @@ k (Syn.rule @@ fun () -> tp, tm) tp
+
+let pp_sequent_ctx ppenv fmt (ctx, k) =
+  let rec go ppenv size fmt ctx =
+    match ctx with
+    | [] ->
+      k ppenv fmt
+    | (name, tp) :: ctx ->
+      (* FIXME this does not include negatives *)
+      let tp = Quote.quote ~size ~tp:D.Univ tp in
+      Format.fprintf fmt "  %a : %a@.%a"
+        Ident.pp name
+        (S.pp ppenv Precedence.isolated) tp
+        (go (ppenv #< name) (size + 1)) ctx
+  in
+  go ppenv 0 fmt ctx
+
+let pp_sequent_goal goal ppenv fmt =
+  Format.fprintf fmt "──────────────@.  ⊢ %a@."
+    (S.pp ppenv Precedence.isolated) goal
+
+let pp_sequent_nogoal _ppenv fmt =
+  Format.fprintf fmt "──────────────@.  ⊢ ?@."
+
+let print_ctx fmt k =
+  let ppenv = Locals.ppenv () in
+  let ctx = Locals.local_types () in
+  pp_sequent_ctx Emp fmt (List.combine (Bwd.to_list ppenv) (Bwd.to_list ctx), k)
