@@ -34,7 +34,7 @@ def record_lit : ARecord := { .true = 0, .false = .true }
 def Anything := (T : Type) * T
 
 def let-example :=
-  let n = 5 : ℕ
+  let n := 5 : ℕ
   in n
 
 def Lens : (S T A B : Type) → Type := λ S T A B → { .get : S → A, .set : S → B → T }

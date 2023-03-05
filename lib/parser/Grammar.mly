@@ -129,9 +129,9 @@ plain_unannotated_term:
     { tm }
 
 let_binding:
-  | LET; nm = name; EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = name; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, tm1, tm2) }
-  | LET; nm = name; COLON; ty1 = term; EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = name; COLON; ty1 = term; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, { node = Anno(tm1, ty1) ; loc = get_loc tm1 }, tm2) }
 
 labeled_field(sep):
