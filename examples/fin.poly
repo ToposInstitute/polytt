@@ -85,6 +85,7 @@ def vec : ℕ → Type → Type := λ n A → fin n → A
 -- def vec0-unique : (A : Type) → (v1 : vec 0 A) → (v2 : vec 0 A) → v1 = v2 :=
 --   λ A v1 v2 → refl
 
+
 def listP : Poly := (n : ℕ) × fin n
 
 def list : Type → Type := ofP listP
@@ -94,18 +95,55 @@ def nil : (A : Type) → list A := λ A → (0 , {})
 def cons : (A : Type) → A → list A → list A :=
   λ A a as → (succ (fst as) , fin-case (fst as) (λ _ → A) a (snd as))
 
--- Needs even more extensionality
--- def list-elim : (A : Type) →
---   (mot : list A → Type) →
---   (mot (nil A)) →
---   ((a : A) → (as : list A) → mot as → mot (cons A a as)) →
---   (as : list A) → mot as :=
---   λ A mot iz is →
---     ×-rec ℕ (λ n → fin n → A) mot
---       (ℕ-elim (λ n → (as : fin n → A) → mot (n , as))
---         { .zero = λ _ → iz
---         , .succ = λ n ih as →
---           is (as (z n)) (n , λ i → as (s n i)) (ih (λ i → as (s n i)))
---         }
---       )
+def list-rec : (A : Type) →
+  (mot : Type) →
+  mot →
+  (A → mot → mot) →
+  list A → mot :=
+  λ A mot iz is →
+    ×-rec ℕ (λ n → fin n → A) (λ _ → mot)
+      (ℕ-elim (λ n → (as : fin n → A) → mot)
+        { .zero = λ _ → iz
+        , .succ = λ n ih as →
+          is (as (z n)) (ih (λ i → as (s n i)))
+        }
+      )
 
+-- Workaround: reconstruct lists
+-- This makes it into a list we can more easily prove things about
+-- since it constructions a definitionally-*different* list though it is still
+-- propositionally-equal. Good luck proving that, though!
+def list-ext : (A : Type) → list A → list A :=
+  λ A → list-rec A (list A) (nil A) (cons A)
+
+-- Needs even more extensionality
+-- Workaround: apply to `list-ext A as` instead
+def list-elim-ext : (A : Type) →
+  (mot : list A → Type) →
+  (mot (nil A)) →
+  ((a : A) → (as : list A) → mot as → mot (cons A a as)) →
+  (as : list A) → mot (list-ext A as) :=
+  λ A mot iz is →
+    ×-rec ℕ (λ n → fin n → A) (λ as → mot (list-ext A as))
+      (ℕ-elim (λ n → (as : fin n → A) → mot (list-ext A (n , as)))
+        { .zero = λ _ → iz
+        , .succ = λ n ih as →
+          is (as (z n)) (list-ext A (n , λ i → as (s n i))) (ih (λ i → as (s n i)))
+        }
+      )
+
+-- "Postulate" this for now (we don't have an equality recursor)
+-- def cong :
+--   (A : Type) → (B : Type) →
+--   (f : (a : A) → B) →
+--   (a1 : A) → (a2 : A) → (a1 = a2) → ((f a1) = (f a2)) :=
+--   ?
+
+-- Congruence lets us easily prove this is idempotent, since it is basically
+-- "projecting out" the part of the list datatype that "behaves extensionally"
+-- (really all of it should behave so, but that involves rewriting in mot)
+-- def list-ext-idempotent :
+--   (A : Type) → (as : list A) →
+--   ((list-ext A (list-ext A as)) = (list-ext A as)) :=
+--   λ A → list-elim-ext A (λ as → ((list-ext A as) = as)) (refl)
+--     (λ a as ih → cong (list A) (list A) (cons A a) (list-ext A as) as ih)

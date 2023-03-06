@@ -16,18 +16,18 @@ struct
 
   let bind tp f =
     let arg = D.var tp @@ Eff.read() in
-    Eff.scope (fun size -> size + 1) @@ fun () ->
+    let df () = Eff.scope (fun size -> size + 1) @@ fun () -> f arg in
       match tp with
-      | D.FinSet ls when ls != [] ->
+      | D.FinSet ls ->
         begin
-          try f arg with
+          try df () with
           | Unequal ->
             Debug.print "CC FinSet ETA@.";
               ls |> List.iter @@ fun l ->
                 f (D.Label (ls, l))
         end
       | _ ->
-        f arg
+        df ()
 
   let rec equate tp v1 v2 =
     match (tp, v1, v2) with

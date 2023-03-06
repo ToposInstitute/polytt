@@ -223,8 +223,10 @@ let equate ~tp v1 v2 =
   try
     Conversion.equate ~size:env.size ~tp v1 v2
   with Conversion.Unequal ->
+    Debug.print "Unequal:@.%a@.%a@." D.dump v1 D.dump v2;
     let tm1 = Quote.quote ~size:env.size ~tp v1 in
     let tm2 = Quote.quote ~size:env.size ~tp v2 in
+    Debug.print "Unequal:@.%a@.%a@." S.dump tm1 S.dump tm2;
     Error.error `ConversionError "Could not solve %a = %a@."
       (S.pp env.ppenv (Precedence.left_of S.equals)) tm1
       (S.pp env.ppenv (Precedence.right_of S.equals)) tm2

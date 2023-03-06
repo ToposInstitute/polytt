@@ -22,8 +22,9 @@ struct
   let rec quote (tp : D.t) (v : D.t) : S.t =
     match tp, v with
     (* | D.Pi (_nm, D.FinSet ls, tp_clo), D.Lam (nm, clo) when ls != [] ->
-      (* Debug.print "Lam-FinSet ETA@."; *)
-      S.Lam (nm,
+      Debug.print "Lam-FinSet ETA%a@." D.dump_clo clo;
+      let r = S.Lam (nm,
+        bind (D.FinSet ls) @@ fun arg ->
         S.Cases
           ( S.Lam (_nm, bind (D.FinSet ls) @@ fun arg -> quote D.Univ (Sem.inst_clo tp_clo arg))
           , List.map (fun l ->
@@ -32,7 +33,9 @@ struct
             ) ls
           , S.Var 0
           )
-      ) *)
+      ) in
+      Debug.print "ETAD%a@." S.dump r;
+      r *)
     | D.Pi (_, a, tp_clo), D.Lam (nm, clo) ->
       let body = bind a @@ fun arg ->
         quote (Sem.inst_clo tp_clo arg) (Sem.inst_clo clo arg)
