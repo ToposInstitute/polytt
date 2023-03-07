@@ -4,6 +4,7 @@
 \usepackage{mlmodern}
 \usepackage{todonotes}
 
+\NewDocumentCommand\PolyTT{}{\texttt{PolyTT}}
 \NewDocumentCommand\IsCtx{m}{#1\ \mathit{Ctx}}
 \NewDocumentCommand\IsHomCtx{m}{#1\ \mathit{HomCtx}}
 \NewDocumentCommand\IsHomEnv{m}{#1\ \mathit{HomEnv}}
@@ -28,6 +29,27 @@
 
 \begin{document}
 \maketitle
+
+The theory of polynomial functors is a powerful mathematical tool that sees
+use across a broad range of mathematics, ranging from the very applied
+(modelling dynamical systems) to the very abstract (constructing models of type theory).
+However, mechanizing the theory of polynomial functors makes it unwieldy to use; you
+either forgo all the power of abstraction and work at the level of sets,
+or are forced to work in a setting entirely without variables, which is mentally taxing,
+and does not scale well to large expressions. There currently exist some graphical tools
+such as wiring diagrams that do help the situation, but these only cover a fragment of
+the theory, and are difficult to integrate into proof assistants.
+
+In light of this, we argue that we ought to be working in the \emph{synthetic} theory
+of polynomial functors, where polynomials and their morphisms are defined as part of the
+theory directly. This has several benefits. From a purely ergonomic standpoint, having
+the theory be aware of the existence of maps of polynomials means that working with
+them is much more pleasant; gone are the days of massive chains of composites! Furthermore,
+we are able to exploit the rich structure of polynomials during evaluation.
+
+To back up these claims, we present $\PolyTT$, a type-theoretic encoding of the synthetic
+theory of polynomial functors. It combines Martin Lo\"f Type Theory with a fragment of
+linear type theory, used for constructing morphisms of polynomials.
 
 \section{Polynomials}
 
