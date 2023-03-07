@@ -317,6 +317,10 @@ We also need rules for introducing sink values in sink expressions.
   }
 \end{mathpar}
 
+\todo{This is pretty janky; do we have to care about associativity of things?}
+Here, $\Read(\theta_1)$ denotes reading all bindings from $\theta_1$, and tupling them up in the form
+required by $B^{-}$.
+
 We also have rules for introducing values of the unit type in sink expressions. This is mostly
 relevant when providing the final sink value to a hom expression, as it lets us discard the input
 entirely.
