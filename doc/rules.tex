@@ -20,9 +20,11 @@
 
 
 \title{The Synthetic Theory of Polynomial Functors}
+\author{David Spivak}
+\author{Owen Lynch}
 \author{Reed Mullanix}
-\author{Verity Scheel}
 \author{Solomon Bothwell}
+\author{Verity Scheel}
 
 \begin{document}
 \maketitle
@@ -35,7 +37,7 @@ by instead using a tower of universes. We start by adding a new judgement $\Gamm
 which denotes that $A$ is a polynomial functor. It has the following formation rule:
 
 \begin{mathpar}
-  \inferrule[Poly-formation] {
+  \inferrule[\textcolor{gray}{Judg:}Poly-formation] {
     \Gamma \vdash \IsTp{A} \\
     \Gamma, a : A \vdash \IsTp{B} \\
   } {
@@ -113,7 +115,7 @@ present them. To start, we define hom environments.
   \and
   \inferrule[Hom-env-set]{
     \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \vdash v : A \\
+    \Gamma \mid \rho \vdash v : A \\
     a^{-}\ \text{is a name}
   } {
     \Gamma \vdash \IsHomEnv{\rho, a^{-} \coloneqq v}
@@ -129,14 +131,14 @@ the environment. Furthermore, note that the rule for setting a binding in an env
 We now define all of the normal judgments relative to some environment $\rho$.
 
 \begin{mathpar}
-  \inferrule[Type-in-env]{
+  \inferrule[\textcolor{gray}{Judg:}Type-in-env]{
     \IsCtx{\Gamma} \\
     \Gamma \vdash \IsHomEnv{\rho}
   } {
     \Gamma \mid \rho \vdash \IsTp{A^{+}}
   }
   \and
-  \inferrule[Term-in-env]{
+  \inferrule[\textcolor{gray}{Judg:}Term-in-env]{
     \IsCtx{\Gamma} \\
     \Gamma \vdash \IsHomEnv{\rho} \\
     \Gamma \mid \rho \vdash \IsTp{A^{+}}
@@ -144,7 +146,7 @@ We now define all of the normal judgments relative to some environment $\rho$.
     \Gamma \mid \rho \vdash a : A^{+}
   }
   \and
-  \inferrule[Type-eq-in-env]{
+  \inferrule[\textcolor{gray}{Judg:}Type-eq-in-env]{
     \IsCtx{\Gamma} \\
     \Gamma \vdash \IsHomEnv{\rho} \\
     \Gamma \mid \rho \vdash \IsTp{A^{+}} \\
@@ -153,7 +155,7 @@ We now define all of the normal judgments relative to some environment $\rho$.
     \Gamma \mid \rho \vdash A^{+} \equiv B^{+}\ \mathit{Type}
   }
   \and
-  \inferrule[Term-eq-in-env]{
+  \inferrule[\textcolor{gray}{Judg:}Term-eq-in-env]{
     \IsCtx{\Gamma} \\
     \Gamma \vdash \IsHomEnv{\rho} \\
     \Gamma \mid \rho \vdash \IsTp{A} \\
@@ -196,6 +198,7 @@ environment relative conversion rule.
 We now give rules for linear Hom contexts, as well as a judgement for deriving
 ``sink'' terms from linear contexts.
 
+\todo{Reed: I \emph{think} it's ok to depend on reads from earlier in $\rho$?}
 \begin{mathpar}
   \inferrule[Hom-context-empty]{
     \\
@@ -209,15 +212,22 @@ We now give rules for linear Hom contexts, as well as a judgement for deriving
   } {
     \Gamma \mid \rho \vdash \IsHomCtx{\Psi, a^{-} : A}
   }
-  
-  \inferrule[Sink-term] {
+  \and
+  \inferrule[\textcolor{gray}{Judg:}Sink-term] {
     \IsCtx{\Gamma} \\
     \Gamma \vdash \IsHomEnv{\rho} \\
     \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
-    \Gamma \vdash \IsTp{A} \\
+    \Gamma \mid \rho \vdash \IsTp{A} \\
     \Gamma \vdash \IsHomEnv{\theta} \\
   } {
     \Gamma \mid \rho \mid \Psi \vdash a^{-} : A^{-} \rightsquigarrow \theta
+  }
+  \and
+  \inferrule[Sink-conversion] {
+    \Gamma \mid \rho \mid \Psi \vdash a^{-} : A^{-} \\
+    \Gamma \mid \rho \vdash \IsTp{A \equiv B}
+  } {
+    \Gamma \mid \rho \mid \Psi \vdash a^{-} : B^{-}
   }
 \end{mathpar}
 
@@ -238,7 +248,7 @@ we are required to provide it with a value of the appropriate type.
 We proceed by defining a new judgement describing hom expressions.
 
 \begin{mathpar}
-  \inferrule[Hom-expr]{
+  \inferrule[\textcolor{gray}{Judg:}Hom-term]{
     \IsCtx{\Gamma} \\
     \Gamma \vdash \IsHomEnv{\rho} \\
     \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
@@ -250,7 +260,7 @@ We proceed by defining a new judgement describing hom expressions.
   \inferrule[Hom-set]{
     \Gamma \vdash a^{+} : A \\
     \Gamma, x : A \mid \rho \mid \Psi_1 \vdash b^{-} : B^{-} \rightsquigarrow \theta \\
-    \Gamma, \rho \cup \theta[a^{+}/x] , \Psi_2 \vdash \IsHom{\phi}{Q}
+    \Gamma, \rho, \theta[a^{+}/x] , \Psi_2 \vdash \IsHom{\phi}{Q}
   }{
     \Gamma \mid \rho \mid \Psi_1, \Psi_2 \vdash \IsHom{a^{+} \rightarrow (\lambda x. b^{-});\phi}{Q}
   }
@@ -280,23 +290,46 @@ sink application rule, as it can be handled by function application.
     \Gamma \vdash f : P \Rightarrow Q \\
     \Gamma \vdash p^{+} : \Base{P}
   } {
-    \Gamma \vdash f p^{+} : (q^{+} : \Base{Q}) \times (\Fib{Q}{q^{+}} \to \Fib{P}{p^+})
+    \Gamma \vdash f\ p^{+} : (q^{+} : \Base{Q}) \times (\Fib{Q}{q^{+}} \to \Fib{P}{p^+})
   }
 \end{mathpar}
 
-\section{Sink Elimination}
+\section{Sink Introduction and Elimination}
 
 We need to also have rules for eliminating sink values in hom expressions.
 
-\todo{How do we handle the $\theta$ here? I want to instantiate it with $(\Read{a^{-}}, \Read{b^{-}})$,
-  but that's not allowed currently, as can't have read chains in $\rho$.}
 \begin{mathpar}
   \inferrule[Sigma-sink-elim] {
     \Gamma, x : (a : A) \times B\ a \mid \rho \mid \Psi_1 \vdash c^{-} : C^{-} \rightsquigarrow \theta \\
-    \Gamma \mid \rho, a^{-}, b^{-} \mid \Psi_2, a^{-} : A, b^{-} : B(\Read{a^{-}}) \vdash \IsHom{\phi}{Q}
+    \Gamma \mid \rho, a^{-}, b^{-}, \theta[(\Read{a^{-}, \Read{b^{-}}})/x] \mid \Psi_2, a^{-} : A, b^{-} : B(\Read{a^{-}}) \vdash \IsHom{\phi}{Q}
   } {
     \Gamma \mid \rho \mid \Psi_1 \vdash \IsHom{\mathsf{unpack}\ ab^{-} \to (a^{-}, b^{-}); \phi}{Q}
   }
 \end{mathpar}
+
+We also need rules for introducing sink values in sink expressions.
+\begin{mathpar}
+  \inferrule[Sigma-sink-intro]{
+    \Gamma \mid \rho \mid \Psi_1 \vdash a^{-} : A^{-} \rightsquigarrow \theta_1 \\
+    \Gamma \mid \rho \mid \Psi_1 \vdash b^{-} : B^{-} (\Read{\theta_1}) \rightsquigarrow \theta_2
+  }{
+    \Gamma \mid \rho \mid \Psi_1, \Psi_2 \vdash (a^{-}, b^{-}) : ((x : A) \times B\ x)^{-} \rightsquigarrow \theta_1, \theta_2
+  }
+\end{mathpar}
+
+We also have rules for introducing values of the unit type in sink expressions. This is mostly
+relevant when providing the final sink value to a hom expression, as it lets us discard the input
+entirely.
+
+\begin{mathpar}
+  \inferrule[Unit-sink-intro] {
+    \\
+  } {
+    \Gamma \mid \rho \mid \cdot \vdash \mathsf{drop} : \top^{-} \rightsquigarrow \cdot
+  }
+\end{mathpar}
+
+An elimination rule is not required, as we have $\eta$ for the unit type, and conversion for
+sink values allows for the $\eta$ to apply.
 
 \end{document}
