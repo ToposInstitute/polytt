@@ -7,25 +7,33 @@
 
 \NewDocumentCommand\IsCtx{m}{#1\ \mathit{Ctx}}
 \NewDocumentCommand\IsNegCtx{m}{#1\ \mathit{NegCtx}}
+\NewDocumentCommand\IsNegEnv{m}{#1\ \mathit{NegEnv}}
 \NewDocumentCommand\IsFilled{m}{#1\ \mathit{Filled}}
 \NewDocumentCommand\IsHomCtx{m}{#1\ \mathit{HomCtx}}
 \NewDocumentCommand\IsHomEnv{m}{#1\ \mathit{HomEnv}}
 \NewDocumentCommand\IsTp{m}{#1\ \mathit{Type}}
+\NewDocumentCommand\IsProg{m}{#1\ \mathit{Program}}
 \NewDocumentCommand\IsPoly{m}{#1\ \mathit{Poly}}
 \NewDocumentCommand\IsHom{mm}{#1\ \mathit{Hom}(#2)}
 \NewDocumentCommand\Base{m}{\mathit{Base}\ #1}
 \NewDocumentCommand\Fib{mm}{\mathit{Fib}\ #1\ #2}
-\NewDocumentCommand\Read{m}{\mathit{borrow}\ #1}
+\NewDocumentCommand\Borrow{m}{\operatorname{borrow}\ #1}
+\NewDocumentCommand\Fst{m}{\operatorname{fst} #1}
+\NewDocumentCommand\Snd{m}{\operatorname{snd} #1}
 
 \NewDocumentCommand\TpUniv{}{\mathcal{U}}
 \NewDocumentCommand\PolyUniv{}{\mathit{Poly}}
 \NewDocumentCommand\Hom{mm}{#1 \Rightarrow #2}
 
+\NewDocumentCommand\Judg{m}{\textcolor{gray}{Judg:}#1}
+\NewDocumentCommand\Deriv{m}{\textcolor{gray}{Deriv:}#1}
 
 \title{The Synthetic Theory of Polynomial Functors}
+\author{David Spivak}
+\author{Owen Lynch}
 \author{Reed Mullanix}
-\author{Verity Scheel}
 \author{Solomon Bothwell}
+\author{Verity Scheel}
 
 \begin{document}
 \maketitle
@@ -33,6 +41,10 @@
 \section{Verity's Rules}
 
 Blah blah blah Martin-L\"of Type Theory.
+
+We will write variables as $x^{(\pm)}, y^{(\pm)}, z^{(\pm)}$ when we are referencing explicit bindings, as opposed to general expressions.
+We will use $x^{+}$ for normal variables in the forwards direction of morphisms, $x^{-}$ for sinks (negative variables, which are necessarily in the reverse direction of morphisms), and plain $x$ for binding the positive value being threaded through the reverse direction.
+That is, our convention will be that $x^{-} = \lambda x \to (x \mapsto x^{-})$ (eta-expansion of sinks).
 
 MLTT has three things:
 \begin{enumerate}
@@ -43,35 +55,48 @@ MLTT has three things:
 
 To this we add:
 \begin{enumerate}
-  \item A type of polynomial functors and a type of morphisms between them
-  \item Negative (linear) contexts, with variables of negative types \emph{and} their values when written to
-  \item Negative types, which may mention negative values via reading
-  \item Negative terms, which can be set to values
-  \item Programs, which set negative terms to values
-  \item Morphism bodies, which have a sequence of programs and then conclude in a return value and fibration
+  \item A type of polynomial functors $P, Q : \PolyUniv$ and a type of morphisms between them $\Hom{P}{Q}$
+  \item Negative (linear) contexts $\Psi$, with variables of negative types
+  \item Negative types $A^{-}$, which are exactly like MLTT types but may mention negative values via borrowing (note that ${-}^{-}$ is no longer an operation, just notation to distinguish negative types)
+  \item Programs $\pi$, which set negative terms to values
+  \item Program environments $\chi$, which are normalized programs $\chi = {\downarrow \pi}$ writing variables (as opposed to generalized negative terms) in \emph{cons}-order (not \emph{snoc}!)
+  \item Negative terms $a^{-}$, which can be set to values in programs
+  \item Morphism bodies $\phi$, which have a sequence of programs and then conclude in a positive return value and negative fibrational component
+\end{enumerate}
+
+Programs have a few operations:
+\begin{enumerate}
+  \item Write, of course. We will write it as $a^{+} \mapsto a^{-}$.
+  \item Done, which is necessary for the grammar to be right-associative. We will write it as $\emptyset$.
+  \item Borrow, which abstracts over an opaque value of a wire. We do not need this yet, so we omit it. We may also restrict it to borrowing variables only, as opposed to generate negative terms.
+  \item Pair, which bundles up two wires (with a type dependency) into a sigma-wire. This can be implemented in user-land: $(a^{-}, b^{-}) := \lambda ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-})$.
+  \item Unpack, which splits a sigma-wire into two wires (with a type dependency). We will write it as $v^{-} \prec (x^{-}, y^{-})$.
+  \item Morphism application can also be implemented in user-land (although it loses sharing but eh we don't have that anyways).
 \end{enumerate}
 
 Linearity is checked by writing a negative variable's written value in context, never allowing it to be written twice, and checking that all variables have been written by the end of a morphism-body.
 
 Writing a variable only occurs in negative terms in programs and morphism bodies.
-This introduces additional definitional equalities for $\Read a^{-}$ into scope.
-Namely, $x^{-} := a : A^{-}$ allows for the reduction $\Read x^{-} \mapsto a$.
+This introduces additional definitional equalities for $\Borrow a^{-}$ into scope.
+Namely, $a \mapsto x^{-} : A$ allows for the reduction $\Borrow x^{-} \equiv a$.
 
 \begin{mathpar}
-  \inferrule[Deriv:Read-reduce] {
+  \inferrule[\Deriv{Borrow-reduce}] {
   } {
-    \Gamma \mid \Psi_L, (a =: x^{-} : A^{-}), \Psi_R \vdash \Read x^{-} \cong a : A
+    \Gamma \mid \Psi \mid \chi_L, (a \mapsto x^{-} : A^{-}), \chi_R \vdash \Borrow x^{-} \equiv a : A
   }
 \end{mathpar}
 
+TODO: what to do about compound negative terms? disallow them?
+
 Negative terms in negative types are not consumed.
-In particular, mentioning a negative variable in $\Read a^{-}$ does not consume it, so this means that the only difference between types and negative types are that the latter may mention $\Read a^{-}$.
+In particular, mentioning a negative variable in $\Borrow a^{-}$ does not consume it, so this means that the only difference between types and negative types are that the latter may mention $\Borrow a^{-}$.
 
 \begin{mathpar}
-  \inferrule[Deriv:Read-negative] {
-    \Gamma \mid \Psi \vdash a^{-} : A^{-} \rightsquigarrow \_
+  \inferrule[\Deriv{Borrow-negative}] {
+    \Gamma \mid \Psi \vdash a^{-} : A^{-}
   } {
-    \Gamma \mid \Psi \vdash \Read a^{-} : A
+    \Gamma \mid \Psi \vdash \Borrow a^{-} : A
   }
 \end{mathpar}
 
@@ -80,7 +105,7 @@ It only needs to pass along the compound context $\Gamma \mid \Psi$.
 For example, the application rule looks like this:
 
 \begin{mathpar}
-  \inferrule[Deriv:Ap] {
+  \inferrule[\Deriv{Ap}] {
     \Gamma \mid \Psi \vdash f : (a : A) \to B[a]\\
     \Gamma \mid \Psi \vdash v : A
   } {
@@ -89,408 +114,179 @@ For example, the application rule looks like this:
 \end{mathpar}
 
 It would be nice to get rid of the morphism-body, since various judgments are polymorphic over it in their return (e.g. sequencing and negsima-elim), but let's gloss over that for now.
+Sequencing is right-associative: each statement may bind variables and write values that appear in all following statements.
+In fact that needs to be baked into the syntax, so that the environment can remain a reader context.
 
-\begin{mathpar}
-  \inferrule[Deriv:Seq-Program] {
-    \Gamma \mid \Psi_1 \vdash \pi_1 \rightsquigarrow \Psi_2\\
-    \Gamma \mid \Psi_2 \vdash \pi_2 \rightsquigarrow \Psi_3
-  } {
-    \Gamma \mid \Psi_1 \vdash \pi_1 ; \pi_2 \rightsquigarrow \Psi_3
-  }
-\end{mathpar}
-\begin{mathpar}
-  \inferrule[Deriv:Seq-Body] {
-    \Gamma \mid \Psi_1 \vdash \pi \rightsquigarrow \Psi_2\\
-    \Gamma \mid \Psi_2 \vdash \rho :\Rightarrow Q
-  } {
-    \Gamma \mid \Psi_1 \vdash \pi ; \rho :\Rightarrow Q
-  }
-\end{mathpar}
+%\begin{mathpar}
+%  \inferrule[\Deriv{Seq-Program}] {
+%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\pi_1}\\
+%    \Gamma \mid \Psi \mid {\downarrow \pi_1}; \chi \vdash \IsProg{\pi_2}
+%  } {
+%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\pi_1 ; \pi_2}
+%  }
+%\end{mathpar}
+%\begin{mathpar}
+%  \inferrule[\Deriv{Seq-Body}] {
+%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\pi}\\
+%    \Gamma \mid \Psi \mid {\downarrow \pi}; \chi \vdash \rho :\Rightarrow Q
+%  } {
+%    \Gamma \mid \Psi \mid \chi \vdash \pi ; \rho :\Rightarrow Q
+%  }
+%\end{mathpar}
+
+
 
 \section{Negative contexts and types}
 
-Negative contexts have variables of specified negative types that may be set to values.
-We will see whether it depends on order???
+Negative contexts have variables of specified negative types.
+Negative types are exactly regular types with access to $\Borrow{x^{-}}$ for all negative variables $x^{-}$ in scope thus far, so we omit its derivation rules.
 
 \begin{mathpar}
-  \inferrule[Judg:Neg-ctx] {
+  \inferrule[\Judg{Neg-ctx}] {
+    \IsCtx{\Gamma}
   } {
     \Gamma \vdash \IsNegCtx{\Psi}
   }
-\end{mathpar}
-\begin{mathpar}
-  \inferrule[Judg:Full] {
+
+  \inferrule[\Judg{Neg-type}] {
+  	\IsCtx{\Gamma}\\
+    \Gamma \vdash \IsNegCtx{\Psi}
   } {
-    \IsFilled{\Psi}
-  }
-\end{mathpar}
-
-\section{Negative terms and programs}
-
-Hack: using $\cdot$ to mean ``The particular variable we abstracted over in this negative term'' (since it may only abstract over one).
-
-\begin{mathpar}
-  \inferrule[Deriv:Neg-Eta] {
-    \Gamma, a : A \mid \Psi_1 \vdash \pi \rightsquigarrow \Psi_2
-  } {
-    \Gamma \mid \Psi_1 \vdash (\lambda a \to \pi) : A^{-} \rightsquigarrow \Psi_2[a := \cdot]
+    \Gamma \mid \Psi \vdash \IsTp{A^{-}}
   }
 \end{mathpar}
 
 \begin{mathpar}
-  \inferrule[Deriv:Neg-Set] {
+  \inferrule[\Deriv{Neg-ctx-empty}] {
+  	\IsCtx{\Gamma}
+  } {
+    \Gamma \vdash \IsNegCtx{\cdot}
+  }
+
+  \inferrule[\Deriv{Neg-ctx-snoc}] {
+    \Gamma \vdash \IsNegCtx{\Psi}\\
+    \Gamma \mid \Psi \vdash \IsTp{A^{-}}
+  } {
+    \Gamma \vdash \IsNegCtx{\Psi, x^{-} : A^{-}}
+  }
+\end{mathpar}
+
+
+
+\section{Negative terms and programs and program environments}
+
+Programs are exactly the bodies of eta-expanded negative terms:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-Eta}] {
+    \Gamma, a : A \mid \Psi \mid \chi \vdash \IsProg{\pi}
+  } {
+    \Gamma \mid \Psi \mid \chi \vdash (\lambda a \to \pi) : A^{-}
+  }
+\end{mathpar}
+
+Note that $a$ cannot depend on any negative terms (in particular, cannot borrow).
+That means that $a^{-}$ needs its type $A^{-}$ to reduce to a term that does not mention borrowed values, either by having no dependence on other sinks in the first place or by already being written to a value from previous writes in $\chi$.
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-Write}] {
     \Gamma \vdash a : A\\
-    \Gamma \mid \Psi_1 \vdash a^{-} : A^{-} \rightsquigarrow \Psi_2
+    \Gamma \mid \Psi \mid \chi \vdash a^{-} : A^{-}\\
+    \Gamma \mid \Psi \mid {\downarrow (a \mapsto a^{-})}; \chi \vdash \IsProg{\pi}
   } {
-    \Gamma \mid \Psi_1 \vdash (a =: a^{-}) \rightsquigarrow \Psi_2[\cdot := a]
+    \Gamma \mid \Psi \mid \chi \vdash \IsProg{(a \mapsto a^{-}); \pi}
   }
 \end{mathpar}
 
-Programs have a few operations:
-\begin{enumerate}
-  \item Write, of course
-  \item Read (borrow), which abstracts over an opaque value of a wire.
-  \item Pair, which bundles up two wires (with a type dependency) into a sigma-wire
-  \item Unpack, which splits a sigma-wire into two wires (with a type dependency)
-  \item I don't think morphism application really needs to be a fundamental operation at this point?
-\end{enumerate}
+Program environments write variables in LtR order, but are constructed RtL.
+
+Operationally, we think of them as operating on mutable cells corresponding to each variable in scope.
+These cells are initialized with $\Borrow{self}$ and written to in order to trace out the reverse direction of poly morphisms.
+
+\begin{mathpar}
+  \inferrule[\Judg{Neg-env}] {
+    \Gamma \vdash \IsNegCtx{\Psi}
+  } {
+    \Gamma \mid \Psi \vdash \IsNegEnv{\chi}
+  }
+\end{mathpar}
+
+Their scoping is a bit weird, since they can depend on any variables in $\Psi$ (and are stable under weakening = adding variables to $\Psi$).
+Note that, unlike $\textsc{\Deriv{Neg-Set}}$, their value \emph{can} depend on further borrows! (And definitional equalities introduced into the environment already.)
+The only place we use this affordance is in $\textsc{\Deriv{Unpack}}$.
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-env-empty}] {
+    \Gamma \vdash \IsNegCtx{\Psi}
+  } {
+    \Gamma \mid \Psi \vdash \IsNegEnv{\emptyset}
+  }
+\end{mathpar}
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-env-cons}] {
+    \Gamma \mid \Psi \vdash \IsNegEnv{\chi}\\
+    x^{-} \notin \chi\\
+    \Gamma \mid \Psi \vdash \IsTp{A^{-}}\\
+    \Gamma \mid \Psi \mid \chi \vdash a : A\\
+  } {
+    \Gamma \mid \Psi \vdash \IsNegEnv{(a \mapsto x^{-} : A^{-}); \chi}
+  }
+\end{mathpar}
+
+The linearity check is ensured by never writing to the same variable twice and by checking that each variable in $\Psi$ is written exactly once by the end of the hom-body:
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-env-filled}] {
+  	Vars(\Psi) = Vars(\chi)
+  } {
+    \Psi \cong \IsFilled{\chi}
+  }
+\end{mathpar}
+In particular, this is used for program extraction of the backwards action on fibrations, by seeing what the input $p^{-}$ is set to in the environment.
+
 
 \section{Morphism body}
 
+This provides the forward component $p^{+}$ and adds an obligation $p^{-}$, then checks that the body of the morphism $\rho$ will fulfill the obligation.
+
 \begin{mathpar}
-  \inferrule[Deriv:Morph-Intro] {
-    \Gamma, p^{+} : \Base{P} \mid p^{-} : \Fib{P}{p^{+}} \vdash \rho :\Rightarrow Q\\
+  \inferrule[\Deriv{Morph-Intro}] {
+    \Gamma, p^{+} : \Base{P} \mid p^{-} : \Fib{P}{p^{+}} \mid \emptyset \vdash \rho :\Rightarrow Q\\
   } {
     \Gamma \vdash (\lambda p^{+} p^{-} \rightsquigarrow \rho) : P \Rightarrow Q
   }
 \end{mathpar}
 
+The obligation is fulfilled when the body ends, providing a positive value for the base and a negative sink for the fibration, and every negative variable in $\Psi$ has been set to a positive value in $\chi$.
+
 \begin{mathpar}
-  \inferrule[Deriv:Body-Done] {
+  \inferrule[\Deriv{Body-Done}] {
     \Gamma \vdash q^{+} : \Base{Q}\\
-    \Gamma \mid \Psi_1 \vdash q^{-} : (\Fib{Q}{q^{+}})^{-} \rightsquigarrow \Psi_2\\
-    \IsFilled{\Psi_2}
+    \Gamma \mid \Psi \vdash q^{-} : (\Fib{Q}{q^{+}})^{-}\\
+    \Psi \cong \IsFilled{(q \mapsto q^{-}); \chi}
   } {
-    \Gamma \mid \Psi_1 \vdash (q^{+} \leftsquigarrow q^{-}) :\Rightarrow Q
+    \Gamma \mid \Psi \mid \chi \vdash (q^{+} \leftsquigarrow q^{-}) :\Rightarrow Q
   }
 \end{mathpar}
 
-The action on fibrations can be recovered as something like $\lambda q. p$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid q^{-} := q : \Fib{Q}{q^{+}}, p^{-} := p : \Fib{P}{p^{+}}$, where $p^{-}$ gets set to $p$ in the process of setting $q^{-}$ to $q$.
+The action on fibrations can be recovered as something like $\lambda q. p$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid p^{-} : \Fib{P}{p^{+}} \mid (q \mapsto q^{-}) : \Fib{Q}{q^{+}}, (p \mapsto p^{-}) : \Fib{P}{p^{+}}$, where $p^{-}$ gets set to $p$ in the process of setting $q^{-}$ to $q$.
+
+
 
 \section{Sigmas}
 
+Consumes $ab^{-}$, splitting it into two new wires $(x^{-}, y^{-})$ whose values get paired and written to $ab^{-}$.
 
 \begin{mathpar}
-  \inferrule[Deriv:Unpack] {
-    \Gamma \mid \Psi_1 \vdash ab^{-} : (a : A) \times B^{-}[a] \rightsquigarrow \Psi_2\\
-    \Gamma \mid \Psi_2, a^{-} : A^{-}, b^{-} : B^{-}[\Read{a^{-}}] \vdash \pi \rightsquigarrow \Psi_3\\
+  \inferrule[\Deriv{Unpack}] {
+    \Gamma \mid \Psi \mid \chi_1 \vdash ab^{-} : (a : A) \times B^{-}[a]\\
+    \chi_2 := {\downarrow ((\Borrow{x^{-}}, \Borrow{y^{-}}) \mapsto ab^{-})}; \chi_1 \\
+    \Gamma \mid \Psi, x^{-} : A^{-}, y^{-} : B^{-}[\Borrow{x^{-}}] \mid \chi_2 \vdash \IsProg{\pi}\\
   } {
-    \Gamma \mid \Psi_1 \vdash ab^{-} \prec (a^{-}, b^{-}); \pi \rightsquigarrow \Psi_i
-  }
-\end{mathpar}
-
-\begin{mathpar}
-  \inferrule[Deriv:Pair] {
-    \Gamma \mid \Psi_1 \vdash ab^{-} : (a : A) \times B^{-}[a] \rightsquigarrow \Psi_2\\
-    \Gamma \mid \Psi_2, a^{-} : A^{-}, b^{-} : B^{-}[\Read{a^{-}}] \vdash \pi \rightsquigarrow \Psi_3\\
-  } {
-    \Gamma \mid \Psi_1 \vdash ab^{-} \prec (a^{-}, b^{-}); \pi \rightsquigarrow \Psi_i
+    \Gamma \mid \Psi \mid \chi_1 \vdash ab^{-} \prec (x^{-}, y^{-}); \IsProg{\pi}
   }
 \end{mathpar}
 
 
-\pagebreak
 
-\pagebreak
-
-\pagebreak
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\section{Polynomials}
-
-We omit the standard rules for Martin L\"of Type Theory with Tarski Universes. For simplicity,
-we shall assume that the universe $\TpUniv{}$ codes itself. This inconsistency can be resolved
-by instead using a tower of universes. We start by adding a new judgement $\Gamma \vdash \IsPoly{A}$,
-which denotes that $A$ is a polynomial functor. It has the following formation rule:
-
-\begin{mathpar}
-  \inferrule[Poly-formation] {
-    \Gamma \vdash \IsTp{A} \\
-    \Gamma, a : A \vdash \IsTp{B} \\
-  } {
-    \Gamma \vdash \IsPoly{(a : A) \times B\ a}
-  }
-\end{mathpar}
-
-We also add the following rules for obtaining the base of a polynomial, along with
-the fibre of a polynomial at a base.
-
-\begin{mathpar}
-  \inferrule[Poly-base] {
-    \Gamma \vdash \IsPoly{P}
-  } {
-    \Gamma \vdash \IsTp{\Base{P}}
-  }
-  \and
-  \inferrule[Poly-fibre] {
-    \Gamma \vdash \IsPoly{P} \\
-    \Gamma \vdash i : \Base{P}
-  } {
-    \Gamma \vdash \IsTp{\Fib{P}{i}}
-  }
-\end{mathpar}
-
-The base and fibre operations do what one would expect when applied to a concrete polynomial.
-
-\begin{mathpar}
-  \inferrule[Poly-base-decoding] {
-  } {
-    \Base{(a : A) \times B\ a} \equiv A
-  }
-  \and
-  \inferrule[Poly-fibre-decoding] {
-    \Gamma \vdash \IsTp{A} \\
-    \Gamma, a : A \vdash \IsTp{B} \\
-    \Gamma \vdash i : \Base{(a : A) \times B\ a}
-  } {
-    \Fib{((a : A) \times B\ a)}{i} \equiv B\ i
-  }
-\end{mathpar}
-
-\section{Morphisms of Polynomials}
-
-We proceed by defining a type of morphisms between polynomials.
-
-\begin{mathpar}
-  \inferrule[Hom-formation] {
-    \Gamma \vdash \IsPoly{P} \\
-    \Gamma \vdash \IsPoly{Q} \\
-  } {
-    \Gamma \vdash \IsTp{P \Rightarrow Q}
-  }
-\end{mathpar}
-
-\subsection{Hom Environments}
-
-The introduction and elimination rules for this type are the source of all of the power
-\emph{and} complexity of the theory, so we will need to build out some machinery before we
-present them. To start, we define hom environments.
-
-\begin{mathpar}
-  \inferrule[Hom-env-empty]{
-    \\
-  } {
-    \Gamma \vdash \IsHomEnv{\cdot}
-  }
-  \and
-  \inferrule[Hom-env-bind]{
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    a^{-}\ \text{is a name}
-  } {
-    \Gamma \vdash \IsHomEnv{\rho, a^{-}}
-  }
-  \and
-  \inferrule[Hom-env-set]{
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \vdash v : A \\
-    a^{-}\ \text{is a name}
-  } {
-    \Gamma \vdash \IsHomEnv{\rho, a^{-} \coloneqq v}
-  }
-\end{mathpar}
-
-We shall gloss over any difficulties with name freshness, and gesture vaguely in the direction
-of nameless representations if pressed. We also define a meta-operation $\rho[a^{-} \coloneqq v]$, which
-replaces an $a^{-}$ in an environment $\rho$ with $a^{-} \coloneqq v$. This is defined by induction over
-the environment. Furthermore, note that the rule for setting a binding in an environment $\rho$ does
-\emph{not} allow for the the value $v$ to depend on earlier entries in $\rho$.
-
-We now define all of the normal judgments relative to some environment $\rho$.
-
-\begin{mathpar}
-  \inferrule[Type-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho}
-  } {
-    \Gamma \mid \rho \vdash \IsTp{A^{+}}
-  }
-  \and
-  \inferrule[Term-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A^{+}}
-  } {
-    \Gamma \mid \rho \vdash a : A^{+}
-  }
-  \and
-  \inferrule[Type-eq-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A^{+}} \\
-    \Gamma \mid \rho \vdash \IsTp{B^{+}}
-  } {
-    \Gamma \mid \rho \vdash A^{+} \equiv B^{+}\ \mathit{Type}
-  }
-  \and
-  \inferrule[Term-eq-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A} \\
-    \Gamma \mid \rho \vdash \IsTp{x} : A^{+} \\
-    \Gamma \mid \rho \vdash \IsTp{y} : A^{+}
-  } {
-    \Gamma \mid \rho \vdash x \equiv y : A^{+}
-  }
-\end{mathpar}
-
-We can read variables from an environment.
-
-\begin{mathpar}
-  \inferrule[Hom-env-read]{
-    a^{-} \in \rho
-  } {
-    \Gamma \mid \rho \vdash \Read{a^{-}} : A^{+}
-  }
-\end{mathpar}
-
-All of the rules for types in the base theory are copied over to the environment relative
-ones. We shall omit these for brevity, though we shall highlight the fact that we have an
-environment relative conversion rule.
-
-\begin{mathpar}
-  \inferrule[Conversion-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A} \\
-    \Gamma \mid \rho \vdash \IsTp{B} \\
-    \Gamma \mid \rho \vdash A \equiv B\ \mathit{Type} \\
-    \Gamma \mid \rho \vdash x : B
-  } {
-    \Gamma \mid \rho \vdash x : A \\
-  }
-\end{mathpar}
-
-\subsection{Hom Contexts and Sinks}
-
-We now give rules for linear Hom contexts, as well as a judgement for deriving
-``sink'' terms from linear contexts.
-
-\begin{mathpar}
-  \inferrule[Hom-context-empty]{
-    \\
-  } {
-    \Gamma \mid \rho \vdash \IsHomCtx{\cdot}
-  }
-  \and
-  \inferrule[Hom-context-bind]{
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
-    \Gamma \mid \rho \vdash \IsTp{A}
-  } {
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi, a^{-} : A}
-  }
-  
-  \inferrule[Sink-term] {
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
-    \Gamma \vdash \IsTp{A} \\
-    \Gamma \vdash \IsHomEnv{\theta} \\
-  } {
-    \Gamma \mid \rho \mid \Psi \vdash a^{-} : A^{-} \rightsquigarrow \theta
-  }
-\end{mathpar}
-
-Linearity of the Hom contexts is ensured by the following rule.
-The intuition here is that in order to discharge an obligation $a^{-}$,
-we are required to provide it with a value of the appropriate type.
-
-\begin{mathpar}
-  \inferrule[Sink-linear-var] {
-    \Gamma \vdash a^{+}  : A
-  } {
-    \Gamma \mid \rho \mid a^{-} : A^{-} \vdash a^{-}[a^{+}] : A^{-} \rightsquigarrow a^{-} \coloneqq a^{+}
-  }
-\end{mathpar}
-
-\subsection{Hom Expressions}
-
-We proceed by defining a new judgement describing hom expressions.
-
-\begin{mathpar}
-  \inferrule[Hom-expr]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
-    \Gamma \vdash \IsPoly{Q}
-  }{
-    \Gamma \mid \rho \mid \Psi \vdash \IsHom{\phi}{Q}
-  }
-  \and
-  \inferrule[Hom-set]{
-    \Gamma \vdash a^{+} : A \\
-    \Gamma, x : A \mid \rho \mid \Psi_1 \vdash b^{-} : B^{-} \rightsquigarrow \theta \\
-    \Gamma, \rho \cup \theta[a^{+}/x] , \Psi_2 \vdash \IsHom{\phi}{Q}
-  }{
-    \Gamma \mid \rho \mid \Psi_1, \Psi_2 \vdash \IsHom{a^{+} \rightarrow (\lambda x. b^{-});\phi}{Q}
-  }
-  \and
-  \inferrule[Hom-done]{
-    \Gamma \vdash q^{+} : \Base{Q} \\
-    \Gamma, x : \Fib{Q}{q^+} \mid \rho \mid \Psi \vdash q^{-} : A^{-}
-  } {
-    \Gamma \mid \rho \mid \Psi \vdash \IsHom{(q^+, \lambda x. q^{-})}{Q}
-  }
-\end{mathpar}
-
-Note that we lambda abstract a variable $x$ when defining the sink expression. This is not essential,
-but allows us to avoid writing a point-free mess. This also removes the need for a separate
-sink application rule, as it can be handled by function application.
-
-\subsection{Hom Introduction and Elimination}
-
-\begin{mathpar}
-  \inferrule[Hom-intro]{
-    \Gamma, p^{+} : \Base{p} \mid \cdot \mid p^{-} : \Fib{P}{p^{+}} \vdash \IsHom{\phi}{Q}
-  } {
-    \Gamma \vdash \lambda p^{+} p^{-} \rightsquigarrow \phi : P \Rightarrow Q
-  }
-  \and
-  \inferrule[Hom-elim]{
-    \Gamma \vdash f : P \Rightarrow Q \\
-    \Gamma \vdash p^{+} : \Base{P}
-  } {
-    \Gamma \vdash f p^{+} : (q^{+} : \Base{Q}) \times (\Fib{Q}{q^{+}} \to \Fib{P}{p^+})
-  }
-\end{mathpar}
-
-\section{Sink Elimination}
-
-We need to also have rules for eliminating sink values in hom expressions.
-
-\todo{How do we handle the $\theta$ here? I want to instantiate it with $(\Read{a^{-}}, \Read{b^{-}})$,
-  but that's not allowed currently, as can't have read chains in $\rho$.}
-\begin{mathpar}
-  \inferrule[Sigma-sink-elim] {
-    \Gamma, x : (a : A) \times B\ a \mid \rho \mid \Psi_1 \vdash c^{-} : C^{-} \rightsquigarrow \theta \\
-    \Gamma \mid \rho, a^{-}, b^{-} \mid \Psi_2, a^{-} : A, b^{-} : B(\Read{a^{-}}) \vdash \IsHom{\phi}{Q}
-  } {
-    \Gamma \mid \rho \mid \Psi_1 \vdash \IsHom{\mathsf{unpack}\ ab^{-} \to (a^{-}, b^{-}); \phi}{Q}
-  }
-\end{mathpar}
 
 \end{document}

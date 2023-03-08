@@ -135,3 +135,5 @@ result/
 # Tex
 *.log
 *.aux
+*.synctex.gz
+
