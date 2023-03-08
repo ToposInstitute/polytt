@@ -15,28 +15,38 @@ let ap_or_atomic =
   | [] -> failwith "Impossible Internal Error"
   | [f] -> unlocate f
   | f :: args -> CS.Ap (f, args)
+
+let neg_ap_or_atomic neg fns =
+  match fns with
+  | None -> unlocate neg
+  | Some fns -> CS.NegAp (neg, fns)
 %}
 
 %token <int> NUMERAL
 %token <bool> FLAG
 %token <string> ATOM
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA RIGHT_ARROW UNDERSCORE EQUALS QUESTION
+%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW UNDERSCORE EQUALS QUESTION
 (* Symbols *)
 %token FORALL LAMBDA LET IN
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
+%token POLY BASE FIB RIGHT_THICK_ARROW
+%token LEFT_SQUIGGLY_ARROW RIGHT_SQUIGGLY_ARROW RIGHT_ARROW_TAIL CIRC
 %token HASH
 (* Delimiters *)
 %token LPR RPR LSQ RSQ LBR RBR
 (* Keywords *)
 %token TYPE
+%token REFL
 (* Commands *)
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
-%right COLON
+%right SEMICOLON COLON
 %right RIGHT_ARROW TIMES IN
+%left CIRC
+%nonassoc RIGHT_THICK_ARROW RIGHT_SQUIGGLY_ARROW
 
 %start <Vernacular.Syntax.cmd list> commands
 
@@ -100,16 +110,20 @@ plain_term:
     { CS.Sigma (name, base, fam) }
   | base = term; TIMES; fam = term
     { CS.Sigma (`Anon, base, fam) }
-  | LPR; t1 = term; COMMA; t2 = term; RPR
-    { CS.Pair (t1, t2) }
   | FST; tm = atomic_term
     { CS.Fst tm }
+  | tm1 = atomic_term; EQUALS; tm2 = atomic_term
+    { CS.Eq (tm1, tm2) }
+  | REFL
+    { CS.Refl }
   | SND; tm = atomic_term
     { CS.Snd tm }
-  | SUCC; tm = atomic_term
-    { CS.Succ tm }
   | NAT_ELIM; mot = atomic_term; zero = atomic_term; succ = atomic_term; scrut = atomic_term
     { CS.NatElim (mot, zero, succ, scrut) }
+  | BASE; p = atomic_term
+    { CS.Base p }
+  | FIB; p = atomic_term; i = atomic_term
+    { CS.Fib (p, i) }
   | tm = anno
     { tm }
   | tm = let_binding
@@ -134,10 +148,58 @@ labeled_field(sep):
 arrow:
   | LAMBDA; nms = list(name); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
+  | LAMBDA; pos = name; neg = name; RIGHT_SQUIGGLY_ARROW; body = hom_body
+    { CS.HomLam(pos, neg, body) }
   | LPR; name = name; COLON; base = term; RPR; RIGHT_ARROW; fam = term
     { CS.Pi (name, base, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi (`Anon, base, fam) }
+  | p = term; RIGHT_THICK_ARROW; q = term
+    { CS.Hom (p, q) }
+
+hom_body:
+  | t = located(plain_hom_body)
+    { t }
+
+plain_hom_body:
+  | tm = atomic_term; RIGHT_ARROW; neg = neg_term; SEMICOLON; hom = hom_body
+    { CS.Set(tm, neg, hom) }
+  | LPR; pos = term; COMMA; neg = neg_term; RPR; RIGHT_ARROW_TAIL; hom = atomic_term; RIGHT_ARROW; LPR; pos_name = name; COMMA; neg_name = name; RPR; SEMICOLON; body = hom_body
+    { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
+  | p = atomic_neg_term; LSQ; tm = term; RSQ; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
+    { CS.NegUnpack (p, tm, a_name, b_name, body) }
+  | p = atomic_neg_term; LSQ; RSQ; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
+    { CS.NegUnpackSimple (p, a_name, b_name, body) }
+  | pos = atomic_term; LEFT_SQUIGGLY_ARROW; neg = neg_term
+    { CS.Done (pos, neg) }
+
+neg_spine:
+  | CIRC; tms = separated_nonempty_list(CIRC, atomic_term)
+    { tms }
+
+neg_term:
+  | t = located(plain_neg_term)
+    { t }
+
+plain_neg_term:
+  | neg = atomic_neg_term; tms = option(neg_spine)
+    { neg_ap_or_atomic neg tms }
+
+atomic_neg_term:
+  | t = located(plain_atomic_neg_term)
+    { t }
+
+plain_atomic_neg_term:
+  | LPR; tm = plain_neg_term; RPR
+    { tm }
+  | LSQ; a = neg_term; COMMA; LAMBDA; a_name = name; RIGHT_ARROW; b = neg_term; RSQ
+    { CS.NegPair (a, a_name, b) }
+  | LSQ; a = neg_term; COMMA; b = neg_term; RSQ
+    { CS.NegPairSimple (a, b) }
+  | path = path
+    { CS.Var path }
+  | UNDERSCORE
+    { CS.Drop }
 
 atomic_term:
   | t = located(plain_atomic_term)
@@ -146,16 +208,22 @@ atomic_term:
 plain_atomic_term:
   | LPR; tm = plain_term; RPR
     { tm }
+  | LPR; t1 = term; COMMA; t2 = term; RPR
+    { CS.Pair (t1, t2) }
   | path = path
     { CS.Var path }
   | NAT
     { CS.Nat }
   | ZERO
     { CS.Zero }
+  | SUCC
+    { CS.Succ }
   | n = NUMERAL
     { CS.Lit n }
   | TYPE
     { CS.Univ }
+  | POLY
+    { CS.Poly }
   | QUESTION
     { CS.Hole }
   | HASH; LBR; labels = separated_list(COMMA, LABEL); RBR;

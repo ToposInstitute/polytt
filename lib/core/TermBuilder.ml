@@ -34,6 +34,9 @@ struct
   let ap fn arg size =
     S.Ap (fn size, arg size)
 
+  let sigma ?(name = `Anon) base fam size =
+    S.Sigma(name, base size, scope fam size)
+
   let nat _ =
     S.Nat
 
@@ -54,6 +57,21 @@ struct
 
   let univ _ =
     S.Univ
+
+  let negate tp size =
+    S.Negate (tp size)
+
+  let unnegate tp size =
+    S.UnNegate (tp size)
+
+  let neg_sigma ?(name = `Anon) base fam size =
+    S.NegSigma(name, base size, scope fam size)
+
+  let base p size =
+    S.Base (p size)
+
+  let fib p i size =
+    S.Fib (p size, i size)
 end
 
 module Graft =
@@ -67,6 +85,9 @@ struct
     let x = var (Bwd.length env) in
     let env = env #< v in
     k x env
+
+  let clo (clo : D.tm_clo) (k : S.t tb -> 'a t) : 'a t =
+    value (D.Lam (`Anon, clo)) k
 
   let build (builder : 'a tb) : 'a t =
     fun env -> (builder, env)

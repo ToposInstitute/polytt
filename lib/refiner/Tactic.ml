@@ -1,8 +1,9 @@
 open Core
+open Bwd
+open Bwd.Infix
 include Eff
 
-module S = Syntax
-module D = Domain
+include TermBuilder
 
 module rec Chk : sig
   type tac
@@ -38,6 +39,45 @@ struct
     tp, Chk.run chk tp
 end
 
+and Hom : sig
+  type tac
+  val rule : (D.tp -> S.hom) -> tac
+  val run : tac -> D.tp -> S.hom
+end =
+struct
+  type tac = D.tp -> S.hom
+  let rule k = k
+  let run k tp = k tp
+end
+
+and NegChk : sig
+  type tac
+  val rule : (D.t -> S.neg) -> tac
+  val run : tac -> D.t -> S.neg
+  val syn : NegSyn.tac -> tac
+end =
+struct
+  type tac = D.t -> S.neg
+  let rule k = k
+  let run k tp = k tp
+  let syn tac =
+    NegChk.rule @@ fun expected ->
+    let (actual, tm) = NegSyn.run tac in
+    equate ~tp:D.Univ expected actual;
+    tm
+end
+
+and NegSyn : sig
+  type tac
+  val rule : (unit -> D.t * S.neg) -> tac
+  val run : tac -> D.t * S.neg
+end =
+struct
+  type tac = unit -> D.t * S.neg
+  let rule k = k
+  let run k = k ()
+end
+
 and Var : sig
   type tac
 
@@ -63,3 +103,50 @@ struct
     Eff.Locals.concrete ~name tp value @@ fun () ->
     k {tp; value}
 end
+
+and NegVar : sig
+  type tac
+  val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+end =
+struct
+  type tac = { tp : D.tp; lvl : int }
+  let abstract ?(name = `Anon) tp k =
+    Locals.abstract_neg ~name tp @@ fun lvl ->
+    k { tp; lvl }
+end
+
+let match_goal k =
+  Chk.rule @@ fun goal ->
+  Chk.run (k goal) goal
+
+let match_syn tac k =
+  Syn.rule @@ fun () ->
+  let tp, tm = Syn.run tac in
+  Syn.run @@ k (Syn.rule @@ fun () -> tp, tm) tp
+
+let pp_sequent_ctx ppenv fmt (ctx, k) =
+  let rec go ppenv size fmt ctx =
+    match ctx with
+    | [] ->
+      k ppenv fmt
+    | (name, tp) :: ctx ->
+      (* FIXME this does not include negatives *)
+      let tp = Quote.quote ~size ~tp:D.Univ tp in
+      Format.fprintf fmt "  %a : %a@.%a"
+        Ident.pp name
+        (S.pp ppenv Precedence.isolated) tp
+        (go (ppenv #< name) (size + 1)) ctx
+  in
+  go ppenv 0 fmt ctx
+
+let pp_sequent_goal goal ppenv fmt =
+  Format.fprintf fmt "──────────────@.  ⊢ %a@."
+    (S.pp ppenv Precedence.isolated) goal
+
+let pp_sequent_nogoal _ppenv fmt =
+  Format.fprintf fmt "──────────────@.  ⊢ ?@."
+
+let print_ctx fmt k =
+  let ppenv = Locals.ppenv () in
+  let ctx = Locals.local_types () in
+  pp_sequent_ctx Emp fmt (List.combine (Bwd.to_list ppenv) (Bwd.to_list ctx), k)

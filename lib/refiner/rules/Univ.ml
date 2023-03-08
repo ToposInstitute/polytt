@@ -1,4 +1,3 @@
-open Errors
 open Tactic
 
 let formation = Syn.rule @@ fun () ->

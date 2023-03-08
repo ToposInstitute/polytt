@@ -16,8 +16,18 @@ struct
 
   let bind tp f =
     let arg = D.var tp @@ Eff.read() in
-    Eff.scope (fun size -> size + 1) @@ fun () ->
-    f arg
+    let df () = Eff.scope (fun size -> size + 1) @@ fun () -> f arg in
+      match tp with
+      | D.FinSet ls ->
+        begin
+          try df () with
+          | Unequal ->
+            Debug.print "CC FinSet ETA@.";
+              ls |> List.iter @@ fun l ->
+                f (D.Label (ls, l))
+        end
+      | _ ->
+        df ()
 
   let rec equate tp v1 v2 =
     match (tp, v1, v2) with
@@ -38,21 +48,48 @@ struct
       equate D.Univ (Sem.inst_clo clo1 v) (Sem.inst_clo clo2 v)
     | D.Sigma (_, a, clo), v1, v2 ->
       equate a (Sem.do_fst v1) (Sem.do_fst v2);
-      let fib = Sem.inst_clo clo v1 in
+      let fib = Sem.inst_clo clo (Sem.do_fst v1) in
       equate fib (Sem.do_snd v1) (Sem.do_snd v2)
+    | _, D.Eq (t1, a1, b1), D.Eq (t2, a2, b2) ->
+      equate D.Univ t1 t2;
+      equate t1 a1 a2;
+      equate t1 b1 b2
+    | _, D.Refl _, D.Refl _ ->
+      (* They must have the same type by the time they got here *)
+      ()
     | _, D.Nat, D.Nat ->
       ()
     | _, D.Zero, D.Zero ->
       ()
     | _, D.Succ n1, D.Succ n2 ->
       equate D.Nat n1 n2
-    | _, D.FinSet s1, D.FinSet s2 when SS.of_list s1 = SS.of_list s2 ->
+    | _, D.FinSet s1, D.FinSet s2 when SS.equal (SS.of_list s1) (SS.of_list s2) ->
       ()
     | _, D.Label (_, l), D.Label (_, r) when l = r ->
       ()
     | _, D.Univ, D.Univ ->
       ()
+    | _, D.NegUniv, D.NegUniv ->
+      ()
+    | _, D.NegSigma (_, a1, b1), D.NegSigma (_, a2, b2) ->
+      equate D.Univ a1 a2;
+      bind a1 @@ fun v ->
+      equate D.Univ (Sem.inst_clo b1 v) (Sem.inst_clo b2 v)
+    | _, D.Poly, D.Poly ->
+      ()
+    | D.Poly, v1, v2 ->
+      let base1 = Sem.do_base v1 in
+      let base2 = Sem.do_base v2 in
+      equate D.Univ base1 base2;
+      bind base1 @@ fun i ->
+      equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
+    | _, D.Hom (p1, q1), D.Hom (p2, q2) ->
+      equate D.Poly p1 p2;
+      equate D.Poly q1 q2;
     | _, _, _ ->
+      Debug.print "Could not equate %a and %a@."
+        D.dump v1
+        D.dump v2;
       raise Unequal
 
   and equate_neu (neu1 : D.neu) (neu2 : D.neu) =
@@ -66,7 +103,16 @@ struct
       ()
     | D.Hole (_, n) , D.Hole (_, m) when n = m ->
       ()
-    | _ -> raise Unequal
+    | D.Skolem _, D.Skolem _ ->
+      (* Skolems don't equate with themselves. This is used
+         in the skolem check, as we equate something with itself to
+         flush out any skolems. *)
+      raise Unequal
+    | D.Negate tp1, D.Negate tp2 ->
+      equate D.Univ tp1 tp2
+    | _ ->
+      Debug.print "Could not equate heads.@.";
+      raise Unequal
 
   and equate_frm frm1 frm2 =
     match frm1, frm2 with
@@ -110,7 +156,18 @@ struct
       let m2 = MS.of_seq (List.to_seq r2.cases) in
       let _ = equate_maps apply_motives m1 m2 in
       ()
+    | D.Base, D.Base ->
+      ()
+    | D.Fib fib1, D.Fib fib2 ->
+      equate fib1.base fib1.value fib2.value
+    | D.HomElim {tp; value = v1}, D.HomElim {value = v2; _} ->
+      equate tp v1 v2
+    | D.UnNegate, D.UnNegate ->
+      ()
     | _ ->
+      Debug.print "Could not equate frames %a and %a@."
+        D.dump_frm frm1
+        D.dump_frm frm2;
       raise Unequal
 
   and equate_maps apply_motives =

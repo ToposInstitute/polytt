@@ -1,0 +1,149 @@
+-- Helpers (TODO: abstract and import)
+def ofP : Poly → Type → Type :=
+  λ P A → (p : base P) × (fib P p → A)
+
+def Void := #{}
+
+def absurd : (R : Type) → Void → R :=
+  λ R → {}
+
+def Unit := #{ .unit }
+
+def unit : Unit := .unit
+
+def unit-elim : (mot : Unit → Type) → mot .unit → (u : Unit) → mot u :=
+  λ mot mot-unit → { .unit = mot-unit }
+
+def unique : (u : Unit) → u = .unit :=
+  unit-elim (λ u → u = .unit) (refl)
+
+def ×-rec :
+  (A : Type) → (B : A → Type) →
+  (R : ((a : A) × B a) → Type) →
+  ((a : A) → (b : B a) → R (a , b)) →
+  (ab : ((a : A) × B a)) → R ab :=
+  λ A B R fn ab → fn (fst ab) (snd ab)
+
+-- Maybe monad: one layer of a fin
+def fin-step : Type → Type :=
+  λ A → (tag : #{ .zero, .succ }) × { .zero = Unit, .succ = A } tag
+
+def ℕ-elim :
+  (mot : ℕ → Type) →
+  { .zero : mot zero
+  , .succ : (n : ℕ) → mot n → mot (succ n)
+  } →
+  (n : ℕ) → mot n :=
+  λ mot r n → elim mot (r .zero) (r .succ) n
+
+-- Recursively-defined type of finite natural numbers
+def fin : ℕ → Type :=
+  λ n → elim (λ _ → Type) Void (λ _ → fin-step) n
+
+-- zero as a finite number
+def z : (n : ℕ) → fin (succ n) :=
+  λ n → (.zero, unit)
+
+-- successor in finite numbers
+def s : (n : ℕ) → fin n → fin (succ n) :=
+  λ n i → (.succ, i)
+
+-- ex falso quodlibet
+def fin0-elim : (mot : fin 0 → Type) → (i : fin 0) → mot i :=
+  λ mot → {}
+
+-- Handle zero and successor, non-recursively
+def fin-case :
+  (n : ℕ) → (mot : fin (succ n) → Type) →
+  mot (z n) → ((i : fin n) → mot (s n i)) →
+  (i : fin (succ n)) → mot i :=
+  λ n mot motz mots →
+    ×-rec #{ .zero, .succ } { .zero = Unit, .succ = fin n } mot
+      { .zero = { .unit = motz }
+      , .succ = mots
+      }
+
+-- Full elimination principle for arbitrary finite numbers
+def fin-elim :
+  (mot : (n : ℕ) → fin n → Type) →
+  ((n : ℕ) → mot (succ n) (z n)) →
+  ((n : ℕ) → (i : fin n) → mot n i → mot (succ n) (s n i)) →
+  (n : ℕ) → (i : fin n) → mot n i :=
+  λ mot motz mots →
+    ℕ-elim (λ n → (i : fin n) → mot n i)
+      { .zero = {}
+      , .succ = λ n ih →
+        ×-rec #{ .zero, .succ } { .zero = Unit, .succ = fin n } (mot (succ n))
+          { .zero = { .unit = motz n }
+          , .succ = λ i → mots n i (ih i)
+          }
+      }
+
+def vec : ℕ → Type → Type := λ n A → fin n → A
+
+-- Needs extensionality for absurd functions
+-- def vec0-unique : (A : Type) → (v1 : vec 0 A) → (v2 : vec 0 A) → v1 = v2 :=
+--   λ A v1 v2 → refl
+
+
+def listP : Poly := (n : ℕ) × fin n
+
+def list : Type → Type := ofP listP
+
+def nil : (A : Type) → list A := λ A → (0 , {})
+
+def cons : (A : Type) → A → list A → list A :=
+  λ A a as → (succ (fst as) , fin-case (fst as) (λ _ → A) a (snd as))
+
+def list-rec : (A : Type) →
+  (mot : Type) →
+  mot →
+  (A → mot → mot) →
+  list A → mot :=
+  λ A mot iz is →
+    ×-rec ℕ (λ n → fin n → A) (λ _ → mot)
+      (ℕ-elim (λ n → (as : fin n → A) → mot)
+        { .zero = λ _ → iz
+        , .succ = λ n ih as →
+          is (as (z n)) (ih (λ i → as (s n i)))
+        }
+      )
+
+-- Workaround: reconstruct lists
+-- This makes it into a list we can more easily prove things about
+-- since it constructions a definitionally-*different* list though it is still
+-- propositionally-equal. Good luck proving that, though!
+def list-ext : (A : Type) → list A → list A :=
+  λ A → list-rec A (list A) (nil A) (cons A)
+
+-- Needs even more extensionality
+-- Workaround: apply to `list-ext A as` instead
+def list-elim-ext : (A : Type) →
+  (mot : list A → Type) →
+  (mot (nil A)) →
+  ((a : A) → (as : list A) → mot as → mot (cons A a as)) →
+  (as : list A) → mot (list-ext A as) :=
+  λ A mot iz is →
+    ×-rec ℕ (λ n → fin n → A) (λ as → mot (list-ext A as))
+      (ℕ-elim (λ n → (as : fin n → A) → mot (list-ext A (n , as)))
+        { .zero = λ _ → iz
+        , .succ = λ n ih as →
+          is (as (z n)) (list-ext A (n , λ i → as (s n i))) (ih (λ i → as (s n i)))
+        }
+      )
+
+-- "Postulate" this for now (we don't have an equality recursor)
+-- def cong :
+--   (A : Type) → (B : Type) →
+--   (f : (a : A) → B) →
+--   (a1 : A) → (a2 : A) → (a1 = a2) → ((f a1) = (f a2)) :=
+--   ?
+
+-- Congruence lets us easily prove this is idempotent, since it is basically
+-- "projecting out" the part of the list datatype that "behaves extensionally"
+-- (really all of it should behave so, but that involves rewriting in mot)
+-- def list-ext-idempotent :
+--   (A : Type) → (as : list A) →
+--   ((list-ext A (list-ext A as)) = (list-ext A as)) :=
+--   λ A → list-elim-ext A (λ as → ((list-ext A as) = as)) (refl)
+--     (λ a as ih → cong (list A) (list A) (cons A a) (list-ext A as) as ih)

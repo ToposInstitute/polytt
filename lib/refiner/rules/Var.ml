@@ -1,8 +1,7 @@
 open Core
-open Errors
 open Tactic
 
-let local (cell : Cell.t) =
+let local (cell : Cell.pos) =
   Syn.rule @@ fun () ->
   (cell.tp, quote ~tp:cell.tp cell.value)
 
@@ -18,3 +17,11 @@ let let_bind ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
   let vtm = Eff.eval etm in
   let body = Chk.run (Var.concrete ~name vtp vtm f) rtp in
   Let (name, etm, body)
+
+let negative (cell : Cell.neg) =
+  NegSyn.rule @@ fun () ->
+  let already_used = Linearity.consume cell in
+  if already_used then
+    Error.error `LinearVariableDoubleUse "Linear variable already used."
+  else
+    (cell.tp, S.Var cell.lvl)

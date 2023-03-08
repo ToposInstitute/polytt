@@ -30,10 +30,14 @@ let keywords =
   make_table 0 [
     ("def", DEF);
     ("Type", TYPE);
+    ("Poly", POLY);
+    ("base", BASE);
+    ("fib", FIB);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);
     ("elim", NAT_ELIM);
+    ("refl", REFL);
     ("fst", FST);
     ("snd", SND);
   ]
@@ -103,10 +107,22 @@ and real_token = parse
     { FORALL }
   | "->" | "→"
     { RIGHT_ARROW }
+  | "=>" | "⇒"
+    { RIGHT_THICK_ARROW }
+  | "." | "∘"
+    { CIRC }
+  | "~>" | "⇝"
+    { RIGHT_SQUIGGLY_ARROW }
+  | "<~" | "⇜"
+    { LEFT_SQUIGGLY_ARROW }
+  | ">-" | "⤚"
+    { RIGHT_ARROW_TAIL }
   | "*" | "×"
     { TIMES }
   | ':'
      { COLON }
+  | ';'
+     { SEMICOLON }
   | "::"
     { COLON_COLON }
   | '_'
@@ -147,8 +163,8 @@ and real_token = parse
       | tok -> tok
       | exception Not_found -> Printf.eprintf "Unknown Command: %s\n" (lexeme lexbuf); token lexbuf
     }
-  | "." atom
-    { LABEL (lexeme lexbuf) }
+  | "." (atom as label)
+    { LABEL label }
   | atom
     {
       let input = lexeme lexbuf in
