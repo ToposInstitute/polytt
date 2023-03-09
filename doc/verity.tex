@@ -18,6 +18,8 @@
 \NewDocumentCommand\Base{m}{\mathit{Base}\ #1}
 \NewDocumentCommand\Fib{mm}{\mathit{Fib}\ #1\ #2}
 \NewDocumentCommand\Borrow{m}{\operatorname{borrow}\ #1}
+\NewDocumentCommand\Let{m}{\operatorname{let}\ #1}
+\NewDocumentCommand\In{}{\text{\ in\ }}
 \NewDocumentCommand\Fst{m}{\operatorname{fst} #1}
 \NewDocumentCommand\Snd{m}{\operatorname{snd} #1}
 
@@ -242,6 +244,34 @@ The linearity check is ensured by never writing to the same variable twice and b
   }
 \end{mathpar}
 In particular, this is used for program extraction of the backwards action on fibrations, by seeing what the input $p^{-}$ is set to in the environment.
+
+TODO: check no cycles introduced.
+
+\begin{mathpar}
+  \inferrule[\Deriv{Borrowing}] {
+    x^{-} \notin \chi\\
+    \Gamma \mid \Psi \mid \chi \vdash x^{-} : A^{-}\\
+  	\Gamma, y : A \mid \Psi \mid (y \mapsto x^{-} : A^{-}); \chi \vdash \IsProg{\pi_1[y]}\\
+  	\Gamma \mid \Psi \mid {\downarrow (\pi_1[\Borrow{x^{-}}])}; \chi \vdash \IsProg{\pi_2}\\
+  } {
+    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\Borrow{x^{-}} \in (\lambda y \to \pi_1[y]); \pi_2}
+  }
+\end{mathpar}
+
+Note that we have to borrow against a negative \emph{variable}, since we keep record of their cells and we cannot in general hope to invert general negative terms.
+(Note also that we can borrow a variable that is already set in $\chi$, by positive let-binding it.)
+However, we can allocate new cells through a negative let-binding:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Lending??}] {
+    \Gamma \mid \Psi \mid \chi \vdash a^{-} : A^{-}\\
+    \Gamma \mid \Psi, x^{-} : A^{-} \mid {\downarrow (\Borrow{x^{-}} \mapsto a^{-})}; \chi \vdash \IsProg{\pi_2}
+  } {
+    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\Let{x^{-}} : A^{-} := a^{-}; \pi_2}
+  }
+\end{mathpar}
+
+
 
 
 \section{Morphism body}
