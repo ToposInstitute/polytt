@@ -1,0 +1,77 @@
+\ProvidesPackage{rules}
+\ProcessOptions\relax
+
+\RequirePackage{mdframed}
+\RequirePackage{xifthen}
+\RequirePackage{mathpartir}
+\RequirePackage{mathtools}
+\RequirePackage{mlmodern}
+\RequirePackage{hyperref}
+\RequirePackage{todonotes}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Notation
+
+\NewDocumentCommand\PolyTT{}{\texttt{PolyTT}}
+\NewDocumentCommand\IsCtx{m}{#1\, \operatorname{\mathit{ctx}}}
+\NewDocumentCommand\IsHomCtx{m}{#1\, \operatorname{\mathit{hom-ctx}}}
+\NewDocumentCommand\IsHomEnv{m}{#1\, \operatorname{\mathit{hom-env}}}
+\NewDocumentCommand\IsTp{m}{#1\, \operatorname{\mathit{type}}}
+\NewDocumentCommand\IsPoly{m}{#1\, \operatorname{\mathit{poly}}}
+\NewDocumentCommand\IsHom{mm}{#1\, \operatorname{\mathit{hom}\ #2}}
+\NewDocumentCommand\IsResolver{m}{#1\, \operatorname{\mathit{resolver}}}
+\NewDocumentCommand\Base{m}{\mathsf{base}\ #1}
+\NewDocumentCommand\Fib{mm}{\mathsf{fib}\ #1\ #2}
+\NewDocumentCommand\Borrow{m}{\mathsf{borrow}\ #1}
+\NewDocumentCommand\Done{}{\mathsf{done}}
+
+\NewDocumentCommand\TpUniv{}{\mathsf{U}}
+\NewDocumentCommand\PolyUniv{}{\mathit{Poly}}
+\NewDocumentCommand\Hom{mm}{#1 \Rightarrow #2}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Boxes
+
+\colorlet{theorem-color}{white!93!yellow}
+\colorlet{definition-color}{white!93!cyan}
+\colorlet{note-color}{white!93!green}
+
+\mdfdefinestyle{theorem-frame}{%
+  linewidth=0pt,
+  backgroundcolor=theorem-color,
+  leftmargin=0,
+  innerleftmargin=4,
+  rightmargin=0,
+  innerrightmargin=4,
+}
+
+\mdfdefinestyle{definition-frame}{%
+  linewidth=0pt,
+  backgroundcolor=definition-color,
+  leftmargin=0,
+  innerleftmargin=4,
+  rightmargin=0,
+  innerrightmargin=4,
+}
+
+\mdfdefinestyle{note-frame}{%
+  linewidth=0pt,
+  backgroundcolor=note-color,
+  leftmargin=0,
+  innerleftmargin=4,
+  rightmargin=0,
+  innerrightmargin=4,
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Theorems
+
+\theoremstyle{definition}
+\newmdtheoremenv[style=definition-frame]{definition}{Definition}
+
+\theoremstyle{theorem}
+\newmdtheoremenv[style=theorem-frame]{theorem}{Theorem}
+\newmdtheoremenv[style=theorem-frame]{lemma}{Lemma}
+
+\theoremstyle{remark}
+\newmdtheoremenv[style=note-frame]{remark}{Remark}

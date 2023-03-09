@@ -1,23 +1,5 @@
 \documentclass[final]{amsart}
-\usepackage{mathpartir}
-\usepackage{mathtools}
-\usepackage{mlmodern}
-\usepackage{todonotes}
-
-\NewDocumentCommand\PolyTT{}{\texttt{PolyTT}}
-\NewDocumentCommand\IsCtx{m}{#1\ \mathit{Ctx}}
-\NewDocumentCommand\IsHomCtx{m}{#1\ \mathit{HomCtx}}
-\NewDocumentCommand\IsHomEnv{m}{#1\ \mathit{HomEnv}}
-\NewDocumentCommand\IsTp{m}{#1\ \mathit{Type}}
-\NewDocumentCommand\IsPoly{m}{#1\ \mathit{Poly}}
-\NewDocumentCommand\IsHom{mm}{#1\ \mathit{Hom}(#2)}
-\NewDocumentCommand\Base{m}{\mathit{Base}\ #1}
-\NewDocumentCommand\Fib{mm}{\mathit{Fib}\ #1\ #2}
-\NewDocumentCommand\Read{m}{\mathit{read}\ #1}
-
-\NewDocumentCommand\TpUniv{}{\mathcal{U}}
-\NewDocumentCommand\PolyUniv{}{\mathit{Poly}}
-\NewDocumentCommand\Hom{mm}{#1 \Rightarrow #2}
+\usepackage{rules}
 
 
 \title{The Synthetic Theory of Polynomial Functors}
@@ -51,24 +33,35 @@ To back up these claims, we present $\PolyTT$, a type-theoretic encoding of the 
 theory of polynomial functors. It combines Martin Lo\"f Type Theory with a fragment of
 linear type theory, used for constructing morphisms of polynomials.
 
-\section{Polynomials}
+\section{The Type Theory}
 
-We omit the standard rules for Martin Lo\"f Type Theory with Tarski Universes. For simplicity,
-we shall assume that the universe $\TpUniv{}$ codes itself. This inconsistency can be resolved
-by instead using a tower of universes. We start by adding a new judgement $\Gamma \vdash \IsPoly{A}$,
-which denotes that $A$ is a polynomial functor. It has the following formation rule:
+We omit the standard rules for Martin L\"of Type Theory with Tarski Universes. The first
+extension we add is a judgement $\Gamma \vdash \IsPoly{P}$, which denotes that $P$ is
+polynomial functor.
 
 \begin{mathpar}
-  \inferrule[\textcolor{gray}{Judg:}Poly-formation] {
-    \Gamma \vdash \IsTp{A} \\
-    \Gamma, a : A \vdash \IsTp{B} \\
+  \inferrule[Poly-judgement]{
+    \IsCtx{\Gamma}
   } {
-    \Gamma \vdash \IsPoly{(a : A) \times B\ a}
+    \Gamma \vdash \IsPoly{P}
   }
 \end{mathpar}
 
-We also add the following rules for obtaining the base of a polynomial, along with
-the fibre of a polynomial at a base.
+There is a single formation rule, which constructs a polynomial functor from a base type $I : \TpUniv{}$
+and a family $J : I \to \TpUniv{}$.
+
+\begin{mathpar}
+  \inferrule[Poly-formation] {
+    \Gamma \vdash \IsTp{I} \\
+    \Gamma, a : A \vdash \IsTp{J} \\
+  } {
+    \Gamma \vdash \IsPoly{((i : I) \times J\ i)}
+  }
+\end{mathpar}
+
+We also a projection for obtaining the the base type of a polynomial, along with a projection
+that allows us to get the fibre of the family at a point. These have the expected equations
+when applied to a concrete polynomial.
 
 \begin{mathpar}
   \inferrule[Poly-base] {
@@ -83,279 +76,184 @@ the fibre of a polynomial at a base.
   } {
     \Gamma \vdash \IsTp{\Fib{P}{i}}
   }
-\end{mathpar}
-
-The base and fibre operations do what one would expect when applied to a concrete polynomial.
-
-\begin{mathpar}
+  \and
+  \\
   \inferrule[Poly-base-decoding] {
   } {
-    \Base{(a : A) \times B\ a} \equiv A
+    \Base{((a : A) \times B\ a)} \equiv A
   }
   \and
   \inferrule[Poly-fibre-decoding] {
-    \Gamma \vdash \IsTp{A} \\
-    \Gamma, a : A \vdash \IsTp{B} \\
-    \Gamma \vdash i : \Base{(a : A) \times B\ a}
+    \\
   } {
     \Fib{((a : A) \times B\ a)}{i} \equiv B\ i
   }
 \end{mathpar}
 
-\section{Morphisms of Polynomials}
+\subsection{Polynomial Maps}
 
-We proceed by defining a type of morphisms between polynomials.
+As evidenced above, it is relatively simple to add a type of polynomial functors
+directly to the theory. In fact, if we have 2 universes $\TpUniv{}_0 : \TpUniv{}_1$
+then we can directly define a type of polynomials as
+$((I : \TpUniv{}_0) \times I \to \TpUniv{}_0) : \TpUniv{}_1$. The complexity of the theory
+lies in the \emph{maps} of polynomials. In elementary terms, we can define a morphism
+of polynomials $P \Rightarrow Q$ as a function of type
+\[ P \Rightarrow Q \coloneqq (i : \Base{P}) \to (j : \Base{Q}) \times (\Fib{Q}{j} \to \Fib{P}{i})
+\]
+\todo{Insert a good example of something that's annoying to write.}
+However, writing morphisms in this form is somewhat tedious and counter-intuitive.
+
+\todo{Provide citation for wiring diagrams.}
+Instead, we opt for a syntax that allows for the construction of the ``forward'' and ``backward''
+components of a polynomial map simultaneously. To do this, we shall introduce a notion
+of ``obligation'' of type $A$ that must be somehow discharged. In
+a wiring diagram, these obligations correspond to input wires to boxes. This suggests that
+obligations must be linear; all inputs in a wiring diagram must be provided, and provided \emph{exactly} once.
+Constructing a map $\Hom{P}{Q}$ then consists of constructing a value $q^{+} : \Base{Q}$ from a value
+$p^{+} : \Base{P}$, while also consuming an obligations of type $\Fib{P}{p^{+}}$ and
+creating an obligation of type $\Fib{Q}{q^{+}}$.
+
+With that high-level picture in our minds, we define a new collection of judgments.
 
 \begin{mathpar}
-  \inferrule[Hom-formation] {
+  \inferrule[\label{jdg:hom-ctx}Hom-ctx-judgment] {
+    \IsCtx{\Gamma} \\
+  } {
+    \Gamma \vdash \IsHomCtx{\Psi}
+  }
+  \\
+  \and
+  \inferrule[\label{jdg:resolver}Resolver-judgment] {
+    \IsCtx{\Gamma} \\
+    \Gamma \vdash \IsHomCtx{\Psi}
+  } {
+    \Gamma \mid \Psi \vdash \IsResolver{\pi}
+  }
+  \\
+  \and
+  \inferrule[\label{jdg:hom}Hom-judgment] {
+    \IsCtx{\Gamma} \\
+    \Gamma \vdash \IsHomCtx{\Psi} \\
+    \Gamma \vdash \IsPoly{Q}
+  } {
+    \Gamma \mid \Psi \vdash \IsHom{\phi}{Q}
+  }
+\end{mathpar}
+
+Hom contexts are linear contexts containing obligations that
+may or may not have been fulfilled.
+
+\begin{mathpar}
+  \inferrule[\label{rule:hom-context-empty}Hom-ctx-empty]{
+    \\
+  } {
+    \Gamma \vdash \IsHomCtx{\cdot}
+  }
+  \and
+  \inferrule[\label{rule:hom-context-bind}Hom-ctx-bind]{
+    \Gamma \vdash \IsHomCtx{\Psi} \\
+    a^{-}\ \text{is a name} \\
+    \Gamma \mid \Psi \vdash \IsTp{A}
+  } {
+    \Gamma \vdash \IsHomCtx{\Psi, a^{-} : A}
+  }
+  \and
+  \inferrule[\label{rule:hom-context-set}Hom-ctx-set]{
+    \Gamma \vdash \IsHomCtx{\Psi} \\
+    a^{-}\ \text{is a name} \\
+    \Gamma \mid \Psi \vdash \IsTp{A} \\
+    \Gamma \mid \Psi \vdash v : A \\
+  } {
+    \Gamma \vdash \IsHomCtx{\Psi, a^{-} : A \coloneqq v}
+  }
+\end{mathpar}
+
+We omit the judgement signatures and rules for the hom context relative judgements
+of MLTT; these are identical to the standard ones, with following addition.
+In order to allow for dependent obligations, we add a notion of ``borrowing''
+from a (potentially unfulfilled) obligation. When the obligation has not
+yet been fulfilled, we have no equations governing a borrow. If the obligation
+has been fulfilled, the value of a borrow is equal to the value used to
+fulfill the obligation.
+
+\begin{mathpar}
+  \inferrule[\label{rule:borrow}Borrow]{
+    a^{-} : A \in \Psi
+  } {
+    \Gamma \mid \Psi \vdash \Borrow{a^{-}} : A
+  }
+  \and
+  \inferrule[\label{rule:borrow-value}Borrow-value]{
+    a^{-} : A \coloneqq v \in \Psi
+  } {
+    \Gamma \mid \Psi \vdash \Borrow{a^{-}} \equiv v
+  }
+\end{mathpar}
+
+We proceed by giving rules for resolvers; these consist of a sequence of obligations,
+and values used to fulfill those obligations. Note that linearity of $\Psi$ is enforced
+by requiring that we can only fulfill an obligation exactly once.
+
+\begin{mathpar}
+  \inferrule[\label{rule:resolver-done}Resolver-done] {
+    \text{all obligations in $\Psi$ are fulfilled}
+  } {
+    \Gamma \mid \Psi \vdash \IsResolver{\Done{}}
+  }
+  \and
+  \inferrule[\label{rule:resolver-fulfill}Resolver-fulfill] {
+    \Gamma \vdash a^{+} : A \\
+    \Gamma \mid \Psi_1, a^{-} : A \coloneqq a^{+}, \Psi_2 \vdash \IsResolver{\pi}
+  } {
+    \Gamma \mid \Psi_1, a^{-} : A, \Psi_2 \vdash \IsResolver{a^{-} \coloneqq a^{+}; \pi}
+  }
+\end{mathpar}
+
+We can use this to define hom expressions $\IsHom{\phi}{Q}$, which denote morphisms
+\emph{into} some polynomial $Q$. Much like resolvers, we can also fulfill obligations
+in a hom expression. The crucial difference is how we terminate a hom expression; we
+are required to give a $q^{+} : \Base{Q}$, along with a resolver that is allowed
+to use reference some $i : \Fib{Q}{q^{+}}$.
+
+\begin{mathpar}
+  \inferrule[\label{rule:hom-fulfill}Hom-fulfill] {
+    \Gamma \vdash a^{+} : A \\
+    \Gamma \mid \Psi_1, a^{-} : A \coloneqq a^{+}, \Psi_2 \vdash \IsHom{\phi}{Q}
+  } {
+    \Gamma \mid \Psi_1, a^{-} : A, \Psi_2 \vdash \IsHom{a^{-} \coloneqq a^{+}; \phi}{Q}
+  }
+  \and
+  \inferrule[\label{rule:hom-done}Hom-done] {
+    \Gamma \vdash q^{+} : \Base{Q} \\
+    \Gamma, i : \Fib{Q}{q^{+}} \mid \Psi \vdash \IsResolver{\pi}
+  } {
+    \Gamma \mid \Psi \vdash \IsHom{(q^{+}, i. \pi)}{Q}
+  }
+\end{mathpar}
+
+With this in place, we can define the type of morphisms, along with the associated introduction
+and elimination rules.
+
+\begin{mathpar}
+  \inferrule[\label{rule:hom-formation}Hom-formation] {
     \Gamma \vdash \IsPoly{P} \\
     \Gamma \vdash \IsPoly{Q} \\
   } {
-    \Gamma \vdash \IsTp{P \Rightarrow Q}
-  }
-\end{mathpar}
-
-\subsection{Hom Environments}
-
-The introduction and elimination rules for this type are the source of all of the power
-\emph{and} complexity of the theory, so we will need to build out some machinery before we
-present them. To start, we define hom environments.
-
-\begin{mathpar}
-  \inferrule[Hom-env-empty]{
-    \\
-  } {
-    \Gamma \vdash \IsHomEnv{\cdot}
+    \Gamma \vdash \IsTp{\Hom{P}{Q}}
   }
   \and
-  \inferrule[Hom-env-bind]{
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    a^{-}\ \text{is a name}
+  \inferrule[\label{rule:hom-intro}Hom-intro] {
+    \Gamma, p^{+} : \Base{P} \mid p^{-} : \Fib{P}{p^{+}} \vdash \IsHom{\phi}{Q}
   } {
-    \Gamma \vdash \IsHomEnv{\rho, a^{-}}
+    \Gamma \vdash \lambda\ p^{+}\ p^{-}.\ \phi : \Hom{P}{Q}
   }
   \and
-  \inferrule[Hom-env-set]{
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash v : A \\
-    a^{-}\ \text{is a name}
-  } {
-    \Gamma \vdash \IsHomEnv{\rho, a^{-} \coloneqq v}
-  }
-\end{mathpar}
-
-We shall gloss over any difficulties with name freshness, and gesture vaguely in the direction
-of nameless representations if pressed. We also define a meta-operation $\rho[a^{-} \coloneqq v]$, which
-replaces an $a^{-}$ in an environment $\rho$ with $a^{-} \coloneqq v$. This is defined by induction over
-the environment. Furthermore, note that the rule for setting a binding in an environment $\rho$ does
-\emph{not} allow for the the value $v$ to depend on earlier entries in $\rho$.
-
-We now define all of the normal judgments relative to some environment $\rho$.
-
-\begin{mathpar}
-  \inferrule[\textcolor{gray}{Judg:}Type-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho}
-  } {
-    \Gamma \mid \rho \vdash \IsTp{A^{+}}
-  }
-  \and
-  \inferrule[\textcolor{gray}{Judg:}Term-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A^{+}}
-  } {
-    \Gamma \mid \rho \vdash a : A^{+}
-  }
-  \and
-  \inferrule[\textcolor{gray}{Judg:}Type-eq-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A^{+}} \\
-    \Gamma \mid \rho \vdash \IsTp{B^{+}}
-  } {
-    \Gamma \mid \rho \vdash A^{+} \equiv B^{+}\ \mathit{Type}
-  }
-  \and
-  \inferrule[\textcolor{gray}{Judg:}Term-eq-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A} \\
-    \Gamma \mid \rho \vdash \IsTp{x} : A^{+} \\
-    \Gamma \mid \rho \vdash \IsTp{y} : A^{+}
-  } {
-    \Gamma \mid \rho \vdash x \equiv y : A^{+}
-  }
-\end{mathpar}
-
-We can read variables from an environment.
-
-\begin{mathpar}
-  \inferrule[Hom-env-read]{
-    a^{-} \in \rho
-  } {
-    \Gamma \mid \rho \vdash \Read{a^{-}} : A^{+}
-  }
-\end{mathpar}
-
-All of the rules for types in the base theory are copied over to the environment relative
-ones. We shall omit these for brevity, though we shall highlight the fact that we have an
-environment relative conversion rule.
-
-\begin{mathpar}
-  \inferrule[Conversion-in-env]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsTp{A} \\
-    \Gamma \mid \rho \vdash \IsTp{B} \\
-    \Gamma \mid \rho \vdash A \equiv B\ \mathit{Type} \\
-    \Gamma \mid \rho \vdash x : B
-  } {
-    \Gamma \mid \rho \vdash x : A \\
-  }
-\end{mathpar}
-
-\subsection{Hom Contexts and Sinks}
-
-We now give rules for linear Hom contexts, as well as a judgement for deriving
-``sink'' terms from linear contexts.
-
-\todo{Reed: I \emph{think} it's ok to depend on reads from earlier in $\rho$?}
-\begin{mathpar}
-  \inferrule[Hom-context-empty]{
-    \\
-  } {
-    \Gamma \mid \rho \vdash \IsHomCtx{\cdot}
-  }
-  \and
-  \inferrule[Hom-context-bind]{
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
-    \Gamma \mid \rho \vdash \IsTp{A}
-  } {
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi, a^{-} : A}
-  }
-  \and
-  \inferrule[\textcolor{gray}{Judg:}Sink-term] {
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
-    \Gamma \mid \rho \vdash \IsTp{A} \\
-    \Gamma \vdash \IsHomEnv{\theta} \\
-  } {
-    \Gamma \mid \rho \mid \Psi \vdash a^{-} : A^{-} \rightsquigarrow \theta
-  }
-  \and
-  \inferrule[Sink-conversion] {
-    \Gamma \mid \rho \mid \Psi \vdash a^{-} : A^{-} \\
-    \Gamma \mid \rho \vdash \IsTp{A \equiv B}
-  } {
-    \Gamma \mid \rho \mid \Psi \vdash a^{-} : B^{-}
-  }
-\end{mathpar}
-
-Linearity of the Hom contexts is ensured by the following rule.
-The intuition here is that in order to discharge an obligation $a^{-}$,
-we are required to provide it with a value of the appropriate type.
-
-\begin{mathpar}
-  \inferrule[Sink-linear-var] {
-    \Gamma \vdash a^{+}  : A
-  } {
-    \Gamma \mid \rho \mid a^{-} : A^{-} \vdash a^{-}[a^{+}] : A^{-} \rightsquigarrow a^{-} \coloneqq a^{+}
-  }
-\end{mathpar}
-
-\subsection{Hom Expressions}
-
-We proceed by defining a new judgement describing hom expressions.
-
-\begin{mathpar}
-  \inferrule[\textcolor{gray}{Judg:}Hom-term]{
-    \IsCtx{\Gamma} \\
-    \Gamma \vdash \IsHomEnv{\rho} \\
-    \Gamma \mid \rho \vdash \IsHomCtx{\Psi} \\
-    \Gamma \vdash \IsPoly{Q}
-  }{
-    \Gamma \mid \rho \mid \Psi \vdash \IsHom{\phi}{Q}
-  }
-  \and
-  \inferrule[Hom-set]{
-    \Gamma \vdash a^{+} : A \\
-    \Gamma, x : A \mid \rho \mid \Psi_1 \vdash b^{-} : B^{-} \rightsquigarrow \theta \\
-    \Gamma, \rho, \theta[a^{+}/x] , \Psi_2 \vdash \IsHom{\phi}{Q}
-  }{
-    \Gamma \mid \rho \mid \Psi_1, \Psi_2 \vdash \IsHom{a^{+} \rightarrow (\lambda x. b^{-});\phi}{Q}
-  }
-  \and
-  \inferrule[Hom-done]{
-    \Gamma \vdash q^{+} : \Base{Q} \\
-    \Gamma, x : \Fib{Q}{q^+} \mid \rho \mid \Psi \vdash q^{-} : A^{-}
-  } {
-    \Gamma \mid \rho \mid \Psi \vdash \IsHom{(q^+, \lambda x. q^{-})}{Q}
-  }
-\end{mathpar}
-
-Note that we lambda abstract a variable $x$ when defining the sink expression. This is not essential,
-but allows us to avoid writing a point-free mess. This also removes the need for a separate
-sink application rule, as it can be handled by function application.
-
-\subsection{Hom Introduction and Elimination}
-
-\begin{mathpar}
-  \inferrule[Hom-intro]{
-    \Gamma, p^{+} : \Base{p} \mid \cdot \mid p^{-} : \Fib{P}{p^{+}} \vdash \IsHom{\phi}{Q}
-  } {
-    \Gamma \vdash \lambda p^{+} p^{-} \rightsquigarrow \phi : P \Rightarrow Q
-  }
-  \and
-  \inferrule[Hom-elim]{
-    \Gamma \vdash f : P \Rightarrow Q \\
+  \inferrule[\label{rule:hom-elim}Hom-elim] {
+    \Gamma \vdash f : \Hom{P}{Q} \\
     \Gamma \vdash p^{+} : \Base{P}
   } {
-    \Gamma \vdash f\ p^{+} : (q^{+} : \Base{Q}) \times (\Fib{Q}{q^{+}} \to \Fib{P}{p^+})
+    \Gamma \vdash f\ p^{+} : \Sigma\ (q^{+} : \Base{Q})\ (\Fib{Q}{q^{+}} \to \Fib{P}{p^+})
   }
 \end{mathpar}
-
-\section{Sink Introduction and Elimination}
-
-We need to also have rules for eliminating sink values in hom expressions.
-
-\begin{mathpar}
-  \inferrule[Sigma-sink-elim] {
-    \Gamma, x : (a : A) \times B\ a \mid \rho \mid \Psi_1 \vdash c^{-} : C^{-} \rightsquigarrow \theta \\
-    \Gamma \mid \rho, a^{-}, b^{-}, \theta[(\Read{a^{-}, \Read{b^{-}}})/x] \mid \Psi_2, a^{-} : A, b^{-} : B(\Read{a^{-}}) \vdash \IsHom{\phi}{Q}
-  } {
-    \Gamma \mid \rho \mid \Psi_1 \vdash \IsHom{\mathsf{unpack}\ ab^{-} \to (a^{-}, b^{-}); \phi}{Q}
-  }
-\end{mathpar}
-
-We also need rules for introducing sink values in sink expressions.
-\begin{mathpar}
-  \inferrule[Sigma-sink-intro]{
-    \Gamma \mid \rho \mid \Psi_1 \vdash a^{-} : A^{-} \rightsquigarrow \theta_1 \\
-    \Gamma \mid \rho \mid \Psi_1 \vdash b^{-} : B^{-} (\Read{\theta_1}) \rightsquigarrow \theta_2
-  }{
-    \Gamma \mid \rho \mid \Psi_1, \Psi_2 \vdash (a^{-}, b^{-}) : ((x : A) \times B\ x)^{-} \rightsquigarrow \theta_1, \theta_2
-  }
-\end{mathpar}
-
-\todo{This is pretty janky; do we have to care about associativity of things?}
-Here, $\Read(\theta_1)$ denotes reading all bindings from $\theta_1$, and tupling them up in the form
-required by $B^{-}$.
-
-We also have rules for introducing values of the unit type in sink expressions. This is mostly
-relevant when providing the final sink value to a hom expression, as it lets us discard the input
-entirely.
-
-\begin{mathpar}
-  \inferrule[Unit-sink-intro] {
-    \\
-  } {
-    \Gamma \mid \rho \mid \cdot \vdash \mathsf{drop} : \top^{-} \rightsquigarrow \cdot
-  }
-\end{mathpar}
-
-An elimination rule is not required, as we have $\eta$ for the unit type, and conversion for
-sink values allows for the $\eta$ to apply.
 
 \end{document}
