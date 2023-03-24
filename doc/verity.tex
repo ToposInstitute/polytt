@@ -5,27 +5,16 @@
 \usepackage{todonotes}
 \usepackage{mathabx}
 
-\NewDocumentCommand\IsCtx{m}{#1\ \mathit{Ctx}}
+\usepackage{rules}
+
 \NewDocumentCommand\IsNegCtx{m}{#1\ \mathit{NegCtx}}
 \NewDocumentCommand\IsNegEnv{m}{#1\ \mathit{NegEnv}}
 \NewDocumentCommand\IsFilled{m}{#1\ \mathit{Filled}}
-\NewDocumentCommand\IsHomCtx{m}{#1\ \mathit{HomCtx}}
-\NewDocumentCommand\IsHomEnv{m}{#1\ \mathit{HomEnv}}
-\NewDocumentCommand\IsTp{m}{#1\ \mathit{Type}}
 \NewDocumentCommand\IsProg{m}{#1\ \mathit{Program}}
-\NewDocumentCommand\IsPoly{m}{#1\ \mathit{Poly}}
-\NewDocumentCommand\IsHom{mm}{#1\ \mathit{Hom}(#2)}
-\NewDocumentCommand\Base{m}{\mathit{Base}\ #1}
-\NewDocumentCommand\Fib{mm}{\mathit{Fib}\ #1\ #2}
-\NewDocumentCommand\Borrow{m}{\operatorname{borrow}\ #1}
 \NewDocumentCommand\Let{m}{\operatorname{let}\ #1}
 \NewDocumentCommand\In{}{\text{\ in\ }}
 \NewDocumentCommand\Fst{m}{\operatorname{fst} #1}
 \NewDocumentCommand\Snd{m}{\operatorname{snd} #1}
-
-\NewDocumentCommand\TpUniv{}{\mathcal{U}}
-\NewDocumentCommand\PolyUniv{}{\mathit{Poly}}
-\NewDocumentCommand\Hom{mm}{#1 \Rightarrow #2}
 
 \NewDocumentCommand\Judg{m}{\textcolor{gray}{Judg:}#1}
 \NewDocumentCommand\Deriv{m}{\textcolor{gray}{Deriv:}#1}
@@ -58,68 +47,72 @@ MLTT has three things (``kinds''?):
 
 To this we add:
 \begin{enumerate}
-  \item A type of polynomial functors $P, Q : \PolyUniv$ and a type of morphisms between them $\Hom{P}{Q}$
-  \item Negative (linear) contexts $\Psi$, with variables of negative types
-  \item Negative types $A^{-}$, which are exactly like MLTT types but may mention negative values via borrowing (note that ${-}^{-}$ is no longer an operation, just notation to distinguish negative types)
-  \item Programs $\pi$, which set negative terms to values
-  \item Program environments $\chi$, which are normalized programs $\chi = {\downarrow \pi}$ writing variables (as opposed to generalized negative terms) in \emph{cons}-order (not \emph{snoc}!)
-  \item Negative terms $a^{-}$, which can be set to values in programs
-  \item Morphism bodies $\rho$, which have a sequence of programs and then conclude in a positive return value and negative fibrational component
+  \item A type of polynomial functors $P, Q : \PolyUniv$, and a type of morphisms between them $\phi, \psi : \Hom{P}{Q}$
+  % see it's a nice loop, graphically signifying control flow
+  \item Negative (linear) contexts $\Omega$, which introduces sinks (negative variables of negative types) and later will fill in their values (this forms compound contexts $\Gamma | \Omega$, where the vertical bar is mere syntax)
+  \item Negative types $A^{-}$, which are exactly like MLTT types but may mention negative values via borrowing (note that ${-}^{-}$ is no longer an operation, just notation to distinguish negative types -- the fundamental distinction is whether they are typechecked in just $\Gamma$ or $\Gamma | \Omega$)
+  \item Programs $\pi$, which set negative terms (sinks) to values, which then are reflected in the context $\Omega$
+  \item Negative terms $a^{-}$ (sinks), which can be set to values in programs (that is, they are abstracted programs which take in a positive value)
+  % \rho for [r]eturn
+  \item Morphism bodies $\rho :\Rightarrow Q$, which have a sequence of programs and then conclude in a positive return value and negative fibrational component (this is a technical wart of our presentation, we need to hold onto the right return type $Q$ for the end of the body of the poly-morphism of type $P \Rightarrow Q$, after introducing the bits from $P$)
 \end{enumerate}
 
 Programs have a few operations:
 \begin{enumerate}
-  \item Write, of course. We will write it as $a^{+} \mapsto a^{-}$.
-  \item Done, which is necessary for the grammar to be right-associative. We will write it as $\emptyset$.
-  %\item Borrow, which abstracts over an opaque value of a wire. We do not need this yet, so we omit it. We may also restrict it to borrowing variables only, as opposed to general negative terms.
-  \item Unpack, which splits a sigma-wire into two wires (with a type dependency). We will write it as $v^{-} \prec (x^{-}, y^{-})$.
-  \item Pair, which bundles up two wires (with a type dependency) into a sigma-wire. This can be implemented in user-land: $(a^{-}, b^{-}) := \lambda\ ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-})$.
-  \item Morphism application can also be implemented in user-land (although it loses sharing but eh we don't have that anyways).
+  \item Writing a positive value to a negative term of the same type. We will write it as $a^{+} \mapsto a^{-}$.
+  \item Done, the program which does nothing, which is necessary for the grammar to be right-associative. We will write it as $\Done$.
+  %\item Borrow, which abstracts over an opaque value of a sink. We do not need this yet, so we omit it. We may also restrict it to borrowing variables only, as opposed to general negative terms.
+  \item Unpack, which splits a sigma-sink into two sinks (with a type dependency). We will write it as $v^{-} \prec (x^{-}, y^{-})$.
+  \item Pair, which bundles up two sinks (with a type dependency) into a sigma-sink. This can be implemented in user-land: $(a^{-}, b^{-}) := \lambda\ ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-})$.
+  \item Morphism application $(p^{+}, p^{-}) \xrightarrow{\phi} (q^{+}, q^{-})$ can also be implemented in user-land (although it loses sharing but eh we don't have that anyways).
 \end{enumerate}
 
-Linearity is checked by writing a negative variable's written value in context $\chi$, never allowing it to be written twice, and checking that all variables from $\Psi$ have been written by the end of a morphism-body.
+\section{Overview on linearity}
+
+We will preview some rules here, but they will be fully defined and presented in the following sections.
+
+Linearity is checked by writing a negative variable's written value in context $\Omega$, never allowing it to be written twice, and checking that all variables introduced in $\Omega$ have been written by the end of a morphism-body.
 
 Writing a variable only occurs in negative terms in programs and morphism bodies.
 This introduces additional definitional equalities for $\Borrow a^{-}$ into scope.
-Namely, $a \mapsto x^{-} : A$ allows for the reduction $\Borrow x^{-} \equiv a$.
+Namely, $a \mapsto x^{-}$ allows for the reduction $\Borrow x^{-} \equiv a$, like so:
 
 \begin{mathpar}
   \inferrule[\Deriv{Borrow-reduce}] {
   } {
-    \Gamma \mid \Psi \mid \chi_L, (a \mapsto x^{-} : A^{-}), \chi_R \vdash \Borrow x^{-} \equiv a : A
+    \Gamma \mid \Omega_L, (x^{-} : A^{-}), \Omega_M, (a \mapsto x^{-}), \Omega_R \vdash \Borrow x^{-} \equiv a : A
   }
 \end{mathpar}
 
-TODO: what to do about compound negative terms? disallow them? yes! definitely.
+\textsc{Todo}: what to do about compound negative terms? disallow them? yes! definitely.
 
 Negative terms in negative types are not consumed.
 In particular, mentioning a negative variable in $\Borrow a^{-}$ does not consume it, so this means that the only difference between types and negative types are that the latter may mention $\Borrow a^{-}$.
 
 \begin{mathpar}
   \inferrule[\Deriv{Borrow-negative}] {
-    \Gamma \mid \Psi \mid \chi \vdash a^{-} : A^{-}
+    \Gamma \mid \Omega \vdash a^{-} : A^{-}
   } {
-    \Gamma \mid \Psi \mid \chi \vdash \Borrow a^{-} : A
+    \Gamma \mid \Omega \vdash \Borrow a^{-} : A
   }
 \end{mathpar}
 
 This means that the MLTT fragment does not need to care about linearity.
-It only needs to pass along the compound context $\Gamma \mid \Psi \mid \chi$.
-($\chi$ is here for definitional equalities that may be necessary for some terms to typecheck.)
+It only needs to pass along the compound context $\Gamma \mid \Omega$.
 For example, the application rule looks like this:
 
 \begin{mathpar}
   \inferrule[\Deriv{Ap}] {
-    \Gamma \mid \Psi \mid \chi \vdash f : (a : A) \to B[a]\\
-    \Gamma \mid \Psi \mid \chi \vdash v : A
+    \Gamma \mid \Omega \vdash f : (a : A) \to B[a]\\
+    \Gamma \mid \Omega \vdash v : A
   } {
-    \Gamma \mid \Psi \mid \chi \vdash f(v) : B[v]
+    \Gamma \mid \Omega \vdash f(v) : B[v]
   }
 \end{mathpar}
 
-It would be nice to get rid of the morphism-body, since various judgments are polymorphic over it in their return (e.g. sequencing and negsima-elim), but let's gloss over that for now.
-Sequencing is right-associative: each statement may bind variables and write values that appear in all following statements.
-In fact that needs to be baked into the syntax, so that the environment can remain a reader context and not devolve into writer or state context.
+%It would be nice to get rid of the morphism-body, since various judgments are polymorphic over it in their return (e.g. sequencing and negsima-elim), but let's gloss over that for now.
+%Sequencing is right-associative: each statement may bind variables and write values that appear in all following statements.
+%In fact that needs to be baked into the syntax, so that the environment can remain a reader context and not devolve into writer or state context.
 
 %\begin{mathpar}
 %  \inferrule[\Deriv{Seq-Program}] {
@@ -138,26 +131,27 @@ In fact that needs to be baked into the syntax, so that the environment can rema
 %  }
 %\end{mathpar}
 
-
+\pagebreak
 
 \section{Negative contexts and types}
 
-Negative contexts have variables of specified negative types.
-Negative types are exactly regular types with access to $\Borrow{x^{-}}$ for all negative variables $x^{-}$ in scope thus far, so we omit its derivation rules.
-($\chi$ is here for definitional equalities that make be necessary for some terms to typecheck.)
+Negative contexts are a bit weird in my presentation here: they introduce variables of specified negative types, but they also write them to values.
+They are inductively generated with three constructors: empty, introducing a variable, and writing a variable.
+
+Negative types are exactly regular types with access to $\Omega$ ($\Borrow{x^{-}}$ for all negative variables $x^{-}$ in scope thus far, and any known definitional equalities from them), so we omit its derivation rules as they are inherited from MLTT.
 
 \begin{mathpar}
   \inferrule[\Judg{Neg-ctx}] {
     \IsCtx{\Gamma}
   } {
-    \Gamma \vdash \IsNegCtx{\Psi}
+    \Gamma \vdash \IsNegCtx{\Omega}
   }
 
   \inferrule[\Judg{Neg-type}] {
   	\IsCtx{\Gamma}\\
-    \Gamma \vdash \IsNegCtx{\Psi}
+    \Gamma \vdash \IsNegCtx{\Omega}
   } {
-    \Gamma \mid \Psi \mid \chi \vdash \IsTp{A^{-}}
+    \Gamma \mid \Omega \vdash \IsTp{A^{-}}
   }
 \end{mathpar}
 
@@ -167,14 +161,41 @@ Negative types are exactly regular types with access to $\Borrow{x^{-}}$ for all
   } {
     \Gamma \vdash \IsNegCtx{\cdot}
   }
+\end{mathpar}
 
-  \inferrule[\Deriv{Neg-ctx-snoc}] {
-    \Gamma \vdash \IsNegCtx{\Psi}\\
-    \Gamma \mid \Psi \vdash \IsTp{A^{-}}
+We can always introduce a negative variable of a valid negative type (assuming uniqueness of variables blah blah):
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-ctx-intro}] {
+    \Gamma \vdash \IsNegCtx{\Omega}\\
+    \Gamma \mid \Omega \vdash \IsTp{A^{-}}
   } {
-    \Gamma \vdash \IsNegCtx{\Psi, x^{-} : A^{-}}
+    \Gamma \vdash \IsNegCtx{\Omega, (x^{-} : A^{-})}
   }
 \end{mathpar}
+
+But to write to a variable, we need to know that it is defined in context (with the corresponding type) \emph{and} was not yet written to (the asterisk here is a wildcard):
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-ctx-write}] {
+    \Gamma \vdash \IsNegCtx{\Omega}\\
+    \Gamma \vdash a : A\\
+    (x^{-} : A^{-}) \in \Omega\\
+    (* \mapsto x^{-}) \notin \Omega\\
+  } {
+    \Gamma \vdash \IsNegCtx{\Omega, (a \mapsto x^{-})}
+  }
+\end{mathpar}
+
+Ugly? I don't know, I'm just hoping it works out.
+
+
+The linearity check is ensured by never writing to the same variable twice and by checking that each variable in $\Omega$ is written exactly once by the end of the hom-body.
+
+In particular, this is used for program extraction of the backwards action on fibrations, by seeing what the input $p^{-}$ is set to in the environment when the output $q^{-}$ is written with a value.
+
+
+
 
 
 
@@ -184,112 +205,83 @@ Programs are exactly the bodies of eta-expanded negative terms:
 
 \begin{mathpar}
   \inferrule[\Deriv{Neg-Eta}] {
-    \Gamma, a : A \mid \Psi \mid \chi \vdash \IsProg{\pi}
+    \Gamma, a : A \mid \Omega \vdash \IsProg{\pi}
   } {
-    \Gamma \mid \Psi \mid \chi \vdash (\lambda a \to \pi) : A^{-}
+    \Gamma \mid \Omega \vdash (\lambda a \to \pi) : A^{-}
   }
 \end{mathpar}
 
+As an example, there is a negative term $\mathsf{drop}$ that accepts anything and writes nothing: $\mathsf{drop} := (\lambda a \to \Done{}) : A^{-}$.
+
+Programs can write positive values $a$ to negative terms $a^{-}$.
+Two things:
+\begin{enumerate}
+\item
 Note that $a$ cannot depend on any negative terms (in particular, cannot borrow).
-That means that $a^{-}$ needs its type $A^{-}$ to reduce to a term that does not mention borrowed values, either by having no dependence on other sinks in the first place or by already being written to a value from previous writes in $\chi$.
+That means that $a^{-}$ needs its type $A^{-}$ to reduce to a term that does not mention borrowed values, either by having no dependence on other sinks in the first place or by already being written to a value from previous writes in $\Omega$.
+\item
+Speaking of $\Omega$, $a^{-}$ may not be a variable, so we need to be able to write out the side-effects of writing to it back into $\Omega'$.
+We do this with an operation ${\downarrow (a \mapsto a^{-})}$ that we will write out later.
+\end{enumerate}
 
 \begin{mathpar}
   \inferrule[\Deriv{Neg-Write}] {
     \Gamma \vdash a : A\\
-    \Gamma \mid \Psi \mid \chi \vdash a^{-} : A^{-}\\
-    \Gamma \mid \Psi \mid {\downarrow (a \mapsto a^{-})}; \chi \vdash \IsProg{\pi}
+    \Gamma \mid \Omega \vdash a^{-} : A^{-}\\
+    \Gamma \mid \Omega, {\downarrow (a \mapsto a^{-})} \vdash \IsProg{\pi}
   } {
-    \Gamma \mid \Psi \mid \chi \vdash \IsProg{(a \mapsto a^{-}); \pi}
+    \Gamma \mid \Omega \vdash \IsProg{(a \mapsto a^{-}); \pi}
   }
 \end{mathpar}
 
-Program environments write variables in LtR order, but are constructed RtL.
-
-Operationally, we think of them as operating on mutable cells corresponding to each variable in scope.
-These cells are initialized with $\Borrow{self}$ and written to in order to trace out the reverse direction of poly morphisms.
-
-\begin{mathpar}
-  \inferrule[\Judg{Neg-env}] {
-    \Gamma \vdash \IsNegCtx{\Psi}
-  } {
-    \Gamma \mid \Psi \vdash \IsNegEnv{\chi}
-  }
-\end{mathpar}
-
-Their scoping is a bit weird, since they can depend on any variables in $\Psi$ (and are stable under weakening, meaning adding variables to $\Psi$).
-Note that, unlike $\textsc{\Deriv{Neg-Set}}$, their value \emph{can} depend on further borrows! (And definitional equalities introduced into the environment already.)
-The only place we use this affordance is in $\textsc{\Deriv{Unpack}}$.
-
-\begin{mathpar}
-  \inferrule[\Deriv{Neg-env-empty}] {
-    \Gamma \vdash \IsNegCtx{\Psi}
-  } {
-    \Gamma \mid \Psi \vdash \IsNegEnv{\emptyset}
-  }
-\end{mathpar}
-\begin{mathpar}
-  \inferrule[\Deriv{Neg-env-cons}] {
-    \Gamma \mid \Psi \vdash \IsNegEnv{\chi}\\
-    x^{-} \notin \chi\\
-    \Gamma \mid \Psi \vdash \IsTp{A^{-}}\\
-    \Gamma \mid \Psi \mid \chi \vdash a : A\\
-  } {
-    \Gamma \mid \Psi \vdash \IsNegEnv{(a \mapsto x^{-} : A^{-}); \chi}
-  }
-\end{mathpar}
-
-The linearity check is ensured by never writing to the same variable twice and by checking that each variable in $\Psi$ is written exactly once by the end of the hom-body:
-\begin{mathpar}
-  \inferrule[\Deriv{Neg-env-filled}] {
-  	Vars(\Psi) = Vars(\chi)
-  } {
-    \Psi \cong \IsFilled{\chi}
-  }
-\end{mathpar}
-In particular, this is used for program extraction of the backwards action on fibrations, by seeing what the input $p^{-}$ is set to in the environment.
-
-
-%TODO: check no cycles introduced.
-%I think this actually introduces cycles so must be avoided.
-%In particular, you borrow x^{-} for y^{-} and then borrow y^{-} for x^{-} and now you have a cycle.
-%So it would need more machinery to make it compositional, totally not worth it.
-%
-%\begin{mathpar}
-%  \inferrule[\Deriv{Borrowing}] {
-%    x^{-} \notin \chi\\
-%    \Gamma \mid \Psi \mid \chi \vdash x^{-} : A^{-}\\
-%  	\Gamma, y : A \mid \Psi \mid (y \mapsto x^{-} : A^{-}); \chi \vdash \IsProg{\pi_1[y]}\\
-%  	\Gamma \mid \Psi \mid {\downarrow (\pi_1[\Borrow{x^{-}}])}; \chi \vdash \IsProg{\pi_2}\\
-%  } {
-%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\Borrow{x^{-}} \in (\lambda y \to \pi_1[y]); \pi_2}
-%  }
-%
-%  \inferrule[\Deriv{Borrowing-Written}] {
-%    x^{-} \in \chi\\
-%    \Gamma \mid \Psi \mid \chi \vdash x^{-} : A^{-}\\
-%  	\Gamma, y := \Borrow{x^{-}} : A \mid \Psi \chi \vdash \IsProg{\pi_1[y]}\\
-%  	\Gamma \mid \Psi \mid {\downarrow (\pi_1[\Borrow{x^{-}}])}; \chi \vdash \IsProg{\pi_2}\\
-%  } {
-%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\Borrow{x^{-}} \in (\lambda y \to \pi_1[y]); \pi_2}
-%  }
-%\end{mathpar}
-%
-%Note that we have to borrow against a negative \emph{variable}, since we keep record of their cells and we cannot in general hope to invert general negative terms.
-%(Note also that we can borrow a variable that is already set in $\chi$, by positive let-binding it.)
-%However, we can allocate new cells through a negative let-binding:
 
 We can let-bind negative terms, but it doesn't really buy us much at this point.
 (Since we will never borrow against them.)
 
 \begin{mathpar}
   \inferrule[\Deriv{Lending??}] {
-    \Gamma \mid \Psi \mid \chi \vdash a^{-} : A^{-}\\
-    \Gamma \mid \Psi, x^{-} : A^{-} \mid {\downarrow (\Borrow{x^{-}} \mapsto a^{-})}; \chi \vdash \IsProg{\pi_2}
+    \Gamma \mid \Omega \vdash a^{-} : A^{-}\\
+    \Gamma \mid \Omega, x^{-} : A^{-}, {\downarrow (\Borrow{x^{-}} \mapsto a^{-})} \vdash \IsProg{\pi_2}
   } {
-    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\Let{x^{-}} : A^{-} := a^{-}; \pi_2}
+    \Gamma \mid \Omega \vdash \IsProg{\Let{x^{-}} : A^{-} := a^{-}; \pi_2}
   }
 \end{mathpar}
 
+
+\subsection{Running programs into context}
+
+To write programs into context, we need to run them.
+(Note: this is where I differ from Reed's rules in that I want to be able to write to arbitrary negative terms, instead of simplifying the rules to only write to negative variables.)
+
+On the one hand, it is a bit weird to write out all the rules for this kind of evaluation interleaved with our typing judgments.
+On the other hand, we know something like it is necessary: our implementation needs to run the negative fragment as it is typechecking.
+
+(Note that this isn't an inductive constructor for negative contexts, it is a function in the metatheory that produces negative contexts.)
+
+
+\begin{mathpar}
+  \inferrule[\Judg{Exec}] {
+    \Gamma \vdash \IsNegCtx{\Omega}\\
+    \Gamma \mid \Omega \vdash \IsProg{\pi}
+  } {
+    \Gamma \vdash \IsNegCtx{\Omega, \downarrow \pi}
+  }
+\end{mathpar}
+
+Uhh I am describing its behavior in English for now:
+A program is a series of writes that we want to write into context (and it ends with $\Done{}$).
+\begin{enumerate}
+\item
+Writing to a variable is easy $a \mapsto x^{-}$: we add the appropriate constructor into context, so we produce $\Omega, (a \mapsto x^{-})$.
+\item
+Writing to an eta-expanded negative term is also easy $a \mapsto (\lambda x \to \pi[x])$: we substitute the value in we now know the program should use, and write that program into context, $\Omega, \downarrow \pi[a]$.
+(This is recursive.)
+\item
+I guess there are also let bindings but it should be obvious what to do there?
+All other sugar will be implemented on top of let bindings.
+\item
+Oh I guess we have Unpack too.
+\end{enumerate}
 
 
 
@@ -299,41 +291,42 @@ This provides the forward component $p^{+}$ and adds an obligation $p^{-}$, then
 
 \begin{mathpar}
   \inferrule[\Deriv{Morph-Intro}] {
-    \Gamma, p^{+} : \Base{P} \mid p^{-} : \Fib{P}{p^{+}} \mid \emptyset \vdash \rho :\Rightarrow Q\\
+    \Gamma, p^{+} : \Base{P} \mid p^{-} : \Fib{P}{p^{+}} \vdash \rho :\Rightarrow Q\\
   } {
     \Gamma \vdash (\lambda p^{+} p^{-} \rightsquigarrow \rho) : P \Rightarrow Q
   }
 \end{mathpar}
 
-The obligation is fulfilled when the body ends, providing a positive value for the base and a negative sink for the fibration, and every negative variable in $\Psi$ has been set to a positive value in $\chi$.
+The obligation is fulfilled when the body ends, providing a positive value for the base and a negative sink for the fibration, and every negative variable has been set to a value in $\Omega$ after writing to $q^{-}$ (yes we invent a new variable $q$ to write to $q^{-}$).
 
 \begin{mathpar}
   \inferrule[\Deriv{Body-Done}] {
     \Gamma \vdash q^{+} : \Base{Q}\\
-    \Gamma \mid \Psi \vdash q^{-} : (\Fib{Q}{q^{+}})^{-}\\
-    \Psi \cong \IsFilled{(q \mapsto q^{-}); \chi}
+    \Gamma \mid \Omega \vdash q^{-} : (\Fib{Q}{q^{+}})^{-}\\
+    \IsFilled{\Omega, \downarrow (q \mapsto q^{-})}
   } {
-    \Gamma \mid \Psi \mid \chi \vdash (q^{+} \leftsquigarrow q^{-}) :\Rightarrow Q
+    \Gamma \mid \Omega \vdash (q^{+} \leftsquigarrow q^{-}) :\Rightarrow Q
   }
 \end{mathpar}
 
-The action on fibrations can be recovered as something like $\lambda q. p$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid p^{-} : \Fib{P}{p^{+}} \mid (q \mapsto q^{-}) : \Fib{Q}{q^{+}}, (p \mapsto p^{-}) : \Fib{P}{p^{+}}$, where $p^{-}$ gets set to $p$ in the process of setting $q^{-}$ to $q$.
+The action on fibrations can be recovered as something like $\lambda q. p$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid \Omega$, where $\Omega := (p^{-} : \Fib{P}{p^{+}}, \downarrow (q \mapsto q^{-})) = (p^{-} : \Fib{P}{p^{+}}, ..., (p \mapsto p^{-}), ...)$ means $p^{-}$ gets set to $p$ in the process of setting $q^{-}$ to $q$.
 
 Apply a morphism.
 This takes a base, fib pair and turns it into a new base, fib pair by applying the forward and backwards components of the morphism.
 It can be implemented via positive and negative let in the obvious way, so it is a conservative extension, but then again, so is everything we are doing here.
 
+\textsc{Todo}: $p^{-}$ needs to be a variable here, since we are borrowing against it thus it needs a cell allocated for it??
+
 \begin{mathpar}
   \inferrule[\Deriv{Morph-Ap}] {
     \Gamma \vdash \phi : P \Rightarrow Q\\
   	\Gamma \vdash p^{+} : \Base{P}\\
-  	\Gamma \mid \Psi \mid \chi \vdash p^{-} : (\Fib{P}{p^{+}})^{-}\\
-	\Gamma' := \Gamma, q^{+} := \Base{\phi}(p^{+}) : \Base{Q}\\
-	\Psi' := \Psi, q^{-} := (\Fib{Q}{q^{+}})^{-}\\
-    \chi' := (\Fib{\phi}{p^{+}}(\Borrow{p^{-}}) \mapsto p^{-}); \chi\\
-    \Gamma' \mid \Psi' \mid \chi' \vdash \IsProg{\pi}
+  	\Gamma \mid \Omega \vdash p^{-} : (\Fib{P}{p^{+}})^{-}\\\\
+	\Gamma' := \Gamma, q^{+} := \Base{\phi}(p^{+}) : \Base{Q}\\\\
+	\Omega' := \Omega, q^{-} : (\Fib{Q}{q^{+}})^{-}, (\Fib{\phi}{p^{+}}(\Borrow{p^{-}}) \mapsto q^{-})\\\\
+    \Gamma' \mid \Omega' \vdash \IsProg{\pi}
   } {
-    \Gamma \mid \Psi \mid \chi \vdash \IsProg{(p^{+}, p^{-}) \xrightarrow{\phi} (q^{+}, q^{-}); \pi}
+    \Gamma \mid \Omega \vdash \IsProg{(p^{+}, p^{-}) \xrightarrow{\phi} (q^{+}, q^{-}); \pi}
   }
 \end{mathpar}
 
@@ -342,18 +335,18 @@ It can be implemented via positive and negative let in the obvious way, so it is
 
 \section{Sigmas}
 
-Consumes $ab^{-}$, splitting it into two new wires $(x^{-}, y^{-})$ whose values get paired and written to $ab^{-}$.
-Note that the type of the second wire depends on the value written to the first wire.
+Consumes $ab^{-}$, splitting it into two new sinks $(x^{-}, y^{-})$ whose values get paired and written to $ab^{-}$.
+Note that the type of the second sink depends on the value written to the first sink.
 Since $\Borrow{x^{-}}$ cannot be mentioned in user-code, due to the typing restriction in \textsc{\Deriv{Neg-Write}}, if $B^{-}[\Borrow{x^{-}}]$ does not reduce by virtue of being a constant family, one must write to $x^{-}$ before $y^{-}$.
 %(In theory one could borrow ahead of time but it requires cycle checking, see above.)
 
 \begin{mathpar}
   \inferrule[\Deriv{Unpack}] {
-    \Gamma \mid \Psi \mid \chi_1 \vdash ab^{-} : (a : A) \times B^{-}[a]\\
-    \chi_2 := {\downarrow ((\Borrow{x^{-}}, \Borrow{y^{-}}) \mapsto ab^{-})}; \chi_1 \\
-    \Gamma \mid \Psi, x^{-} : A^{-}, y^{-} : B^{-}[\Borrow{x^{-}}] \mid \chi_2 \vdash \IsProg{\pi}\\
+    \Gamma \mid \Omega_1 \vdash ab^{-} : (a : A) \times B^{-}[a]\\
+    \Omega_2 := \Omega_1, x^{-} : A^{-}, y^{-} : B^{-}[\Borrow{x^{-}}], {\downarrow ((\Borrow{x^{-}}, \Borrow{y^{-}}) \mapsto ab^{-})} \\
+    \Gamma \mid \Omega_2 \vdash \IsProg{\pi}\\
   } {
-    \Gamma \mid \Psi \mid \chi_1 \vdash ab^{-} \prec (x^{-}, y^{-}); \IsProg{\pi}
+    \Gamma \mid \Omega_1 \vdash ab^{-} \prec (x^{-}, y^{-}); \IsProg{\pi}
   }
 \end{mathpar}
 
