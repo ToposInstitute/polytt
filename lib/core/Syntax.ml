@@ -30,10 +30,6 @@ type t = Data.syn =
   | Label of labelset * label
   | Cases of t * t labeled * t
   | Univ
-  | NegUniv
-  | Negate of t
-  | UnNegate of t
-  | NegSigma of Ident.t * t * t
   | Poly
   | PolyIntro of t * t
   | Base of t
@@ -81,16 +77,6 @@ let rec dump fmt =
   | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
   | Cases (mot, cases, case) -> Format.fprintf fmt "cases[%a, %a, %a]" dump mot (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
-  | NegUniv ->
-    Format.fprintf fmt "neg-type"
-  | Negate tp ->
-    Format.fprintf fmt "negate[%a]"
-      dump tp
-  | NegSigma (name, a, b) ->
-    Format.fprintf fmt "neg-sigma[%a, %a, %a]"
-      Ident.pp name
-      dump a
-      dump b
   | Poly ->
     Format.fprintf fmt "poly"
   | PolyIntro (base, fib) ->
@@ -171,14 +157,11 @@ let equals = P.right 2
 let classify_tm =
   function
   | Univ -> atom
-  | NegUniv -> atom
   | Poly -> atom
-  | Negate _ -> juxtaposition
   | Var _ -> atom
   | Pi _ -> arrow
   | Sigma (`Anon, _, _) -> star
   | Sigma _ -> arrow
-  | NegSigma _ -> arrow
   | Pair _ -> atom
   | PolyIntro _ -> atom
   | Fst _ -> juxtaposition
@@ -302,17 +285,6 @@ let rec pp env =
       (pp env (P.right_of this)) r.scrut
   | Univ ->
     Format.fprintf fmt "Type"
-  | NegUniv ->
-    Format.fprintf fmt "Type⁻"
-  | Negate tp ->
-    Format.fprintf fmt "(%a) ⁻"
-      (* FIXME: Reed just chose this randomly, use an actual precedence *)
-      (pp env (P.left_of arrow)) tp
-  | NegSigma (name, a, b) ->
-    Format.fprintf fmt "(%a : %a) ×⁻ %a"
-      Ident.pp name
-      (pp env P.isolated) a
-      (pp (env #< name) (P.right_of arrow)) b
   | FinSet [] ->
     Format.fprintf fmt "#{}"
   | FinSet ls ->

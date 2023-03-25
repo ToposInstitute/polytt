@@ -36,10 +36,6 @@ type syn =
   | Label of labelset * label (* .foo *)
   | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
   | Univ
-  | NegUniv
-  | Negate of syn
-  | UnNegate of syn
-  | NegSigma of Ident.t * syn * syn
   | Poly
   | PolyIntro of syn * syn
   | Base of syn
@@ -78,8 +74,6 @@ and value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
-  | NegUniv
-  | NegSigma of Ident.t * value * tm_clo
   | Poly
   | PolyIntro of value * tm_clo
   | Hom of value * value
@@ -92,7 +86,6 @@ and hd =
   | Var of int
   | Hole of value * int
   | Skolem of value
-  | Negate of value
 
 and frame =
   | Ap of { tp : value; arg : value }
@@ -103,7 +96,6 @@ and frame =
   | Base
   | Fib of { base : value; value : value }
   | HomElim of { tp : value; value : value }
-  | UnNegate
 
 (** {1 Instructions} *)
 and instr =

@@ -69,12 +69,6 @@ struct
       ()
     | _, D.Univ, D.Univ ->
       ()
-    | _, D.NegUniv, D.NegUniv ->
-      ()
-    | _, D.NegSigma (_, a1, b1), D.NegSigma (_, a2, b2) ->
-      equate D.Univ a1 a2;
-      bind a1 @@ fun v ->
-      equate D.Univ (Sem.inst_clo b1 v) (Sem.inst_clo b2 v)
     | _, D.Poly, D.Poly ->
       ()
     | D.Poly, v1, v2 ->
@@ -108,8 +102,6 @@ struct
          in the skolem check, as we equate something with itself to
          flush out any skolems. *)
       raise Unequal
-    | D.Negate tp1, D.Negate tp2 ->
-      equate D.Univ tp1 tp2
     | _ ->
       Debug.print "Could not equate heads.@.";
       raise Unequal
@@ -162,8 +154,6 @@ struct
       equate fib1.base fib1.value fib2.value
     | D.HomElim {tp; value = v1}, D.HomElim {value = v2; _} ->
       equate tp v1 v2
-    | D.UnNegate, D.UnNegate ->
-      ()
     | _ ->
       Debug.print "Could not equate frames %a and %a@."
         D.dump_frm frm1

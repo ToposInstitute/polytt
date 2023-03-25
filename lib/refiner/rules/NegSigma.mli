@@ -1,7 +1,6 @@
 open Core
 open Tactic
 
-val formation : ?name:Ident.t -> Chk.tac -> (Var.tac -> Chk.tac) -> Syn.tac
 val intro : NegChk.tac -> ?name:Ident.t -> (Var.tac -> NegChk.tac) -> NegChk.tac
 val intro_simple : NegSyn.tac -> NegSyn.tac -> NegSyn.tac
 val rec_ : NegSyn.tac

@@ -81,14 +81,6 @@ struct
       do_cases (eval mot) (List.map (fun (l, v) -> l, eval v) cases) (eval case)
     | S.Univ ->
       D.Univ
-    | S.NegUniv ->
-      D.NegUniv
-    | S.Negate tp ->
-      do_negate (eval tp)
-    | S.UnNegate tp ->
-      undo_negate (eval tp)
-    | S.NegSigma (name, a, b_neg) ->
-      D.NegSigma (name, eval a, clo b_neg)
     | S.Poly ->
       D.Poly
     | S.PolyIntro (base, fib) ->
@@ -258,36 +250,6 @@ struct
         invalid_arg "bad do_nat_elim"
     in rec_nat_elim scrut
 
-  and do_negate tp =
-    match tp with
-    | D.Sigma (name, a, clo) ->
-      graft_value @@
-      Graft.value a @@ fun a ->
-      Graft.clo clo @@ fun b ->
-      Graft.build @@
-      TB.neg_sigma ~name a @@ fun x ->
-      TB.negate (TB.ap b x)
-    | D.Neu (D.Univ, { hd; spine = Snoc(spine, D.UnNegate) }) ->
-      D.Neu (D.NegUniv, { hd; spine })
-    | _ ->
-      D.negate tp
-
-  and undo_negate tp =
-    match tp with
-    | D.NegSigma (name, a, clo) ->
-      graft_value @@
-      Graft.value a @@ fun a ->
-      Graft.clo clo @@ fun b ->
-      Graft.build @@
-      TB.sigma ~name a @@ fun x ->
-      TB.unnegate (TB.ap b x)
-    | D.Neu (D.NegUniv, { hd = D.Negate tp; spine = Emp } ) ->
-      tp
-    | D.Neu (D.NegUniv, neu) ->
-      D.Neu (D.Univ, D.push_frm neu D.UnNegate)
-    | _ ->
-      invalid_arg "bad undo_negate"
-
   and do_base p =
     match p with
     | D.PolyIntro (base, _) ->
@@ -377,12 +339,6 @@ let do_fst =
 
 let do_snd =
   Internal.do_snd
-
-let do_negate =
-  Internal.do_negate
-
-let undo_negate =
-  Internal.undo_negate
 
 let do_base =
   Internal.do_base

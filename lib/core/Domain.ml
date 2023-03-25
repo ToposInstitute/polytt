@@ -24,8 +24,6 @@ type t = Data.value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
-  | NegUniv
-  | NegSigma of Ident.t * t * tm_clo
   | Poly
   | PolyIntro of t * tm_clo
   | Hom of t * t
@@ -40,7 +38,6 @@ and hd = Data.hd =
   | Var of int
   | Hole of tp * int
   | Skolem of tp
-  | Negate of tp
 
 and frame = Data.frame =
   | Ap of { tp : t; arg : t }
@@ -51,7 +48,6 @@ and frame = Data.frame =
   | Base
   | Fib of { base : t; value : t }
   | HomElim of { tp : t; value : t }
-  | UnNegate
 
 and env = t bwd
 and 'a clo = 'a Data.clo = Clo of { env : env; body : 'a }
@@ -79,9 +75,6 @@ let hole tp n =
 let skolem tp =
   Data.Neu (tp, { hd = Skolem tp; spine = Emp })
 
-let negate tp =
-  Data.Neu (NegUniv, { hd = Negate tp; spine = Emp })
-
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
 
@@ -100,8 +93,6 @@ let rec dump fmt =
   | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
   | Univ -> Format.fprintf fmt "univ"
-  | NegUniv -> Format.fprintf fmt "neg-univ"
-  | NegSigma (nm, a, b) -> Format.fprintf fmt "neg-sigma[%a %a %a]" Ident.pp nm dump a dump_clo b
   | Poly ->
     Format.fprintf fmt "poly"
   | PolyIntro (base, fib) ->
@@ -156,8 +147,6 @@ and dump_neu fmt { hd; spine } =
     Format.fprintf fmt "D.hole[%a %i %a]" dump tp i dump_spine spine
   | Skolem tp ->
     Format.fprintf fmt "D.hole[%a]" dump tp
-  | Negate tp ->
-    Format.fprintf fmt "negate[%a]" dump tp
 
 (* TODO *)
 and dump_spine fmt spine =
