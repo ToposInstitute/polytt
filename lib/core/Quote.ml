@@ -8,15 +8,16 @@ open TermBuilder
 
 module Internal =
 struct
-  module Eff = Algaeff.Reader.Make (struct type env = int end)
+  type env = { pos : int; neg : D.t list }
+  module Eff = Algaeff.Reader.Make (struct type nonrec env = env end)
 
   let bind tp f =
-    let arg = D.var tp @@ Eff.read() in
-    Eff.scope (fun size -> size + 1) @@ fun () ->
+    let arg = D.var tp (Eff.read ()).pos in
+    Eff.scope (fun env -> { env with pos = env.pos + 1 }) @@ fun () ->
     f arg
 
   let quote_lvl lvl =
-    let env = Eff.read () in
+    let env = (Eff.read ()).pos in
     env - (lvl + 1)
 
   let rec quote (tp : D.t) (v : D.t) : S.t =
@@ -107,7 +108,7 @@ struct
       in S.PolyIntro (qbase, fib)
     | _, D.Hom (p, q) ->
       S.Hom (quote D.Poly p, quote D.Poly q)
-    | D.Hom (p, q), D.HomLam (pos_name, neg_name, clo) ->
+    (* | D.Hom (p, q), D.HomLam (pos_name, neg_name, clo) ->
       bind (Sem.do_base p) @@ fun p_base ->
       let v = Sem.inst_hom_clo clo p_base in
       let q_base = Sem.do_fst v in
@@ -117,19 +118,32 @@ struct
         quote (Sem.do_fib p p_base) (Sem.do_ap (Sem.do_snd v) q_fib)
       in
       (* let prog = S.Lam (p_name, S.Pair(qq_base, S.Lam (q_name, qp_fib))) in *)
-      S.HomLam (pos_name, neg_name, S.Done (qq_base, S.NegAp (S.Var 0, S.Lam(`Anon, qp_fib))))
+      S.HomLam (pos_name, neg_name, S.Done (qq_base, S.NegAp (S.Var 0, S.Lam(`Anon, qp_fib)))) *)
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->
       S.Label (ls, l)
-    | _, D.Neu (_, neu) ->
-      quote_neu neu
+    | tp, D.Neu (_, neu) ->
+      quote_neu tp neu
     | tp, tm ->
       Debug.print "Bad quote: %a@." D.dump tm;
       invalid_arg "bad quote"
 
-  and quote_neu {hd; spine} =
-    Bwd.fold_left quote_frm (quote_hd hd) spine
+  and unstick tp hd =
+    match hd with
+    | D.Borrow lvl ->
+      let env = (Eff.read ()).neg in
+      List.nth env lvl
+    | _ -> D.Neu (tp, { hd; spine = Emp })
+
+  and quote_neu tp {hd; spine} =
+    match unstick tp hd with
+    (* still stuck *)
+    | D.Neu (_tp, { hd; spine = spine1 }) ->
+      Bwd.fold_left quote_frm (Bwd.fold_left quote_frm (quote_hd hd) spine1) spine
+    (* made at least a little progress *)
+    | e ->
+      quote tp (Sem.do_spine e spine)
 
   and quote_hd hd =
     match hd with
@@ -180,10 +194,9 @@ struct
       S.HomElim (tm, quote tp value)
 end
 
-let quote ~size ~tp v =
-  Internal.Eff.run ~env:size @@ fun () ->
+let quote ~size ~cells ~tp v =
+  Internal.Eff.run ~env:{ pos = size; neg = cells } @@ fun () ->
   Internal.quote tp v
 
 let quote_top ~tp v =
-  Internal.Eff.run ~env:0 @@ fun () ->
-  Internal.quote tp v
+  quote ~size:0 ~cells:[] ~tp v

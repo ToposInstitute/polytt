@@ -118,7 +118,7 @@ and prog = { addr : int; capacity : int; instrs : instr list }
     [int] parameter, execute the instructions, and then
     read off the outputs off the 0th cell. *)
 
-and env = value bwd
+and env = { pos : value bwd; neg : value list }
 and 'a clo = Clo of { env : env; body : 'a }
 and tm_clo = syn clo
 and neg_clo = neg_syn clo

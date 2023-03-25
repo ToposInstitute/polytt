@@ -4,6 +4,7 @@
 module S := Syntax
 module D := Domain
 
+open Bwd
 open TermBuilder
 
 (** Given an environment context, convert from a Syntax term to a Domain term. *)
@@ -19,7 +20,7 @@ val do_snd : D.t -> D.t
 val do_nat_elim : mot:D.t -> zero:D.t -> succ:D.t -> scrut:D.t -> D.t
 val do_base : D.t -> D.t
 val do_fib : D.t -> D.t -> D.t
+val do_spine : D.t -> D.frame bwd -> D.t
 
 val inst_clo : D.tm_clo -> D.t -> D.t
-val inst_hom_clo : D.hom_clo -> D.t -> D.t
 val graft_value : S.t Graft.t -> D.t

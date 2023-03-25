@@ -5,4 +5,4 @@ module D := Domain
 
 exception Unequal
 
-val equate : size:int -> tp:D.tp -> D.t -> D.t -> unit
+val equate : size:int -> cells:D.t list -> tp:D.tp -> D.t -> D.t -> unit

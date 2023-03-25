@@ -12,11 +12,12 @@ exception Unequal
 
 module Internal =
 struct
-  module Eff = Algaeff.Reader.Make (struct type env = int end)
+  type env = { pos : int; neg : D.t list }
+  module Eff = Algaeff.Reader.Make (struct type nonrec env = env end)
 
   let bind tp f =
-    let arg = D.var tp @@ Eff.read() in
-    let df () = Eff.scope (fun size -> size + 1) @@ fun () -> f arg in
+    let arg = D.var tp @@ (Eff.read()).pos in
+    let df () = Eff.scope (fun env -> { env with pos = env.pos + 1 }) @@ fun () -> f arg in
       match tp with
       | D.FinSet ls ->
         begin
@@ -31,8 +32,26 @@ struct
 
   let rec equate tp v1 v2 =
     match (tp, v1, v2) with
-    | _, D.Neu (_, neu1), D.Neu (_, neu2) ->
-      equate_neu neu1 neu2
+    | tp, D.Neu (tp1, neu1), D.Neu (tp2, neu2) ->
+      begin
+        match (try_unstick tp1 neu1, try_unstick tp2 neu2) with
+        | D.Neu (_, neu3), D.Neu (_, neu4) -> equate_neu neu3 neu4
+        | D.Neu _, _ -> raise Unequal
+        | _, D.Neu _ -> raise Unequal
+        | v3, v4 -> equate tp v3 v4
+      end
+    | _, D.Neu (tp, neu), other ->
+      begin
+        match try_unstick tp neu with
+        | D.Neu _ -> raise Unequal
+        | e -> equate tp e other
+      end
+    | _, other, D.Neu (tp, neu) ->
+      begin
+        match try_unstick tp neu with
+        | D.Neu _ -> raise Unequal
+        | e -> equate tp other e
+      end
     | _, D.Pi (_, a1, clo1), D.Pi (_, a2, clo2) ->
       equate D.Univ a1 a2;
       bind a1 @@ fun v ->
@@ -85,6 +104,13 @@ struct
         D.dump v1
         D.dump v2;
       raise Unequal
+
+  and try_unstick tp {hd; spine} =
+    match hd with
+    | D.Borrow lvl ->
+      let env = (Eff.read ()).neg in
+      Sem.do_spine (List.nth env lvl) spine
+    | _ -> D.Neu (tp, { hd; spine })
 
   and equate_neu (neu1 : D.neu) (neu2 : D.neu) =
     equate_hd neu1.hd neu2.hd;
@@ -171,6 +197,6 @@ struct
     | _, _ -> raise Unequal
 end
 
-let equate ~size ~tp v1 v2 =
-  Internal.Eff.run ~env:size @@ fun () ->
+let equate ~size ~cells ~tp v1 v2 =
+  Internal.Eff.run ~env:{ pos = size; neg = cells } @@ fun () ->
   Internal.equate tp v1 v2

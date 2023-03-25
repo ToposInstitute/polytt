@@ -50,7 +50,7 @@ and frame = Data.frame =
   | Fib of { base : t; value : t }
   | HomElim of { tp : t; value : t }
 
-and env = t bwd
+and env = Data.env = { pos : t bwd; neg : tp list }
 and 'a clo = 'a Data.clo = Clo of { env : env; body : 'a }
 and tm_clo = Data.syn clo
 and neg_clo = Data.neg_syn clo
@@ -177,9 +177,10 @@ and dump_frm fmt =
     Format.fprintf fmt "hom-elim"
 
 (* TODO *)
-and dump_clo fmt (Clo { env; body }) =
-  Format.fprintf fmt "[%d] %a"
-    (Bwd.length env)
+and dump_clo fmt (Clo { env = { pos; neg }; body }) =
+  Format.fprintf fmt "[%d, %d] %a"
+  (Bwd.length pos)
+  (List.length neg)
 
     S.dump body
 and dump_hom_clo fmt (Clo { env; body }) = Format.fprintf fmt "FIXME :)"
