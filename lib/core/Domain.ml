@@ -36,6 +36,7 @@ and neu = Data.neu = { hd : hd; spine : frame bwd }
 
 and hd = Data.hd =
   | Var of int
+  | Borrow of int
   | Hole of tp * int
   | Skolem of tp
 
@@ -143,6 +144,8 @@ and dump_neu fmt { hd; spine } =
   match hd with
   | Var i ->
     Format.fprintf fmt "D.var[%i %a]" i dump_spine spine
+  | Borrow i ->
+    Format.fprintf fmt "D.borrow[%i %a]" i dump_spine spine
   | Hole (tp, i) ->
     Format.fprintf fmt "D.hole[%a %i %a]" dump tp i dump_spine spine
   | Skolem tp ->

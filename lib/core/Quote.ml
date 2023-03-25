@@ -135,6 +135,8 @@ struct
     match hd with
     | D.Var lvl ->
       S.Var (quote_lvl lvl)
+    | D.Borrow lvl ->
+      S.Borrow lvl
     | D.Hole (tp, n) ->
       S.Hole (quote D.Univ tp, n)
     | D.Skolem tp ->

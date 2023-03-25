@@ -10,6 +10,8 @@ type 'a labeled = (string * 'a) list
 
 type syn =
   | Var of int
+  | Borrow of int
+  (** Negative variables are DeBruijn levels, even in the syntax! *)
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
   | Lam of Ident.t * syn (* λ x. e *)
   | Let of Ident.t * syn * syn (* let x = e in t *)
@@ -84,6 +86,7 @@ and neu = { hd : hd; spine : frame bwd }
 
 and hd =
   | Var of int
+  | Borrow of int
   | Hole of value * int
   | Skolem of value
 

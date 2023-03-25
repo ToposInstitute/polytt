@@ -12,6 +12,7 @@ type 'a labeled = (string * 'a) list
 
 type t = Data.syn =
   | Var of int
+  | Borrow of int
   | Pi of Ident.t * t * t
   | Lam of Ident.t * t
   | Let of Ident.t * t * t
@@ -60,6 +61,7 @@ let rec dump fmt =
   function
   | Univ -> Format.fprintf fmt "univ"
   | Var i -> Format.fprintf fmt "S.var[%i]" i
+  | Borrow i -> Format.fprintf fmt "S.borrow[%i]" i
   | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a %a %a]" Ident.pp nm dump a dump b
   | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump b
   | Pair (a, b) -> Format.fprintf fmt "pair[%a, %a]" dump a dump b
@@ -159,6 +161,7 @@ let classify_tm =
   | Univ -> atom
   | Poly -> atom
   | Var _ -> atom
+  | Borrow _ -> juxtaposition
   | Pi _ -> arrow
   | Sigma (`Anon, _, _) -> star
   | Sigma _ -> arrow
@@ -218,6 +221,7 @@ let rec pp env =
       with Failure _ ->
         Format.fprintf fmt "![bad index %d]!" i
     end
+  | Borrow i -> Format.fprintf fmt "S.borrow %d" i
   | Pi (`Anon, a, b) ->
     Format.fprintf fmt "%a → %a"
       (pp env (P.left_of this)) a
