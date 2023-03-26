@@ -18,7 +18,7 @@ let intro ?(name = `Anon) base_tac fib_tac =
       Var.abstract ~name vbase @@ fun var ->
       Chk.run (fib_tac var) D.Univ
     in
-    S.PolyIntro (base, fib)
+    S.PolyIntro (name, base, fib)
   | _ ->
     Error.error `TypeError "Poly intro must be in poly."
 

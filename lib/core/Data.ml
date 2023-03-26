@@ -39,7 +39,7 @@ type syn =
   | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
   | Univ
   | Poly
-  | PolyIntro of syn * syn
+  | PolyIntro of Ident.t * syn * syn
   | Base of syn
   | Fib of syn * syn
   | Hom of syn * syn
@@ -64,7 +64,7 @@ and value =
   | Label of labelset * label
   | Univ
   | Poly
-  | PolyIntro of value * tm_clo
+  | PolyIntro of Ident.t * value * tm_clo
   | Hom of value * value
   | HomLam of value
 

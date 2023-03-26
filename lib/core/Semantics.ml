@@ -71,8 +71,8 @@ struct
       D.Univ
     | S.Poly ->
       D.Poly
-    | S.PolyIntro (base, fib) ->
-      D.PolyIntro (eval base, clo fib)
+    | S.PolyIntro (nm, base, fib) ->
+      D.PolyIntro (nm, eval base, clo fib)
     | S.Base p ->
       do_base (eval p)
     | S.Fib (p, i) ->
@@ -160,7 +160,7 @@ struct
 
   and do_base p =
     match p with
-    | D.PolyIntro (base, _) ->
+    | D.PolyIntro (_, base, _) ->
       base
     | D.Neu (D.Poly, neu) ->
       D.Neu (D.Univ, D.push_frm neu D.Base)
@@ -169,7 +169,7 @@ struct
 
   and do_fib p i =
     match p with
-    | D.PolyIntro (_, fib) ->
+    | D.PolyIntro (_, _, fib) ->
       inst_clo fib i
     | D.Neu (D.Poly, neu) ->
       let base = do_base p in

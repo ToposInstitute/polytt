@@ -34,7 +34,7 @@ type t = Data.syn =
   | Cases of t * t labeled * t
   | Univ
   | Poly
-  | PolyIntro of t * t
+  | PolyIntro of Ident.t * t * t
   | Base of t
   | Fib of t * t
   | Hom of t * t
@@ -52,8 +52,8 @@ let rec dump fmt =
   | Univ -> Format.fprintf fmt "univ"
   | Var i -> Format.fprintf fmt "S.var[%i]" i
   | Borrow i -> Format.fprintf fmt "S.borrow[%i]" i
-  | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a %a %a]" Ident.pp nm dump a dump b
-  | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump b
+  | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a, %a, %a]" Ident.pp nm dump a dump b
+  | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a, %a, %a]" Ident.pp nm dump a dump b
   | Pair (a, b) -> Format.fprintf fmt "pair[%a, %a]" dump a dump b
   | Fst a -> Format.fprintf fmt "fst[%a]" dump a
   | Snd a -> Format.fprintf fmt "snd[%a]" dump a
@@ -65,14 +65,15 @@ let rec dump fmt =
   | Nat -> Format.fprintf fmt "nat"
   | Zero -> Format.fprintf fmt "zero"
   | Succ n -> Format.fprintf fmt "succ[%a]" dump n
-  | NatElim r -> Format.fprintf fmt "nat-elim[%a %a %a %a]" dump r.mot dump r.zero dump r.succ dump r.scrut
+  | NatElim r -> Format.fprintf fmt "nat-elim[%a, %a, %a, %a]" dump r.mot dump r.zero dump r.succ dump r.scrut
   | FinSet ls -> Format.fprintf fmt "finset[%a]" (pp_sep_list Format.pp_print_string) ls
   | Label (ls, l) -> Format.fprintf fmt "label[%a, %a]" (pp_sep_list Format.pp_print_string) ls Format.pp_print_string l
   | Cases (mot, cases, case) -> Format.fprintf fmt "cases[%a, %a, %a]" dump mot (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt "%a = %a" Format.pp_print_string l dump v)) cases dump case
   | Poly ->
     Format.fprintf fmt "poly"
-  | PolyIntro (base, fib) ->
-    Format.fprintf fmt "poly-intro[%a, %a]"
+  | PolyIntro (nm, base, fib) ->
+    Format.fprintf fmt "poly-intro[%a, %a, %a]"
+      Ident.pp nm
       dump base
       dump fib
   | Base p ->
@@ -269,11 +270,12 @@ let rec pp (env : ppenv) =
       (pp_sep_list (fun fmt (l, v) -> Format.fprintf fmt ".%a = %a" Format.pp_print_string l (pp env P.isolated) v)) cases
       (pp env (P.right_of this)) case
   | Poly ->
-    Format.fprintf fmt "poly"
-  | PolyIntro (base, fib) ->
-    Format.fprintf fmt "(%a , %a)"
+    Format.fprintf fmt "Poly"
+  | PolyIntro (nm, base, fib) ->
+    Format.fprintf fmt "(%a : %a) × %a"
+      Ident.pp nm
       (pp env P.isolated) base
-      (pp env P.isolated) fib
+      (pp (abs_pos env nm) P.isolated) fib
   | Base p ->
     Format.fprintf fmt "base %a"
       (pp env (P.right_of juxtaposition)) p

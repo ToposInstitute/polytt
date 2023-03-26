@@ -96,18 +96,18 @@ struct
       S.Univ
     | _, D.Poly ->
       S.Poly
-    | D.Poly, D.PolyIntro (vbase, vfib) ->
+    | D.Poly, D.PolyIntro (nm, vbase, vfib) ->
       let base = quote D.Univ vbase in
       let fib = bind vbase @@ fun arg ->
         quote D.Univ (Sem.inst_clo vfib arg)
       in
-      S.PolyIntro (base, fib)
+      S.PolyIntro (nm, base, fib)
     | D.Poly, v ->
       let base = Sem.do_base v in
       let qbase = quote D.Univ base in
       let fib = bind base @@ fun i ->
         quote D.Univ (Sem.do_fib v i)
-      in S.PolyIntro (qbase, fib)
+      in S.PolyIntro (`Anon, qbase, fib)
     | _, D.Hom (p, q) ->
       S.Hom (quote D.Poly p, quote D.Poly q)
     | D.Hom (p, q), D.HomLam wrapped ->

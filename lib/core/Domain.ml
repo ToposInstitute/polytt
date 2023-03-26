@@ -25,7 +25,7 @@ type t = Data.value =
   | Label of labelset * label
   | Univ
   | Poly
-  | PolyIntro of t * tm_clo
+  | PolyIntro of Ident.t * t * tm_clo
   | Hom of t * t
   | HomLam of t
 
@@ -70,10 +70,10 @@ let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
 
 let rec dump fmt =
   function
-  | Neu (t, neu) -> Format.fprintf fmt "neu[%a %a]" dump t dump_neu neu
-  | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a %a %a]" Ident.pp nm dump a dump_clo b
-  | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a %a %a]" Ident.pp nm dump a dump_clo b
-  | Pair (a, b) -> Format.fprintf fmt "pair[%a %a]" dump a dump b
+  | Neu (t, neu) -> Format.fprintf fmt "neu[%a, %a]" dump t dump_neu neu
+  | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a, %a, %a]" Ident.pp nm dump a dump_clo b
+  | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a, %a, %a]" Ident.pp nm dump a dump_clo b
+  | Pair (a, b) -> Format.fprintf fmt "pair[%a, %a]" dump a dump b
   | Lam (nm, t) -> Format.fprintf fmt "lam[%a, %a]" Ident.pp nm dump_clo t
   | Eq (t, a, b) -> Format.fprintf fmt "eq[%a, %a, %a]" dump t dump a dump b
   | Refl (a) -> Format.fprintf fmt "refl[%a]" dump a
@@ -85,8 +85,9 @@ let rec dump fmt =
   | Univ -> Format.fprintf fmt "univ"
   | Poly ->
     Format.fprintf fmt "poly"
-  | PolyIntro (base, fib) ->
-    Format.fprintf fmt "poly-intro[%a, %a]"
+  | PolyIntro (nm, base, fib) ->
+    Format.fprintf fmt "poly-intro[%a, %a, %a]"
+      Ident.pp nm
       dump base
       dump_clo fib
   | Hom (p, q) ->
