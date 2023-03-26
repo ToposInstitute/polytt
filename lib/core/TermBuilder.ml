@@ -31,11 +31,17 @@ struct
   let lam ?(name = `Anon) body size =
     S.Lam (name, scope body size)
 
+  let let_ ?(name = `Anon) value body size =
+    S.Let (name, value size, scope body size)
+
   let ap fn arg size =
     S.Ap (fn size, arg size)
 
   let sigma ?(name = `Anon) base fam size =
     S.Sigma(name, base size, scope fam size)
+
+  let pair x y size =
+    S.Pair (x size, y size)
 
   let nat _ =
     S.Nat
@@ -62,6 +68,7 @@ struct
     S.Base (p size)
 
   let fib p i size =
+    Debug.print "build fib %a %a@." S.dump (p size) S.dump (i size);
     S.Fib (p size, i size)
 end
 

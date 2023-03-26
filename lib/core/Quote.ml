@@ -78,6 +78,7 @@ struct
       let t2 = quote (Sem.inst_clo tp_clo v1) v2 in
       S.Pair (t1, t2)
     | D.Sigma (_, a, tp_clo), v ->
+      Debug.print "do_fst eta@.";
       let v1 = Sem.do_fst v in
       let t1 = quote a v1 in
       let t2 = quote (Sem.inst_clo tp_clo v1) (Sem.do_snd v) in
@@ -103,22 +104,24 @@ struct
       in
       S.PolyIntro (nm, base, fib)
     | D.Poly, v ->
+      Debug.print "do_base eta@.";
       let base = Sem.do_base v in
       let qbase = quote D.Univ base in
       let fib = bind base @@ fun i ->
+        Debug.print "do_fib eta@.";
         quote D.Univ (Sem.do_fib v i)
       in S.PolyIntro (`Anon, qbase, fib)
     | _, D.Hom (p, q) ->
       S.Hom (quote D.Poly p, quote D.Poly q)
     | D.Hom (p, q), D.HomLam wrapped ->
-      let p_base = Sem.do_base p in
       let tp =
         Sem.graft_value @@
         Graft.value p @@ fun p ->
         Graft.value q @@ fun q ->
-        Graft.value p_base @@ fun p_base ->
         Graft.build @@
+        TB.pi (TB.base p) @@ fun p_base ->
         TB.sigma (TB.base q) @@ fun q_base ->
+        Debug.print "building HomLam quote type@.";
         TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
       in
       S.HomLam (quote tp wrapped)

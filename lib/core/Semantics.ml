@@ -76,6 +76,7 @@ struct
     | S.Base p ->
       do_base (eval p)
     | S.Fib (p, i) ->
+      Debug.print "do_fib from syntax@.";
       do_fib (eval p) (eval i)
     | S.Hom (p, q) ->
       D.Hom (eval p, eval q)
@@ -165,6 +166,7 @@ struct
     | D.Neu (D.Poly, neu) ->
       D.Neu (D.Univ, D.push_frm neu D.Base)
     | _ ->
+      Debug.print "Bad do_base %a@." D.dump p;
       invalid_arg "bad do_base"
 
   and do_fib p i =
@@ -175,7 +177,8 @@ struct
       let base = do_base p in
       D.Neu (D.Univ, D.push_frm neu (D.Fib { base; value = i }))
     | _ ->
-      invalid_arg "bad do_base"
+      Debug.print "Bad do_fib %a@." D.dump p;
+      invalid_arg "bad do_fib"
 
   and inst_clo clo v =
     match clo with

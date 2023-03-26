@@ -107,6 +107,7 @@ end
 and NegVar : sig
   type tac
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
   val borrow : tac -> D.t
 end =
 struct
@@ -114,6 +115,14 @@ struct
   let abstract ?(name = `Anon) tp k =
     Locals.abstract_neg ~name tp @@ fun lvl ->
     k { tp; lvl }
+
+  let concrete ?(name = `Anon) tp value k =
+    Locals.abstract_neg ~name tp @@ fun lvl ->
+    match Locals.consume_neg lvl () with
+    | None -> invalid_arg ""
+    | Some writer ->
+      writer value;
+      k { tp; lvl }
 
   let borrow { tp; lvl } = D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
 end

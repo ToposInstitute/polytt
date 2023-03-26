@@ -63,7 +63,8 @@ def id : (P : Poly) → P ⇒ P :=
 def nyan-hom : ℕ → nyan ⇒ nyan :=
   λ n → λ a⁺ a⁻ ⇝
     (a⁺ , a⁻) ⤚ (id nyan) → (b⁺ , b⁻);
-    n ⇜ (b⁻ ∘ succ ∘ succ)
+    -- n ⇜ (b⁻ ∘ succ ∘ succ)
+    n ⇜ b⁻
 
 #normalize nyan-hom 42 1
 

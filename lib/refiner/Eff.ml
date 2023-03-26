@@ -291,3 +291,6 @@ let do_base p =
 
 let do_fib p i =
   Semantics.do_fib p i
+
+let do_hom_elim p i =
+  Semantics.do_hom_elim p i

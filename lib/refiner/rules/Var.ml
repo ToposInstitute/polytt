@@ -22,6 +22,6 @@ let negative (cell : Cell.neg) =
   NegSyn.rule @@ fun () ->
   match Eff.Locals.consume_neg cell.lvl () with
   | None ->
-    Error.error `LinearVariableDoubleUse "Linear variable already used."
+    Error.error `LinearVariableDoubleUse "Linear variable already used: %a." Ident.pp cell.name
   | Some writer ->
     (cell.tp, writer)
