@@ -10,6 +10,8 @@ type labelset = string list
 type label = string
 type 'a labeled = (string * 'a) list
 
+type ppenv = { pos : Ident.t bwd; neg_size : int; neg : Ident.t bwd }
+
 type t = Data.syn =
   | Var of int
   | Borrow of int
@@ -205,41 +207,48 @@ let pp_braced_cond classify plain_pp penv fmt tm =
   else
     plain_pp this penv fmt tm
 
+let abs_pos env name = { env with pos = env.pos #< name }
+
 let rec collect_lams env nms tm =
   match tm with
   | Lam (nm, t) ->
-    collect_lams (env #< nm) (nm :: nms) t
+    collect_lams (abs_pos env nm) (nm :: nms) t
   | body -> env, List.rev nms, body
 
 (** Pretty print a term *)
-let rec pp env =
+let rec pp (env : ppenv) =
   pp_braced_cond classify_tm @@ fun this _penv fmt ->
   function
   | Var i ->
     begin
-      try Ident.pp fmt (Bwd.nth env i)
+      try Ident.pp fmt (Bwd.nth env.pos i)
       with Failure _ ->
-        Format.fprintf fmt "![bad index %d]!" i
+        Format.fprintf fmt "![bad var index %d]!" i
     end
-  | Borrow i -> Format.fprintf fmt "S.borrow %d" i
+  | Borrow i ->
+    begin
+      try Ident.pp fmt (Bwd.nth env.neg ((env.neg_size - 1) - i))
+      with Failure _ ->
+        Format.fprintf fmt "![bad borrow index %d]!" i
+    end
   | Pi (`Anon, a, b) ->
     Format.fprintf fmt "%a → %a"
       (pp env (P.left_of this)) a
-      (pp (env #< `Anon) (P.right_of this)) b
+      (pp (abs_pos env `Anon) (P.right_of this)) b
   | Pi (nm, a, b) ->
     Format.fprintf fmt "(%a : %a) → %a"
       Ident.pp nm
       (pp env P.isolated) a
-      (pp (env #< nm) (P.right_of this)) b
+      (pp (abs_pos env nm) (P.right_of this)) b
   | Sigma (`Anon, a, b) ->
     Format.fprintf fmt "%a × %a"
       (pp env (P.left_of this)) a
-      (pp (env #< `Anon) (P.right_of this)) b
+      (pp (abs_pos env `Anon) (P.right_of this)) b
   | Sigma (nm, a, b) ->
     Format.fprintf fmt "(%a : %a) × %a"
       Ident.pp nm
       (pp env P.isolated) a
-      (pp (env #< nm) (P.right_of this)) b
+      (pp (abs_pos env nm) (P.right_of this)) b
   | Pair (a, b) ->
     Format.fprintf fmt "(%a , %a)"
       (pp env P.isolated) a
@@ -259,7 +268,7 @@ let rec pp env =
     Format.fprintf fmt "let %a = %a in %a"
       Ident.pp nm
       (pp env (P.right_of this)) t1
-      (pp (env #< nm) (P.right_of this)) t2
+      (pp (abs_pos env nm) (P.right_of this)) t2
   | Ap (f, a) ->
     Format.fprintf fmt "%a %a"
       (pp env (P.left_of this)) f
@@ -325,7 +334,7 @@ let rec pp env =
     Format.fprintf fmt "λ %a %a → FIXME :)"
       Ident.pp p_name
       Ident.pp q_name
-  (* (pp_hom (env #< p_name #< q_name) (P.right_of arrow)) bdy *)
+  (* (pp_hom (abs_pos env p_name #< q_name) (P.right_of arrow)) bdy *)
   | HomElim (hom, i) ->
     Format.fprintf fmt "%a %a"
       (pp env (P.left_of juxtaposition)) hom
@@ -351,4 +360,4 @@ let rec pp env =
 (*   | Done (pos, neg) -> *)
 (*     __ *)
 
-let pp_toplevel = pp Emp P.isolated
+let pp_toplevel = pp { pos = Emp; neg_size = 0; neg = Emp } P.isolated

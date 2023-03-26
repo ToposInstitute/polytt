@@ -6,18 +6,20 @@ module Sem = Semantics
 
 open TermBuilder
 
+module Env = QuoteEnv
+
 module Internal =
 struct
-  type env = { pos : int; neg : D.t list }
-  module Eff = Algaeff.Reader.Make (struct type nonrec env = env end)
+  type env = Env.t
+  module Eff = Env.Eff
 
   let bind tp f =
-    let arg = D.var tp (Eff.read ()).pos in
-    Eff.scope (fun env -> { env with pos = env.pos + 1 }) @@ fun () ->
+    let arg = D.var tp (Env.read_pos_size ()) in
+    Eff.scope Env.incr_pos @@ fun () ->
     f arg
 
   let quote_lvl lvl =
-    let env = (Eff.read ()).pos in
+    let env = Env.read_pos_size () in
     env - (lvl + 1)
 
   let rec quote (tp : D.t) (v : D.t) : S.t =
@@ -132,8 +134,7 @@ struct
   and unstick tp hd =
     match hd with
     | D.Borrow lvl ->
-      let env = (Eff.read ()).neg in
-      List.nth env lvl
+      Env.read_neg_lvl lvl
     | _ -> D.Neu (tp, { hd; spine = Emp })
 
   and quote_neu tp {hd; spine} =
@@ -194,9 +195,9 @@ struct
       S.HomElim (tm, quote tp value)
 end
 
-let quote ~size ~cells ~tp v =
-  Internal.Eff.run ~env:{ pos = size; neg = cells } @@ fun () ->
+let quote ~env ~tp v =
+  Internal.Eff.run ~env @@ fun () ->
   Internal.quote tp v
 
 let quote_top ~tp v =
-  quote ~size:0 ~cells:[] ~tp v
+  quote ~env:Env.empty ~tp v

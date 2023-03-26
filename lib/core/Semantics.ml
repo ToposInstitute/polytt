@@ -10,14 +10,7 @@ open TermBuilder
 module Internal =
 struct
   type env = D.env
-  type state = {
-    instrs : Data.instr list;
-    (** The current program, used to perform reverse evaluation. *)
-    cells : int;
-    (** The number of memory cells required to execute the program. *)
-  }
   module Env = Algaeff.Reader.Make (struct type nonrec env = env end)
-  module Instrs = Algaeff.State.Make (struct type nonrec state = state end)
 
   let var ix =
     let env = Env.read () in
@@ -25,7 +18,7 @@ struct
 
   let borrow lvl =
     let env = Env.read () in
-    D.Neu (List.nth env.neg lvl, { hd = D.Borrow lvl; spine = Emp })
+    D.Neu (Bwd.nth env.neg ((env.neg_size - 1) - lvl), { hd = D.Borrow lvl; spine = Emp })
 
   let bind value k () =
     Env.scope (fun env -> { env with pos = env.pos #< value }) k
@@ -185,7 +178,7 @@ let eval ~env tm =
   Internal.eval tm
 
 let eval_top tm =
-  eval ~env:{ pos = Emp; neg = [] } tm
+  eval ~env:{ pos = Emp; neg_size = 0; neg = Emp } tm
 
 let do_ap =
   Internal.do_ap

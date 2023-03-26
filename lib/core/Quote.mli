@@ -4,6 +4,7 @@
 
 module S := Syntax
 module D := Domain
+module Env := QuoteEnv
 
-val quote : size:int -> cells:D.t list -> tp:D.t -> D.t -> S.t
+val quote : env:Env.t -> tp:D.t -> D.t -> S.t
 val quote_top : tp:D.t -> D.t -> S.t

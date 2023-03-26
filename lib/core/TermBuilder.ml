@@ -70,11 +70,11 @@ struct
   type 'a t = D.env -> 'a tb * D.env
 
   let value (v : D.t) (k : S.t tb -> 'a t) : 'a t =
-    fun ({ pos; neg }) ->
+    fun ({ pos; neg_size; neg }) ->
     (* Create a variable that points to the end of the extended context.
        The DeBruijin arithmetic is a little tricky, but lets us avoid a subtraction. *)
     let x = var (Bwd.length pos) in
-    let env : D.env = { pos = pos #< v; neg } in
+    let env : D.env = { pos = pos #< v; neg_size; neg } in
     k x env
 
   let clo (clo : D.tm_clo) (k : S.t tb -> 'a t) : 'a t =
@@ -84,6 +84,6 @@ struct
     fun env -> (builder, env)
 
   let graft (k : 'a t) : 'a * D.env =
-    let (tb, env) = k { pos = Emp; neg = [] } in
+    let (tb, env) = k { pos = Emp; neg_size = 0; neg = Emp } in
     (run_tb env tb , env)
 end

@@ -131,11 +131,11 @@ let pp_sequent_ctx ppenv fmt (ctx, k) =
       k ppenv fmt
     | (name, tp) :: ctx ->
       (* FIXME this does not include negatives *)
-      let tp = Quote.quote ~size ~tp:D.Univ tp in
+      let tp = Quote.quote ~env:{ pos_size = size; neg_size = 0; neg = Emp } ~tp:D.Univ tp in
       Format.fprintf fmt "  %a : %a@.%a"
         Ident.pp name
         (S.pp ppenv Precedence.isolated) tp
-        (go (ppenv #< name) (size + 1)) ctx
+        (go (S.abs_pos ppenv name) (size + 1)) ctx
   in
   go ppenv 0 fmt ctx
 
@@ -149,4 +149,4 @@ let pp_sequent_nogoal _ppenv fmt =
 let print_ctx fmt k =
   let ppenv = Locals.ppenv () in
   let ctx = Locals.local_types () in
-  pp_sequent_ctx Emp fmt (List.combine (Bwd.to_list ppenv) (Bwd.to_list ctx), k)
+  pp_sequent_ctx { pos = Emp; neg_size = 0; neg = Emp } fmt (List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx), k)

@@ -59,7 +59,7 @@ let execute_cmd  (cmd : CS.cmd) =
     let tp = Quote.quote_top ~tp:D.Univ vtp in
     Format.printf "%a : %a@."
       (* FIXME may not be correct precedence *)
-      (S.pp Emp (Precedence.left_of S.juxtaposition)) tm
+      (S.pp { pos = Emp; neg_size = 0; neg = Emp } (Precedence.left_of S.juxtaposition)) tm
       S.pp_toplevel tp
   | CS.Debug b ->
     Debug.debug_mode b

@@ -5,6 +5,7 @@ module D = Domain
 module Sem = Semantics
 module SS = Set.Make(String)
 module MS = Map.Make(String)
+module Env = QuoteEnv
 
 open TermBuilder
 
@@ -12,12 +13,12 @@ exception Unequal
 
 module Internal =
 struct
-  type env = { pos : int; neg : D.t list }
-  module Eff = Algaeff.Reader.Make (struct type nonrec env = env end)
+  type env = Env.t
+  module Eff = Env.Eff
 
   let bind tp f =
-    let arg = D.var tp @@ (Eff.read()).pos in
-    let df () = Eff.scope (fun env -> { env with pos = env.pos + 1 }) @@ fun () -> f arg in
+    let arg = D.var tp @@ Env.read_pos_size () in
+    let df () = Eff.scope Env.incr_pos @@ fun () -> f arg in
       match tp with
       | D.FinSet ls ->
         begin
@@ -108,8 +109,7 @@ struct
   and try_unstick tp {hd; spine} =
     match hd with
     | D.Borrow lvl ->
-      let env = (Eff.read ()).neg in
-      Sem.do_spine (List.nth env lvl) spine
+      Sem.do_spine (Env.read_neg_lvl lvl) spine
     | _ -> D.Neu (tp, { hd; spine })
 
   and equate_neu (neu1 : D.neu) (neu2 : D.neu) =
@@ -197,6 +197,6 @@ struct
     | _, _ -> raise Unequal
 end
 
-let equate ~size ~cells ~tp v1 v2 =
-  Internal.Eff.run ~env:{ pos = size; neg = cells } @@ fun () ->
+let equate ~env ~tp v1 v2 =
+  Internal.Eff.run ~env @@ fun () ->
   Internal.equate tp v1 v2

@@ -48,30 +48,6 @@ struct
     }
 end
 
-module Linearity =
-struct
-  module State = Algaeff.State.Make(struct type nonrec state = IntSet.t end)
-
-  let run k =
-    State.run ~init:IntSet.empty @@ fun () ->
-    let a = k () in
-    let can_use = State.get () in
-    if IntSet.is_empty can_use then
-      Some a
-    else
-      None
-
-  let obligation (neg : Cell.neg) =
-    State.modify @@ fun can_use ->
-    IntSet.add neg.lvl can_use
-
-  let consume (neg : Cell.neg) =
-    let can_use = State.get () in
-    let available = IntSet.mem neg.lvl can_use in
-    State.set @@ IntSet.remove neg.lvl can_use;
-    not available
-end
-
 module Locals =
 struct
   type env = {
@@ -80,7 +56,10 @@ struct
     local_names : (Cell.t, unit) Yuujinchou.Trie.t;
     size : int;
     neg_size : int;
-    ppenv : Ident.t bwd
+    neg_values : (D.t ref) bwd;
+    neg_types : D.tp bwd;
+    ppenv_pos : Ident.t bwd;
+    ppenv_neg : Ident.t bwd
   }
 
   let top_env = {
@@ -89,7 +68,10 @@ struct
     local_names = Yuujinchou.Trie.empty;
     size = 0;
     neg_size = 0;
-    ppenv = Emp
+    neg_values = Emp;
+    neg_types = Emp;
+    ppenv_pos = Emp;
+    ppenv_neg = Emp
   }
 
   module Reader = Algaeff.Reader.Make(struct type nonrec env = env end)
@@ -104,9 +86,17 @@ struct
     let env = Reader.read () in
     env.local_types
 
-  let ppenv () =
+  let ppenv () : S.ppenv =
     let env = Reader.read () in
-    env.ppenv
+    { pos = env.ppenv_pos; neg_size = env.neg_size; neg = env.ppenv_neg }
+
+  let qenv () : QuoteEnv.t =
+    let env = Reader.read () in
+    { pos_size = env.size; neg_size = env.neg_size; neg = Bwd.map (fun r -> !r) env.neg_values }
+
+  let denv () : D.env =
+    let env = Reader.read () in
+    { pos = env.locals; neg_size = env.neg_size; neg = env.neg_types }
 
   let size () =
     let env = Reader.read () in
@@ -148,14 +138,16 @@ struct
         local_types = env.local_types #< tp;
         local_names;
         size = env.size + 1;
-        ppenv = env.ppenv #< name
+        ppenv_pos = env.ppenv_pos #< name
       }
-    | Cell.Neg _ ->
+    | Cell.Neg {name; lvl; tp} ->
       {
         env with
         local_names;
         neg_size = env.neg_size + 1;
-        (* FIXME: Update the negative ppenv *)
+        neg_types = env.neg_types #< tp;
+        neg_values = env.neg_values #< (ref (D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })));
+        ppenv_neg = env.ppenv_neg #< name
       }
 
   let concrete ?(name = `Anon) tp tm k =
@@ -173,9 +165,14 @@ struct
     let lvl = fresh_neg_var () in
     let neg_cell = { Cell.name; tp; lvl } in
     let cell = Cell.Neg neg_cell in
-    Linearity.obligation neg_cell;
     Reader.scope (bind_var cell) @@ fun () ->
     k lvl
+
+  let write_neg lvl value () =
+    let env = Reader.read () in
+    let value_ref = Bwd.nth env.neg_values ((env.neg_size - 1) - lvl) in
+    value_ref := value;
+    ()
 end
 
 
@@ -189,9 +186,9 @@ struct
 
   let type_error tp conn =
     let loc = Eff.read () in
-    let size = Locals.size () in
+    let env = Locals.qenv () in
     let ppenv = Locals.ppenv () in
-    let qtp = Quote.quote ~size:size ~tp:D.Univ tp in
+    let qtp = Quote.quote ~env ~tp:D.Univ tp in
     Logger.fatalf ~loc:loc `TypeError "Expected %a, but got %s@."
       (S.pp ppenv Precedence.isolated) qtp
       conn
@@ -215,29 +212,30 @@ struct
 end
 
 let quote ~tp tm =
-  let env = Locals.env () in
-  Quote.quote ~size:env.size ~tp tm
+  let env = Locals.qenv () in
+  Quote.quote ~env ~tp tm
 
 let equate ~tp v1 v2 =
-  let env = Locals.env () in
+  let env = Locals.qenv () in
+  let ppenv = Locals.ppenv () in
   try
-    Conversion.equate ~size:env.size ~tp v1 v2
+    Conversion.equate ~env ~tp v1 v2
   with Conversion.Unequal ->
     Debug.print "Unequal:@.%a@.%a@." D.dump v1 D.dump v2;
-    let tm1 = Quote.quote ~size:env.size ~tp v1 in
-    let tm2 = Quote.quote ~size:env.size ~tp v2 in
+    let tm1 = Quote.quote ~env ~tp v1 in
+    let tm2 = Quote.quote ~env ~tp v2 in
     Debug.print "Unequal:@.%a@.%a@." S.dump tm1 S.dump tm2;
     Error.error `ConversionError "Could not solve %a = %a@."
-      (S.pp env.ppenv (Precedence.left_of S.equals)) tm1
-      (S.pp env.ppenv (Precedence.right_of S.equals)) tm2
+      (S.pp ppenv (Precedence.left_of S.equals)) tm1
+      (S.pp ppenv (Precedence.right_of S.equals)) tm2
 
 let inst_const_clo ~tp clo =
-  let env = Locals.env () in
-  Skolem.inst_const_clo ~size:env.size ~tp clo
+  let env = Locals.qenv () in
+  Skolem.inst_const_clo ~env ~tp clo
 
 let eval tm =
-  let env = Locals.env () in
-  Semantics.eval ~env:env.locals tm
+  let env = Locals.denv () in
+  Semantics.eval ~env tm
 
 let inst_clo clo v =
   Semantics.inst_clo clo v
