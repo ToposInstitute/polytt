@@ -178,7 +178,7 @@ struct
       ()
     | D.Fib fib1, D.Fib fib2 ->
       equate fib1.base fib1.value fib2.value
-    | D.HomElim {tp; value = v1}, D.HomElim {value = v2; _} ->
+    | D.HomElim {tp; arg = v1}, D.HomElim {arg = v2; _} ->
       equate tp v1 v2
     | _ ->
       Debug.print "Could not equate frames %a and %a@."

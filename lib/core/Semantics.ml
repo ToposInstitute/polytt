@@ -79,8 +79,10 @@ struct
       do_fib (eval p) (eval i)
     | S.Hom (p, q) ->
       D.Hom (eval p, eval q)
-    | S.HomLam (p_name, q_name, bdy) ->
-      D.HomLam (p_name, q_name, clo bdy)
+    | S.HomLam wrapped ->
+      D.HomLam (eval wrapped)
+    | S.HomElim (f, b) ->
+      do_hom_elim (eval f) (eval b)
     | S.Hole (tp, n) ->
       D.hole (eval tp) n
     | S.Skolem tp ->
@@ -97,6 +99,17 @@ struct
       Debug.print "Tried to do_ap against %a@." D.dump d;
       invalid_arg "bad do_ap"
 
+  and do_hom_elim (f : D.t) (arg : D.t) =
+    match f with
+    | D.HomLam wrapped ->
+      do_ap wrapped arg
+    | D.Neu (Pi(_t, a, clo), neu) ->
+      let fib = inst_clo clo arg in
+      D.Neu (fib, D.push_frm neu (D.HomElim { tp = a; arg }))
+    | d ->
+      Debug.print "Tried to do_ap against %a@." D.dump d;
+      invalid_arg "bad do_ap"
+
   and do_aps f args =
     List.fold_left do_ap f args
 
@@ -106,7 +119,8 @@ struct
       a
     | D.Neu (D.Sigma (_, a, _clo), neu) ->
       D.Neu (a, D.push_frm neu D.Fst)
-    | _ ->
+    | tm ->
+      Debug.print "Bad do_fst %a@." D.dump tm;
       invalid_arg "bad do_fst"
 
   and do_snd (v: D.t) =
@@ -204,6 +218,9 @@ let do_cases =
 let do_nat_elim ~mot ~zero ~succ ~scrut =
   Internal.do_nat_elim mot zero succ scrut
 
+let do_hom_elim =
+  Internal.do_hom_elim
+
 let do_frm hd = function
   | D.Ap { arg; _ } -> do_ap hd arg
   | D.Fst -> do_fst hd
@@ -212,6 +229,7 @@ let do_frm hd = function
   | D.Cases { mot; cases } -> do_cases mot cases hd
   | D.Base -> do_base hd
   | D.Fib { value; _ } -> do_fib hd value
+  | D.HomElim { arg; _ } -> do_hom_elim hd arg
 
 let do_spine hd spine =
   Bwd.fold_left do_frm hd spine

@@ -38,6 +38,7 @@ module Locals : sig
   val abstract_neg : ?name:Ident.t -> D.tp -> (int -> 'a) -> 'a
   val consume_neg : int -> unit -> (D.t -> unit) option
   val all_consumed : unit -> bool
+  val head : unit -> D.t
   val run_linear : (unit -> 'b) -> 'b
 end
 

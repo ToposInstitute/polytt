@@ -24,4 +24,4 @@ let negative (cell : Cell.neg) =
   | None ->
     Error.error `LinearVariableDoubleUse "Linear variable already used."
   | Some writer ->
-    (cell.tp, S.Var cell.lvl, writer)
+    (cell.tp, writer)

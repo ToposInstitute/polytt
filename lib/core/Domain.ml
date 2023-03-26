@@ -27,8 +27,7 @@ type t = Data.value =
   | Poly
   | PolyIntro of t * tm_clo
   | Hom of t * t
-  | HomLam of Ident.t * Ident.t * hom_clo
-  | FibLam of prog
+  | HomLam of t
 
 and tp = t
 
@@ -48,21 +47,11 @@ and frame = Data.frame =
   | Cases of { mot : t; cases : t labeled }
   | Base
   | Fib of { base : t; value : t }
-  | HomElim of { tp : t; value : t }
+  | HomElim of { tp : t; arg : t }
 
 and env = Data.env = { pos : t bwd; neg_size : int; neg : tp bwd }
 and 'a clo = 'a Data.clo = Clo of { env : env; body : 'a }
 and tm_clo = Data.syn clo
-and neg_clo = Data.neg_syn clo
-and hom_clo = Data.hom_syn clo
-
-and instr = Data.instr =
-  | Const of { write_addr : int; value : t }
-  | NegAp of { write_addr : int; read_addr : int; fn : t }
-  | Unpair of { read_addr : int; write_addr : int; clo : neg_clo }
-  | Pack of { write_addr : int; read_fst_addr : int; read_snd_addr : int }
-
-and prog = Data.prog = { addr : int; capacity : int; instrs : instr list }
 
 let push_frm {hd; spine} frm =
   {hd; spine = spine #< frm}
@@ -104,40 +93,9 @@ let rec dump fmt =
     Format.fprintf fmt "hom[%a, %a]"
       dump p
       dump q
-  | HomLam (p_name, q_name, bdy) ->
-    Format.fprintf fmt "hom-lam[%a, %a, %a]"
-      Ident.pp p_name
-      Ident.pp q_name
-      dump_hom_clo bdy
-  | FibLam _ ->
-    Format.fprintf fmt "its a fib lam :)"
-
-and dump_instr fmt =
-  function
-  | Const {write_addr; value} ->
-    Format.fprintf fmt "set[%d <- %a]"
-      write_addr
-      dump value
-  | NegAp {write_addr; read_addr; fn} ->
-    Format.fprintf fmt "neg-ap[%d <- %d, %a]"
-      write_addr
-      read_addr
-      dump fn
-  | Unpair {read_addr; write_addr; clo} ->
-    Format.fprintf fmt "unpair[%d <- %d]"
-      write_addr
-      read_addr
-  | Pack { write_addr; read_fst_addr; read_snd_addr} ->
-    Format.fprintf fmt "pack[%d <- %d , %d]"
-      write_addr
-      read_fst_addr
-      read_snd_addr
-
-and dump_instrs fmt instrs =
-  Format.pp_print_list
-    ~pp_sep:(fun fmt () -> Format.fprintf fmt ";@.")
-    dump_instr fmt instrs
-
+  | HomLam wrapped ->
+    Format.fprintf fmt "hom-lam[%a]"
+      dump wrapped
 
 
 and dump_neu fmt { hd; spine } =

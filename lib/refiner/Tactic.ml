@@ -41,39 +41,39 @@ end
 
 and Hom : sig
   type tac
-  val rule : (D.tp -> S.hom) -> tac
-  val run : tac -> D.tp -> S.hom
+  val rule : (D.tp * (unit -> S.t) -> S.t) -> tac
+  val run : tac -> D.tp * (unit -> S.t) -> S.t
 end =
 struct
-  type tac = D.tp -> S.hom
+  type tac = D.tp * (unit -> S.t) -> S.t
   let rule k = k
   let run k tp = k tp
 end
 
 and NegChk : sig
   type tac
-  val rule : (D.t -> S.neg * (D.t -> unit)) -> tac
-  val run : tac -> D.t -> S.neg * (D.t -> unit)
+  val rule : (D.t -> (D.t -> unit)) -> tac
+  val run : tac -> D.t -> (D.t -> unit)
   val syn : NegSyn.tac -> tac
 end =
 struct
-  type tac = D.t -> S.neg * (D.t -> unit)
+  type tac = D.t -> (D.t -> unit)
   let rule k = k
   let run k tp = k tp
   let syn tac =
     NegChk.rule @@ fun expected ->
-    let (actual, tm, writer) = NegSyn.run tac in
+    let (actual, tm) = NegSyn.run tac in
     equate ~tp:D.Univ expected actual;
-    (tm, writer)
+    tm
 end
 
 and NegSyn : sig
   type tac
-  val rule : (unit -> D.t * S.neg * (D.t -> unit)) -> tac
-  val run : tac -> D.t * S.neg * (D.t -> unit)
+  val rule : (unit -> D.t * (D.t -> unit)) -> tac
+  val run : tac -> D.t * (D.t -> unit)
 end =
 struct
-  type tac = unit -> D.t * S.neg * (D.t -> unit)
+  type tac = unit -> D.t * (D.t -> unit)
   let rule k = k
   let run k = k ()
 end

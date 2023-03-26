@@ -98,6 +98,10 @@ struct
     let env = Reader.read () in
     Bwd.for_all (fun (c, _) -> !c) env.neg_values
 
+  let head () =
+    let env = Reader.read () in
+    ! (snd (Bwd.nth env.neg_values (env.neg_size - 1)))
+
   let run_linear k =
     Reader.scope drop_linear @@ fun () ->
       k ()

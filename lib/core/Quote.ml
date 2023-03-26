@@ -25,8 +25,8 @@ struct
   let rec quote (tp : D.t) (v : D.t) : S.t =
     match tp, v with
     (* | D.Pi (_nm, D.FinSet ls, tp_clo), D.Lam (nm, clo) when ls != [] ->
-      Debug.print "Lam-FinSet ETA%a@." D.dump_clo clo;
-      let r = S.Lam (nm,
+       Debug.print "Lam-FinSet ETA%a@." D.dump_clo clo;
+       let r = S.Lam (nm,
         bind (D.FinSet ls) @@ fun arg ->
         S.Cases
           ( S.Lam (_nm, bind (D.FinSet ls) @@ fun arg -> quote D.Univ (Sem.inst_clo tp_clo arg))
@@ -36,9 +36,9 @@ struct
             ) ls
           , S.Var 0
           )
-      ) in
-      Debug.print "ETAD%a@." S.dump r;
-      r *)
+       ) in
+       Debug.print "ETAD%a@." S.dump r;
+       r *)
     | D.Pi (_, a, tp_clo), D.Lam (nm, clo) ->
       let body = bind a @@ fun arg ->
         quote (Sem.inst_clo tp_clo arg) (Sem.inst_clo clo arg)
@@ -50,8 +50,8 @@ struct
       in
       S.Lam(nm, body)
     (* | _, D.Pi (nm, D.FinSet ls, clo) when ls != [] ->
-      (* Debug.print "Pi-FinSet ETA@."; *)
-      S.Pi (nm, S.FinSet ls,
+       (* Debug.print "Pi-FinSet ETA@."; *)
+       S.Pi (nm, S.FinSet ls,
         S.Cases
           ( S.Lam (nm, S.Univ)
           , List.map (fun l ->
@@ -60,7 +60,7 @@ struct
             ) ls
           , S.Var 0
           )
-      ) *)
+       ) *)
     | _, D.Pi (nm, a, clo) ->
       let qa = quote D.Univ a in
       let b = bind a @@ fun arg ->
@@ -110,17 +110,18 @@ struct
       in S.PolyIntro (qbase, fib)
     | _, D.Hom (p, q) ->
       S.Hom (quote D.Poly p, quote D.Poly q)
-    (* | D.Hom (p, q), D.HomLam (pos_name, neg_name, clo) ->
-      bind (Sem.do_base p) @@ fun p_base ->
-      let v = Sem.inst_hom_clo clo p_base in
-      let q_base = Sem.do_fst v in
-      let qq_base = quote (Sem.do_base q) q_base in
-      let qp_fib =
-        bind (Sem.do_fib q q_base) @@ fun q_fib ->
-        quote (Sem.do_fib p p_base) (Sem.do_ap (Sem.do_snd v) q_fib)
+    | D.Hom (p, q), D.HomLam wrapped ->
+      let p_base = Sem.do_base p in
+      let tp =
+        Sem.graft_value @@
+        Graft.value p @@ fun p ->
+        Graft.value q @@ fun q ->
+        Graft.value p_base @@ fun p_base ->
+        Graft.build @@
+        TB.sigma (TB.base q) @@ fun q_base ->
+        TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
       in
-      (* let prog = S.Lam (p_name, S.Pair(qq_base, S.Lam (q_name, qp_fib))) in *)
-      S.HomLam (pos_name, neg_name, S.Done (qq_base, S.NegAp (S.Var 0, S.Lam(`Anon, qp_fib)))) *)
+      S.HomLam (quote tp wrapped)
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->
@@ -129,6 +130,7 @@ struct
       quote_neu tp neu
     | tp, tm ->
       Debug.print "Bad quote: %a@." D.dump tm;
+      Debug.print "  against: %a@." D.dump tp;
       invalid_arg "bad quote"
 
   and unstick tp hd =
@@ -191,8 +193,8 @@ struct
       S.Base tm
     | D.Fib {base; value} ->
       S.Fib (tm, quote base value)
-    | D.HomElim {tp; value} ->
-      S.HomElim (tm, quote tp value)
+    | D.HomElim {tp; arg} ->
+      S.HomElim (tm, quote tp arg)
 end
 
 let quote ~env ~tp v =

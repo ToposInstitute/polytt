@@ -56,6 +56,7 @@ let execute_cmd  (cmd : CS.cmd) =
     profile normalize tm
   | CS.Print tm ->
     let (vtp, tm) = Elaborator.syn tm in
+    Debug.print "Preprint: %a@." S.dump tm;
     let tp = Quote.quote_top ~tp:D.Univ vtp in
     Format.printf "%a : %a@."
       (* FIXME may not be correct precedence *)

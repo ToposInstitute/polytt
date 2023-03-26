@@ -38,22 +38,10 @@ type t = Data.syn =
   | Base of t
   | Fib of t * t
   | Hom of t * t
-  | HomLam of Ident.t * Ident.t * hom
+  | HomLam of t
   | HomElim of t * t
   | Hole of t * int
   | Skolem of t
-
-and neg = Data.neg_syn =
-  | Var of int
-  | NegAp of neg * t
-  | NegPair of neg * Ident.t * neg
-  | Drop
-
-and hom = Data.hom_syn =
-  | Set of t * neg * hom
-  | HomAp of t * t * neg * Ident.t * Ident.t * hom
-  | Unpack of { scrut : neg; a_name : Ident.t; b_name : Ident.t; case : hom; }
-  | Done of t * neg
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
@@ -98,48 +86,15 @@ let rec dump fmt =
     Format.fprintf fmt "hom[%a, %a]"
       dump p
       dump q
-  | HomLam (p_name, q_name, bdy) ->
-    Format.fprintf fmt "hom-lam[%a, %a, %a]"
-      Ident.pp p_name
-      Ident.pp q_name
-      dump_hom bdy
+  | HomLam wrapped ->
+    Format.fprintf fmt "hom-lam[%a]"
+      dump wrapped
   | HomElim (hom, i) ->
     Format.fprintf fmt "hom-elim[%a, %a]"
       dump hom
       dump i
   | Hole (tp, n) -> Format.fprintf fmt "hole[%a, %d]" dump tp n
   | Skolem _ -> Format.fprintf fmt "skolem"
-
-and dump_hom fmt =
-  function
-  | Set (pos, neg, steps) ->
-    Format.fprintf fmt "set[%a, %a];@.%a"
-      dump pos
-      dump_neg neg
-      dump_hom steps
-  | HomAp (hom, pos, neg, pos_name, neg_name, steps) ->
-    Format.fprintf fmt "hom-ap[%a, %a, %a, %a, %a];@.%a"
-      dump hom
-      dump pos
-      dump_neg neg
-      Ident.pp pos_name
-      Ident.pp neg_name
-      dump_hom steps
-  | Done (pos, neg) ->
-    Format.fprintf fmt "done[%a, %a]"
-      dump pos
-      dump_neg neg
-
-and dump_neg fmt : neg -> unit =
-  function
-  | Var ix ->
-    Format.fprintf fmt "neg-var[%d]" ix
-  | NegAp (neg, fn) ->
-    Format.fprintf fmt "neg-ap[%a, %a]"
-      dump_neg neg
-      dump fn
-  | Drop ->
-    Format.fprintf fmt "drop"
 
 let to_numeral =
   let rec go acc =
@@ -330,10 +285,8 @@ let rec pp (env : ppenv) =
     Format.fprintf fmt "%a ⇒ %a"
       (pp env (P.left_of arrow)) p
       (pp env (P.right_of arrow)) q
-  | HomLam (p_name, q_name, bdy) ->
-    Format.fprintf fmt "λ %a %a → FIXME :)"
-      Ident.pp p_name
-      Ident.pp q_name
+  | HomLam wrapped ->
+    Format.fprintf fmt "λ ~> FIXME %a FIXME" (pp env P.isolated) wrapped
   (* (pp_hom (abs_pos env p_name #< q_name) (P.right_of arrow)) bdy *)
   | HomElim (hom, i) ->
     Format.fprintf fmt "%a %a"
@@ -341,23 +294,5 @@ let rec pp (env : ppenv) =
       (pp env (P.right_of juxtaposition)) i
   | Hole (_tp, n) -> Format.fprintf fmt "?%d" n
   | Skolem _ -> Format.fprintf fmt "skolem"
-
-(* and pp_hom ppenv prec fmt = *)
-(*   function *)
-(*   | Set (pos, neg, steps) -> *)
-(*     Format.fprintf fmt "%a → %a;@.%a" *)
-(*       (pp ppenv (P.left_of arrow)) pos *)
-(*       (pp_neg ppenv (P.right_of arrow)) neg *)
-(*       (pp_hom ppenv P.isolated) steps *)
-(*   | HomAp (phi, pos, neg, pos_var, neg_var, steps) -> *)
-(*     Format.fprintf fmt "(%a, %a) ⤚ %a → (%a, %a);@.%a" *)
-(*       (pp ppenv (P.left_of arrow)) pos *)
-(*       (pp_neg ppenv (P.right_of arrow)) neg *)
-(*       __ __ *)
-(*       Ident.pp pos_var *)
-(*       Ident.pp neg_var *)
-(*       (pp_hom ppenv P.isolated) steps *)
-(*   | Done (pos, neg) -> *)
-(*     __ *)
 
 let pp_toplevel = pp { pos = Emp; neg_size = 0; neg = Emp } P.isolated

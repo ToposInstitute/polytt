@@ -56,6 +56,8 @@ def id : (P : Poly) → P ⇒ P :=
   λ P → λ a⁺ a⁻ ⇝
     a⁺ ⇜ a⁻
 
+#print (λ P → λ a⁺ a⁻ ⇝ a⁺ ⇜ a⁻) : (P : Poly) → P ⇒ P
+
 def nyan-hom : ℕ → nyan ⇒ nyan :=
   λ n → λ a⁺ a⁻ ⇝
     (a⁺ , a⁻) ⤚ (id nyan) → (b⁺ , b⁻);
