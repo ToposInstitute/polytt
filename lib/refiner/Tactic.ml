@@ -52,28 +52,28 @@ end
 
 and NegChk : sig
   type tac
-  val rule : (D.t -> S.neg) -> tac
-  val run : tac -> D.t -> S.neg
+  val rule : (D.t -> S.neg * (D.t -> unit)) -> tac
+  val run : tac -> D.t -> S.neg * (D.t -> unit)
   val syn : NegSyn.tac -> tac
 end =
 struct
-  type tac = D.t -> S.neg
+  type tac = D.t -> S.neg * (D.t -> unit)
   let rule k = k
   let run k tp = k tp
   let syn tac =
     NegChk.rule @@ fun expected ->
-    let (actual, tm) = NegSyn.run tac in
+    let (actual, tm, writer) = NegSyn.run tac in
     equate ~tp:D.Univ expected actual;
-    tm
+    (tm, writer)
 end
 
 and NegSyn : sig
   type tac
-  val rule : (unit -> D.t * S.neg) -> tac
-  val run : tac -> D.t * S.neg
+  val rule : (unit -> D.t * S.neg * (D.t -> unit)) -> tac
+  val run : tac -> D.t * S.neg * (D.t -> unit)
 end =
 struct
-  type tac = unit -> D.t * S.neg
+  type tac = unit -> D.t * S.neg * (D.t -> unit)
   let rule k = k
   let run k = k ()
 end
@@ -107,12 +107,15 @@ end
 and NegVar : sig
   type tac
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val borrow : tac -> D.t
 end =
 struct
   type tac = { tp : D.tp; lvl : int }
   let abstract ?(name = `Anon) tp k =
     Locals.abstract_neg ~name tp @@ fun lvl ->
     k { tp; lvl }
+
+  let borrow { tp; lvl } = D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
 end
 
 let match_goal k =

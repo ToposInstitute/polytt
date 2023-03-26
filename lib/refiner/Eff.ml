@@ -56,7 +56,7 @@ struct
     local_names : (Cell.t, unit) Yuujinchou.Trie.t;
     size : int;
     neg_size : int;
-    neg_values : (D.t ref) bwd;
+    neg_values : (bool ref * D.t ref) bwd;
     neg_types : D.tp bwd;
     ppenv_pos : Ident.t bwd;
     ppenv_neg : Ident.t bwd
@@ -74,10 +74,33 @@ struct
     ppenv_neg = Emp
   }
 
+  let drop_linear env =
+    { env with
+      local_names = Yuujinchou.Trie.filter
+          ( fun _ (cell, _) ->
+              match cell with
+              | Cell.Pos _ -> true
+              | Cell.Neg _ -> false
+          )
+          env.local_names;
+      neg_size = 0;
+      neg_values = Emp;
+      neg_types = Emp;
+      ppenv_neg = Emp
+    }
+
   module Reader = Algaeff.Reader.Make(struct type nonrec env = env end)
 
   let run_top k =
     Reader.run ~env:top_env k
+
+  let all_consumed () =
+    let env = Reader.read () in
+    Bwd.for_all (fun (c, _) -> !c) env.neg_values
+
+  let run_linear k =
+    Reader.scope drop_linear @@ fun () ->
+      k ()
 
   let env () =
     Reader.read ()
@@ -92,7 +115,7 @@ struct
 
   let qenv () : QuoteEnv.t =
     let env = Reader.read () in
-    { pos_size = env.size; neg_size = env.neg_size; neg = Bwd.map (fun r -> !r) env.neg_values }
+    { pos_size = env.size; neg_size = env.neg_size; neg = Bwd.map (fun (_, r) -> !r) env.neg_values }
 
   let denv () : D.env =
     let env = Reader.read () in
@@ -146,7 +169,7 @@ struct
         local_names;
         neg_size = env.neg_size + 1;
         neg_types = env.neg_types #< tp;
-        neg_values = env.neg_values #< (ref (D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })));
+        neg_values = env.neg_values #< (ref false, ref (D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })));
         ppenv_neg = env.ppenv_neg #< name
       }
 
@@ -168,11 +191,15 @@ struct
     Reader.scope (bind_var cell) @@ fun () ->
     k lvl
 
-  let write_neg lvl value () =
+  let consume_neg lvl () =
     let env = Reader.read () in
-    let value_ref = Bwd.nth env.neg_values ((env.neg_size - 1) - lvl) in
-    value_ref := value;
-    ()
+    let (consumed, value_ref) = Bwd.nth env.neg_values ((env.neg_size - 1) - lvl) in
+    match !consumed with
+    | true ->
+      None
+    | false ->
+      consumed := true;
+      Some (fun value -> value_ref := value)
 end
 
 
