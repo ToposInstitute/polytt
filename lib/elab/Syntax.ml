@@ -32,8 +32,7 @@ and t_ =
   | Univ
   | NegPair of t * Ident.t * t
   | NegPairSimple of t * t
-  | NegUnpack of t * t * Ident.t * Ident.t * t
-  | NegUnpackSimple of t * Ident.t * Ident.t * t
+  | NegUnpack of t * Ident.t * Ident.t * t
   | Poly
   | Base of t
   | Fib of t * t

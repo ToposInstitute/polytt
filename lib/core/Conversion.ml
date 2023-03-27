@@ -5,6 +5,7 @@ module D = Domain
 module Sem = Semantics
 module SS = Set.Make(String)
 module MS = Map.Make(String)
+module Env = QuoteEnv
 
 open TermBuilder
 
@@ -12,11 +13,12 @@ exception Unequal
 
 module Internal =
 struct
-  module Eff = Algaeff.Reader.Make (struct type env = int end)
+  type env = Env.t
+  module Eff = Env.Eff
 
   let bind tp f =
-    let arg = D.var tp @@ Eff.read() in
-    let df () = Eff.scope (fun size -> size + 1) @@ fun () -> f arg in
+    let arg = D.var tp @@ Env.read_pos_size () in
+    let df () = Eff.scope Env.incr_pos @@ fun () -> f arg in
       match tp with
       | D.FinSet ls ->
         begin
@@ -31,8 +33,26 @@ struct
 
   let rec equate tp v1 v2 =
     match (tp, v1, v2) with
-    | _, D.Neu (_, neu1), D.Neu (_, neu2) ->
-      equate_neu neu1 neu2
+    | tp, D.Neu (tp1, neu1), D.Neu (tp2, neu2) ->
+      begin
+        match (try_unstick tp1 neu1, try_unstick tp2 neu2) with
+        | D.Neu (_, neu3), D.Neu (_, neu4) -> equate_neu neu3 neu4
+        | D.Neu _, _ -> raise Unequal
+        | _, D.Neu _ -> raise Unequal
+        | v3, v4 -> equate tp v3 v4
+      end
+    | _, D.Neu (tp, neu), other ->
+      begin
+        match try_unstick tp neu with
+        | D.Neu _ -> raise Unequal
+        | e -> equate tp e other
+      end
+    | _, other, D.Neu (tp, neu) ->
+      begin
+        match try_unstick tp neu with
+        | D.Neu _ -> raise Unequal
+        | e -> equate tp other e
+      end
     | _, D.Pi (_, a1, clo1), D.Pi (_, a2, clo2) ->
       equate D.Univ a1 a2;
       bind a1 @@ fun v ->
@@ -69,19 +89,15 @@ struct
       ()
     | _, D.Univ, D.Univ ->
       ()
-    | _, D.NegUniv, D.NegUniv ->
-      ()
-    | _, D.NegSigma (_, a1, b1), D.NegSigma (_, a2, b2) ->
-      equate D.Univ a1 a2;
-      bind a1 @@ fun v ->
-      equate D.Univ (Sem.inst_clo b1 v) (Sem.inst_clo b2 v)
     | _, D.Poly, D.Poly ->
       ()
     | D.Poly, v1, v2 ->
+      Debug.print "do_base conversion@.";
       let base1 = Sem.do_base v1 in
       let base2 = Sem.do_base v2 in
       equate D.Univ base1 base2;
       bind base1 @@ fun i ->
+      Debug.print "do_fib conversion@.";
       equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
     | _, D.Hom (p1, q1), D.Hom (p2, q2) ->
       equate D.Poly p1 p2;
@@ -91,6 +107,12 @@ struct
         D.dump v1
         D.dump v2;
       raise Unequal
+
+  and try_unstick tp {hd; spine} =
+    match hd with
+    | D.Borrow lvl ->
+      Sem.do_spine (Env.read_neg_lvl lvl) spine
+    | _ -> D.Neu (tp, { hd; spine })
 
   and equate_neu (neu1 : D.neu) (neu2 : D.neu) =
     equate_hd neu1.hd neu2.hd;
@@ -108,8 +130,6 @@ struct
          in the skolem check, as we equate something with itself to
          flush out any skolems. *)
       raise Unequal
-    | D.Negate tp1, D.Negate tp2 ->
-      equate D.Univ tp1 tp2
     | _ ->
       Debug.print "Could not equate heads.@.";
       raise Unequal
@@ -160,10 +180,8 @@ struct
       ()
     | D.Fib fib1, D.Fib fib2 ->
       equate fib1.base fib1.value fib2.value
-    | D.HomElim {tp; value = v1}, D.HomElim {value = v2; _} ->
+    | D.HomElim {tp; arg = v1}, D.HomElim {arg = v2; _} ->
       equate tp v1 v2
-    | D.UnNegate, D.UnNegate ->
-      ()
     | _ ->
       Debug.print "Could not equate frames %a and %a@."
         D.dump_frm frm1
@@ -181,6 +199,6 @@ struct
     | _, _ -> raise Unequal
 end
 
-let equate ~size ~tp v1 v2 =
-  Internal.Eff.run ~env:size @@ fun () ->
+let equate ~env ~tp v1 v2 =
+  Internal.Eff.run ~env @@ fun () ->
   Internal.equate tp v1 v2

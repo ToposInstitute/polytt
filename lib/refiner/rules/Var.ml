@@ -20,8 +20,8 @@ let let_bind ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
 
 let negative (cell : Cell.neg) =
   NegSyn.rule @@ fun () ->
-  let already_used = Linearity.consume cell in
-  if already_used then
-    Error.error `LinearVariableDoubleUse "Linear variable already used."
-  else
-    (cell.tp, S.Var cell.lvl)
+  match Eff.Locals.consume_neg cell.lvl () with
+  | None ->
+    Error.error `LinearVariableDoubleUse "Linear variable already used: %a." Ident.pp cell.name
+  | Some writer ->
+    (cell.tp, writer)

@@ -8,8 +8,8 @@ type 'a tb = int -> 'a
 
 (** A {!type:'a tb} can be thought of a piece of syntax that is
     relative to some environment. *)
-let run_tb (env : D.env) (k : 'a tb) : 'a =
-  k (Bwd.length env)
+let run_tb ({ pos; _ } : D.env) (k : 'a tb) : 'a =
+  k (Bwd.length pos)
 
 (** Convert a DeBruijin level into a DeBruijin indexed variable relative to the environment. *)
 let var (lvl : int) : S.t tb =
@@ -31,11 +31,17 @@ struct
   let lam ?(name = `Anon) body size =
     S.Lam (name, scope body size)
 
+  let let_ ?(name = `Anon) value body size =
+    S.Let (name, value size, scope body size)
+
   let ap fn arg size =
     S.Ap (fn size, arg size)
 
   let sigma ?(name = `Anon) base fam size =
     S.Sigma(name, base size, scope fam size)
+
+  let pair x y size =
+    S.Pair (x size, y size)
 
   let nat _ =
     S.Nat
@@ -58,19 +64,11 @@ struct
   let univ _ =
     S.Univ
 
-  let negate tp size =
-    S.Negate (tp size)
-
-  let unnegate tp size =
-    S.UnNegate (tp size)
-
-  let neg_sigma ?(name = `Anon) base fam size =
-    S.NegSigma(name, base size, scope fam size)
-
   let base p size =
     S.Base (p size)
 
   let fib p i size =
+    Debug.print "build fib %a %a@." S.dump (p size) S.dump (i size);
     S.Fib (p size, i size)
 end
 
@@ -79,11 +77,11 @@ struct
   type 'a t = D.env -> 'a tb * D.env
 
   let value (v : D.t) (k : S.t tb -> 'a t) : 'a t =
-    fun env ->
+    fun ({ pos; neg_size; neg }) ->
     (* Create a variable that points to the end of the extended context.
        The DeBruijin arithmetic is a little tricky, but lets us avoid a subtraction. *)
-    let x = var (Bwd.length env) in
-    let env = env #< v in
+    let x = var (Bwd.length pos) in
+    let env : D.env = { pos = pos #< v; neg_size; neg } in
     k x env
 
   let clo (clo : D.tm_clo) (k : S.t tb -> 'a t) : 'a t =
@@ -93,6 +91,6 @@ struct
     fun env -> (builder, env)
 
   let graft (k : 'a t) : 'a * D.env =
-    let (tb, env) = k Emp in
+    let (tb, env) = k { pos = Emp; neg_size = 0; neg = Emp } in
     (run_tb env tb , env)
 end

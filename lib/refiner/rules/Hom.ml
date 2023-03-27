@@ -13,20 +13,17 @@ let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.t
   | D.Hom (p, q) ->
     let p_base = do_base p in
     let ok =
-      Linearity.run @@ fun () ->
+      Eff.Locals.run_linear @@ fun () ->
       Var.abstract ~name:pos_name p_base @@ fun pos_var ->
+      Debug.print "do_fib Hom.intro@.";
       let p_fib = do_fib p (Var.value pos_var) in
       Core.Debug.print "Introducing negated %a@." D.dump p_fib;
-      NegVar.abstract ~name:neg_name (do_negate p_fib) @@ fun neg_var ->
-      let bdy = Hom.run (bdy_tac pos_var neg_var) q in
-      S.HomLam (pos_name, neg_name, bdy)
-    in
-    begin
-      match ok with
-      | Some ok -> ok
-      | None ->
-        Error.error `LinearVariablesNotUsed "Didn't use all your linear variables."
-    end
+      NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
+      let tail () = quote ~tp:p_fib (Eff.Locals.head ())
+      in
+      let bdy = Hom.run (bdy_tac pos_var neg_var) (q, tail) in
+      S.HomLam (S.Lam (pos_name, bdy))
+    in ok
   | _ ->
     Error.error `TypeError "Must do a hom lambda in hom."
 
@@ -43,6 +40,7 @@ let elim hom_tac arg_tac =
       Graft.value (eval p_base) @@ fun p_base ->
       Graft.build @@
       TB.sigma (TB.base q) @@ fun q_base ->
+      Debug.print "building fibs for Hom.elim@.";
       TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
     in
     tp, S.HomElim (hom, p_base)
@@ -53,15 +51,16 @@ let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   NegSyn.rule @@ fun () ->
   Debug.print "Doing a neg ap@.";
   let fn_tp, fn = Syn.run fn_tac in
+  let f = (eval fn) in
   match fn_tp with
   | D.Pi (_, a, clo) ->
     begin
       match inst_const_clo ~tp:a clo with
       | Some b ->
-        let neg = NegChk.run neg_tac (do_negate b) in
+        let neg = NegChk.run neg_tac b in
         Debug.print "b in neg_ap: %a@." S.dump (quote ~tp:D.Univ b);
-        Debug.print "%a in neg_ap@." S.dump (quote ~tp:D.NegUniv (do_negate a));
-        do_negate a, S.NegAp (neg, fn)
+        Debug.print "%a in neg_ap@." S.dump (quote ~tp:D.Univ a);
+        a, fun v -> neg (do_ap f v)
       | None ->
         Error.error `TypeError "The skolem. He escaped his scope. Yes. YES. The skolem is out."
     end
@@ -70,14 +69,14 @@ let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
 
 let drop : NegChk.tac =
   NegChk.rule @@ fun _ ->
-  S.Drop
+  fun _ -> ()
 
 let set (pos_tac : Syn.tac) (neg_tac : NegChk.tac) (steps_tac : Hom.tac) : Hom.tac =
   Hom.rule @@ fun q ->
   let pos_tp, pos = Syn.run pos_tac in
-  let neg = NegChk.run neg_tac (do_negate pos_tp) in
-  let steps = Hom.run steps_tac q in
-  S.Set (pos, neg, steps)
+  let neg = NegChk.run neg_tac pos_tp in
+  neg (eval pos);
+  Hom.run steps_tac q
 
 let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
     (phi_tac : Syn.tac)
@@ -89,17 +88,34 @@ let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
   | D.Hom (p, q) ->
     let pos = Chk.run pos_tac (do_base p) in
     let vpos = eval pos in
-    let neg = NegChk.run neg_tac (do_negate @@ do_fib p vpos) in
-    Var.abstract ~name:pos_name (do_base q) @@ fun pos_var ->
-    NegVar.abstract ~name:neg_name (do_negate @@ do_fib q (Var.value pos_var)) @@ fun neg_var ->
+    Debug.print "do_fib Hom.ap 1@.";
+    let neg = NegChk.run neg_tac (do_fib p vpos) in
+    let phi_v = do_hom_elim (eval phi) vpos in
+    Debug.print "do_fst Hom.ap@.";
+    let phi_base = do_fst phi_v in
+    let phi_fib = do_snd phi_v in
+    Var.concrete ~name:pos_name (do_base q) phi_base @@ fun pos_var ->
+    Debug.print "do_fib Hom.ap 2@.";
+    NegVar.abstract ~name:neg_name (do_fib q (Var.value pos_var)) @@ fun neg_var ->
+    Debug.print "do_ap Hom.ap@.";
+    neg (do_ap phi_fib (NegVar.borrow neg_var));
     let steps = Hom.run (steps_tac pos_var neg_var) r in
-    S.HomAp (phi, pos, neg, pos_name, neg_name, steps)
+    S.Let (pos_name, S.Fst (S.HomElim (phi, pos)), steps)
   | _ ->
     Error.error `TypeError "Must ap a hom to a hom!"
 
 (* done is a reserved keyword :) *)
 let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
-  Hom.rule @@ fun r ->
+  Hom.rule @@ fun (r, i) ->
   let pos = Chk.run pos_tac (do_base r) in
-  let neg = NegChk.run neg_tac (do_negate @@ do_fib r (eval pos)) in
-  S.Done (pos, neg)
+  Debug.print "do_fib Hom.done_@.";
+  let fib = (do_fib r (eval pos)) in
+  let neg = NegChk.run neg_tac fib in
+  Eff.Locals.abstract fib @@ fun v ->
+    neg v;
+    let fib_act = i () in
+    match Eff.Locals.all_consumed () with
+    | true ->
+      S.Pair (pos, S.Lam (`Anon, fib_act))
+    | false ->
+      Error.error `LinearVariablesNotUsed "Didn't use all your linear variables."

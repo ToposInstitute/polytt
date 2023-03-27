@@ -41,23 +41,23 @@ end
 
 and Hom : sig
   type tac
-  val rule : (D.tp -> S.hom) -> tac
-  val run : tac -> D.tp -> S.hom
+  val rule : (D.tp * (unit -> S.t) -> S.t) -> tac
+  val run : tac -> D.tp * (unit -> S.t) -> S.t
 end =
 struct
-  type tac = D.tp -> S.hom
+  type tac = D.tp * (unit -> S.t) -> S.t
   let rule k = k
   let run k tp = k tp
 end
 
 and NegChk : sig
   type tac
-  val rule : (D.t -> S.neg) -> tac
-  val run : tac -> D.t -> S.neg
+  val rule : (D.t -> (D.t -> unit)) -> tac
+  val run : tac -> D.t -> (D.t -> unit)
   val syn : NegSyn.tac -> tac
 end =
 struct
-  type tac = D.t -> S.neg
+  type tac = D.t -> (D.t -> unit)
   let rule k = k
   let run k tp = k tp
   let syn tac =
@@ -69,11 +69,11 @@ end
 
 and NegSyn : sig
   type tac
-  val rule : (unit -> D.t * S.neg) -> tac
-  val run : tac -> D.t * S.neg
+  val rule : (unit -> D.t * (D.t -> unit)) -> tac
+  val run : tac -> D.t * (D.t -> unit)
 end =
 struct
-  type tac = unit -> D.t * S.neg
+  type tac = unit -> D.t * (D.t -> unit)
   let rule k = k
   let run k = k ()
 end
@@ -107,12 +107,24 @@ end
 and NegVar : sig
   type tac
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
+  val borrow : tac -> D.t
 end =
 struct
   type tac = { tp : D.tp; lvl : int }
   let abstract ?(name = `Anon) tp k =
     Locals.abstract_neg ~name tp @@ fun lvl ->
     k { tp; lvl }
+
+  let concrete ?(name = `Anon) tp value k =
+    Locals.abstract_neg ~name tp @@ fun lvl ->
+    match Locals.consume_neg lvl () with
+    | None -> invalid_arg ""
+    | Some writer ->
+      writer value;
+      k { tp; lvl }
+
+  let borrow { tp; lvl } = D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
 end
 
 let match_goal k =
@@ -131,11 +143,11 @@ let pp_sequent_ctx ppenv fmt (ctx, k) =
       k ppenv fmt
     | (name, tp) :: ctx ->
       (* FIXME this does not include negatives *)
-      let tp = Quote.quote ~size ~tp:D.Univ tp in
+      let tp = Quote.quote ~env:{ pos_size = size; neg_size = 0; neg = Emp } ~tp:D.Univ tp in
       Format.fprintf fmt "  %a : %a@.%a"
         Ident.pp name
         (S.pp ppenv Precedence.isolated) tp
-        (go (ppenv #< name) (size + 1)) ctx
+        (go (S.abs_pos ppenv name) (size + 1)) ctx
   in
   go ppenv 0 fmt ctx
 
@@ -149,4 +161,4 @@ let pp_sequent_nogoal _ppenv fmt =
 let print_ctx fmt k =
   let ppenv = Locals.ppenv () in
   let ctx = Locals.local_types () in
-  pp_sequent_ctx Emp fmt (List.combine (Bwd.to_list ppenv) (Bwd.to_list ctx), k)
+  pp_sequent_ctx { pos = Emp; neg_size = 0; neg = Emp } fmt (List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx), k)

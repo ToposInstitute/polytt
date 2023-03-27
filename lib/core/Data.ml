@@ -10,6 +10,8 @@ type 'a labeled = (string * 'a) list
 
 type syn =
   | Var of int
+  | Borrow of int
+  (** Negative variables are DeBruijn levels, even in the syntax! *)
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
   | Lam of Ident.t * syn (* λ x. e *)
   | Let of Ident.t * syn * syn (* let x = e in t *)
@@ -36,33 +38,16 @@ type syn =
   | Label of labelset * label (* .foo *)
   | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
   | Univ
-  | NegUniv
-  | Negate of syn
-  | UnNegate of syn
-  | NegSigma of Ident.t * syn * syn
   | Poly
-  | PolyIntro of syn * syn
+  | PolyIntro of Ident.t * syn * syn
   | Base of syn
   | Fib of syn * syn
   | Hom of syn * syn
-  | HomLam of Ident.t * Ident.t * hom_syn
+  | HomLam of syn
   | HomElim of syn * syn
   | Hole of syn * int
   | Skolem of syn
   (** Used for ensuring that pi types are not dependent, see Skolem.ml *)
-
-and neg_syn =
-  | Var of int
-  (** Variables are DeBruijn levels, even in the syntax! *)
-  | NegAp of neg_syn * syn
-  | NegPair of neg_syn * Ident.t * neg_syn
-  | Drop
-
-and hom_syn =
-  | Set of syn * neg_syn * hom_syn
-  | HomAp of syn * syn * neg_syn * Ident.t * Ident.t * hom_syn
-  | Unpack of { scrut : neg_syn; a_name : Ident.t; b_name : Ident.t; case : hom_syn; }
-  | Done of syn * neg_syn
 
 and value =
   | Neu of value * neu
@@ -78,21 +63,18 @@ and value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
-  | NegUniv
-  | NegSigma of Ident.t * value * tm_clo
   | Poly
-  | PolyIntro of value * tm_clo
+  | PolyIntro of Ident.t * value * tm_clo
   | Hom of value * value
-  | HomLam of Ident.t * Ident.t * hom_clo
-  | FibLam of prog
+  | HomLam of value
 
 and neu = { hd : hd; spine : frame bwd }
 
 and hd =
   | Var of int
+  | Borrow of int
   | Hole of value * int
   | Skolem of value
-  | Negate of value
 
 and frame =
   | Ap of { tp : value; arg : value }
@@ -102,29 +84,10 @@ and frame =
   | Cases of { mot : value; cases : (string * value) list }
   | Base
   | Fib of { base : value; value : value }
-  | HomElim of { tp : value; value : value }
-  | UnNegate
+  | HomElim of { tp : value; arg : value }
 
-(** {1 Instructions} *)
-and instr =
-  | Const of { write_addr : int; value : value }
-  (** Write [value] to [write_addr] *)
-  | NegAp of { write_addr : int; read_addr : int; fn : value }
-  (** Read a value from [read_addr], apply [fn] to it, and write the result to [write_addr]. *)
-  | Unpair of { read_addr : int; write_addr : int; clo : neg_clo; }
-  (** Read a pair from [read_addr], write its first component to [write_addr],
-      instantiate and the closure with the first component, execute with the second
-      component. *)
-  | Pack of { write_addr : int; read_fst_addr : int; read_snd_addr : int }
-
-and prog = { addr : int; capacity : int; instrs : instr list }
-(** A compiled program, created by reverse evaluation.
-    When applied, place the argument in the address of the
-    [int] parameter, execute the instructions, and then
-    read off the outputs off the 0th cell. *)
-
-and env = value bwd
+and env = { pos : value bwd; neg_size : int; neg : value bwd }
+(** We need to evaluate positive values, but we only borrow negatives so we just
+    need their types, and we pass the size for quicker level<->index conversion *)
 and 'a clo = Clo of { env : env; body : 'a }
 and tm_clo = syn clo
-and neg_clo = neg_syn clo
-and hom_clo = hom_syn clo
