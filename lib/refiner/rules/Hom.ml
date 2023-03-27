@@ -19,7 +19,9 @@ let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.t
       let p_fib = do_fib p (Var.value pos_var) in
       Core.Debug.print "Introducing negated %a@." D.dump p_fib;
       NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
-      let bdy = Hom.run (bdy_tac pos_var neg_var) (q, fun () -> quote ~tp:p_fib (Eff.Locals.head ())) in
+      let tail () = quote ~tp:p_fib (Eff.Locals.head ())
+      in
+      let bdy = Hom.run (bdy_tac pos_var neg_var) (q, tail) in
       S.HomLam (S.Lam (pos_name, bdy))
     in ok
   | _ ->
@@ -49,6 +51,7 @@ let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   NegSyn.rule @@ fun () ->
   Debug.print "Doing a neg ap@.";
   let fn_tp, fn = Syn.run fn_tac in
+  let f = (eval fn) in
   match fn_tp with
   | D.Pi (_, a, clo) ->
     begin
@@ -57,7 +60,7 @@ let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
         let neg = NegChk.run neg_tac b in
         Debug.print "b in neg_ap: %a@." S.dump (quote ~tp:D.Univ b);
         Debug.print "%a in neg_ap@." S.dump (quote ~tp:D.Univ a);
-        a, fun v -> neg (do_ap (eval fn) v)
+        a, fun v -> neg (do_ap f v)
       | None ->
         Error.error `TypeError "The skolem. He escaped his scope. Yes. YES. The skolem is out."
     end
@@ -94,11 +97,10 @@ let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
     Var.concrete ~name:pos_name (do_base q) phi_base @@ fun pos_var ->
     Debug.print "do_fib Hom.ap 2@.";
     NegVar.abstract ~name:neg_name (do_fib q (Var.value pos_var)) @@ fun neg_var ->
+    Debug.print "do_ap Hom.ap@.";
     neg (do_ap phi_fib (NegVar.borrow neg_var));
-    Debug.print "do_fib Hom.ap 3@.";
     let steps = Hom.run (steps_tac pos_var neg_var) r in
-    (* FIXME *)
-    steps
+    S.Let (pos_name, S.Fst (S.HomElim (phi, pos)), steps)
   | _ ->
     Error.error `TypeError "Must ap a hom to a hom!"
 
@@ -111,8 +113,9 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   let neg = NegChk.run neg_tac fib in
   Eff.Locals.abstract fib @@ fun v ->
     neg v;
+    let fib_act = i () in
     match Eff.Locals.all_consumed () with
     | true ->
-      S.Pair (pos, S.Lam (`Anon, i ()))
+      S.Pair (pos, S.Lam (`Anon, fib_act))
     | false ->
       Error.error `LinearVariablesNotUsed "Didn't use all your linear variables."

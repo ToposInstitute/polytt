@@ -40,6 +40,7 @@ struct
     | S.Let (_nm, tm1, tm2) ->
       inst_clo (clo tm2) (eval tm1)
     | S.Ap (f, a) ->
+      Debug.print "do_ap from syntax@.";
       do_ap (eval f) (eval a)
     | S.Sigma (nm, a, b) ->
       D.Sigma (nm, eval a, clo b)
@@ -93,7 +94,7 @@ struct
     match f with
     | D.Lam (_t, clo) ->
       inst_clo clo arg
-    | D.Neu (Pi(_t, a, clo), neu) ->
+    | D.Neu (Pi (_t, a, clo), neu) ->
       let fib = inst_clo clo arg in
       D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
     | d ->
@@ -103,13 +104,23 @@ struct
   and do_hom_elim (f : D.t) (arg : D.t) =
     match f with
     | D.HomLam wrapped ->
+      Debug.print "do_hom_elim -> do_ap";
       do_ap wrapped arg
-    | D.Neu (Pi(_t, a, clo), neu) ->
-      let fib = inst_clo clo arg in
-      D.Neu (fib, D.push_frm neu (D.HomElim { tp = a; arg }))
+    | D.Neu (Hom (p, q), neu) ->
+      let tp =
+        graft_value @@
+        Graft.value p @@ fun p ->
+        Graft.value q @@ fun q ->
+        Graft.value arg @@ fun p_base ->
+        Graft.build @@
+        TB.sigma (TB.base q) @@ fun q_base ->
+        Debug.print "building HomElim type@.";
+        TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
+      in
+      D.Neu (tp, D.push_frm neu (D.HomElim { tp = do_base p; arg }))
     | d ->
-      Debug.print "Tried to do_ap against %a@." D.dump d;
-      invalid_arg "bad do_ap"
+      Debug.print "Tried to do_hom_elim against %a@." D.dump d;
+      invalid_arg "bad do_hom_elim"
 
   and do_aps f args =
     List.fold_left do_ap f args
