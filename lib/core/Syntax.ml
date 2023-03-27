@@ -109,7 +109,8 @@ let to_numeral =
 (** Precedence levels *)
 let atom = P.nonassoc 11
 let juxtaposition = P.left 10
-let star = P.right 4
+let star = P.right 5
+let hom = P.right 4
 let arrow = P.right 3
 let equals = P.right 2
 
@@ -124,7 +125,7 @@ let classify_tm =
   | Sigma (`Anon, _, _) -> star
   | Sigma _ -> arrow
   | Pair _ -> atom
-  | PolyIntro _ -> atom
+  | PolyIntro _ -> star
   | Fst _ -> juxtaposition
   | Snd _ -> juxtaposition
   | Base _ -> juxtaposition
@@ -145,7 +146,7 @@ let classify_tm =
   | FinSet _ -> atom
   | Label _ -> atom
   | Cases _ -> juxtaposition
-  | Hom _ -> arrow
+  | Hom _ -> hom
   | HomLam _ -> arrow
   | HomElim _ -> juxtaposition
   | Hole _ -> atom
