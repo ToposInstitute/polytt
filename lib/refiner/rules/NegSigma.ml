@@ -27,34 +27,14 @@ let intro_simple x_tac y_tac =
   in
   tp, fun v -> x (do_fst v); y (do_snd v)
 
-let rec_ scrut_tac ?(a_name = `Anon) ?(b_name = `Anon) case_tac =
-  Hom.rule @@ fun q ->
-  let scrut_tp, scrut = NegSyn.run scrut_tac in
-  match scrut_tp with
-  | D.Sigma (_, a, b) ->
-    begin
-      match inst_const_clo ~tp:a b with
-      | Some b ->
-        NegVar.abstract ~name:a_name a @@ fun a_neg ->
-        NegVar.abstract ~name:b_name b @@ fun b_neg ->
-        scrut (D.Pair (NegVar.borrow a_neg, NegVar.borrow b_neg));
-        Hom.run (case_tac a_neg b_neg) q
-      | None ->
-        Core.Debug.print "Uh oh: %a@." D.dump scrut_tp;
-        Error.error `TypeError "Tried to use the rec rule on a dependent negative pair. Try elim instead!"
-    end
-  | _ ->
-    Error.error `TypeError "Tried to neg pair eliminate something thats not a neg sigma."
-
-let elim scrut_tac pos_tac ?(a_name = `Anon) ?(b_name = `Anon) case_tac =
+let elim scrut_tac ?(a_name = `Anon) ?(b_name = `Anon) case_tac =
   Hom.rule @@ fun q ->
   let scrut_tp, scrut = NegSyn.run scrut_tac in
   match scrut_tp with
   | D.Sigma (_, a, b) ->
     Core.Debug.print "Checking pos against %a@." D.dump a;
-    let pos = Chk.run pos_tac a in
     NegVar.abstract ~name:a_name a @@ fun a_neg ->
-    NegVar.abstract ~name:b_name (inst_clo b (eval pos)) @@ fun b_neg ->
+    NegVar.abstract ~name:b_name (inst_clo b (NegVar.borrow a_neg)) @@ fun b_neg ->
       scrut (D.Pair (NegVar.borrow a_neg, NegVar.borrow b_neg));
     Hom.run (case_tac a_neg b_neg) q
   | _ ->

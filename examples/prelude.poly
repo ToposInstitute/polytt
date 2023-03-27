@@ -109,7 +109,7 @@ def test-pair : nyan ⇒ (tensor nyan nyan) :=
 
 def swap : (P : Poly) → (Q : Poly) → tensor P Q ⇒ tensor Q P :=
   λ P Q → λ pq⁺ pq⁻ ⇝
-    pq⁻ [] → (p⁻ , q⁻);
+    pq⁻ → (p⁻ , q⁻);
     ((snd pq⁺ , fst pq⁺)) ⇜ [q⁻ , λ _ → p⁻]
 
 -- λ (p⁺, q⁺) (p⁻, q⁻) ⇝ (q⁺ , p⁺) , (q⁻ , p⁻)
@@ -126,8 +126,8 @@ def internal-hom : Poly → Poly → Poly :=
 
 def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
   λ P Q → λ pf⁺ pf⁻ ⇝
-    pf⁻ [] → (p⁻ , f⁻);
-    f⁻ [ fst pf⁺ ] → (pb⁻ , q⁻);
+    pf⁻ → (p⁻ , f⁻);
+    f⁻ → (pb⁻ , q⁻);
     (fst pf⁺) → pb⁻;
     (fst ((snd pf⁺) (fst pf⁺))) ⇜ ([p⁻ ∘ (snd ((snd pf⁺) (fst pf⁺))) , q⁻] ∘ (dup (fib Q (fst ((snd pf⁺) (fst pf⁺))))))
 

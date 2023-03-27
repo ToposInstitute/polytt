@@ -142,10 +142,8 @@ struct
       Hom.set (syn pos) (neg_chk neg) (hom steps)
     | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->
       Hom.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> hom steps)
-    | NegUnpack (scrut, pos, a_name, b_name, body) ->
-      NegSigma.elim (neg_syn scrut) (chk pos) ~a_name ~b_name (fun _ _ -> hom body)
-    | NegUnpackSimple (scrut, a_name, b_name, body) ->
-      NegSigma.rec_ (neg_syn scrut) ~a_name ~b_name (fun _ _ -> hom body)
+    | NegUnpack (scrut, a_name, b_name, body) ->
+      NegSigma.elim (neg_syn scrut) ~a_name ~b_name (fun _ _ -> hom body)
     | Done (pos, neg) ->
       Hom.done_ (chk pos) (neg_chk neg)
     | _ ->
