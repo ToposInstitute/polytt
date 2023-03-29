@@ -18,6 +18,7 @@ struct
 
   let borrow lvl =
     let env = Env.read () in
+    if (lvl >= env.neg_size) then invalid_arg (Format.asprintf "Semantics.borrow out of bounds: %d >= %d" lvl env.neg_size);
     D.Neu (Bwd.nth env.neg ((env.neg_size - 1) - lvl), { hd = D.Borrow lvl; spine = Emp })
 
   let bind value k () =
@@ -40,7 +41,6 @@ struct
     | S.Let (_nm, tm1, tm2) ->
       inst_clo (clo tm2) (eval tm1)
     | S.Ap (f, a) ->
-      Debug.print "do_ap from syntax@.";
       do_ap (eval f) (eval a)
     | S.Sigma (nm, a, b) ->
       D.Sigma (nm, eval a, clo b)
@@ -77,7 +77,6 @@ struct
     | S.Base p ->
       do_base (eval p)
     | S.Fib (p, i) ->
-      Debug.print "do_fib from syntax@.";
       do_fib (eval p) (eval i)
     | S.Hom (p, q) ->
       D.Hom (eval p, eval q)
@@ -104,7 +103,6 @@ struct
   and do_hom_elim (f : D.t) (arg : D.t) =
     match f with
     | D.HomLam wrapped ->
-      Debug.print "do_hom_elim -> do_ap";
       do_ap wrapped arg
     | D.Neu (Hom (p, q), neu) ->
       let tp =
@@ -114,7 +112,6 @@ struct
         Graft.value arg @@ fun p_base ->
         Graft.build @@
         TB.sigma (TB.base q) @@ fun q_base ->
-        Debug.print "building HomElim type@.";
         TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
       in
       D.Neu (tp, D.push_frm neu (D.HomElim { tp = do_base p; arg }))

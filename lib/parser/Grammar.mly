@@ -26,9 +26,9 @@ let neg_ap_or_atomic neg fns =
 %token <bool> FLAG
 %token <string> ATOM
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW UNDERSCORE EQUALS QUESTION
+%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW UNDERSCORE EQUALS QUESTION BANG
 (* Symbols *)
-%token FORALL LAMBDA LET IN
+%token FORALL LAMBDA LET IN LET_MINUS LAMBDA_MINUS END
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
 %token POLY BASE FIB RIGHT_THICK_ARROW
@@ -163,13 +163,35 @@ hom_body:
 
 plain_hom_body:
   | tm = atomic_term; RIGHT_ARROW; neg = neg_term; SEMICOLON; hom = hom_body
-    { CS.Set(tm, neg, hom) }
+    { CS.Set (tm, neg, hom) }
   | LPR; pos = term; COMMA; neg = neg_term; RPR; RIGHT_ARROW_TAIL; hom = atomic_term; RIGHT_ARROW; LPR; pos_name = name; COMMA; neg_name = name; RPR; SEMICOLON; body = hom_body
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
   | p = atomic_neg_term; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
     { CS.NegUnpack (p, a_name, b_name, body) }
+  | LET; nm = name; EQUALS; tm = term; SEMICOLON; hom = hom_body
+    { CS.Let (nm, tm, hom) }
+  | LET_MINUS; nm = name; EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
+    { CS.NegLet (nm, tm, hom) }
   | pos = atomic_term; LEFT_SQUIGGLY_ARROW; neg = neg_term
     { CS.Done (pos, neg) }
+
+program:
+  | t = located(plain_program)
+    { t }
+
+plain_program:
+  | tm = atomic_term; RIGHT_ARROW; neg = neg_term; SEMICOLON; hom = program
+    { CS.Set (tm, neg, hom) }
+  | LPR; pos = term; COMMA; neg = neg_term; RPR; RIGHT_ARROW_TAIL; hom = atomic_term; RIGHT_ARROW; LPR; pos_name = name; COMMA; neg_name = name; RPR; SEMICOLON; body = program
+    { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
+  | p = atomic_neg_term; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = program
+    { CS.NegUnpack (p, a_name, b_name, body) }
+  | LET; nm = name; EQUALS; tm = term; SEMICOLON; hom = program
+    { CS.Let (nm, tm, hom) }
+  | LET_MINUS; nm = name; EQUALS; tm = neg_term; SEMICOLON; hom = program
+    { CS.NegLet (nm, tm, hom) }
+  | END
+    { CS.End }
 
 neg_spine:
   | CIRC; tms = separated_nonempty_list(CIRC, atomic_term)
@@ -182,6 +204,8 @@ neg_term:
 plain_neg_term:
   | neg = atomic_neg_term; tms = option(neg_spine)
     { neg_ap_or_atomic neg tms }
+  | LAMBDA_MINUS; nm = name; RIGHT_ARROW; prog = program
+    { CS.NegLam (nm, prog) }
 
 atomic_neg_term:
   | t = located(plain_atomic_neg_term)
@@ -196,7 +220,7 @@ plain_atomic_neg_term:
     { CS.NegPairSimple (a, b) }
   | path = path
     { CS.Var path }
-  | UNDERSCORE
+  | BANG
     { CS.Drop }
 
 atomic_term:

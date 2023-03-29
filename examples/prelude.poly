@@ -103,7 +103,7 @@ def Gate : Type → Type → Type :=
 def test-pair : nyan ⇒ (tensor nyan nyan) :=
   λ n⁺ n⁻ ⇝
     (n⁺ , n⁻) ⤚ (nyan-hom 12) → (b⁺ , b⁻);
-    ((n⁺ , b⁺)) ⇜ [_ , λ _ → b⁻ ∘ succ]
+    ((n⁺ , b⁺)) ⇜ [! , λ _ → b⁻ ∘ succ]
 
 #normalize (test-pair 1)
 
@@ -126,10 +126,13 @@ def internal-hom : Poly → Poly → Poly :=
 
 def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
   λ P Q → λ pf⁺ pf⁻ ⇝
+    let p⁺ = fst pf⁺;
+    let f⁺ = snd pf⁺;
+    let qf⁺ = f⁺ p⁺;
     pf⁻ → (p⁻ , f⁻);
     f⁻ → (pb⁻ , q⁻);
     (fst pf⁺) → pb⁻;
-    (fst ((snd pf⁺) (fst pf⁺))) ⇜ ([p⁻ ∘ (snd ((snd pf⁺) (fst pf⁺))) , q⁻] ∘ (dup (fib Q (fst ((snd pf⁺) (fst pf⁺))))))
+    (fst qf⁺) ⇜ ([p⁻ ∘ (snd qf⁺) , q⁻] ∘ (dup (fib Q (fst qf⁺))))
 
 #normalize (eval nyan nyan) (3 , nyan-hom 12)
 

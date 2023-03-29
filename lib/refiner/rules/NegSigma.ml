@@ -35,7 +35,7 @@ let elim scrut_tac ?(a_name = `Anon) ?(b_name = `Anon) case_tac =
     Core.Debug.print "Checking pos against %a@." D.dump a;
     NegVar.abstract ~name:a_name a @@ fun a_neg ->
     NegVar.abstract ~name:b_name (inst_clo b (NegVar.borrow a_neg)) @@ fun b_neg ->
-      scrut (D.Pair (NegVar.borrow a_neg, NegVar.borrow b_neg));
+    scrut (D.Pair (NegVar.borrow a_neg, NegVar.borrow b_neg));
     Hom.run (case_tac a_neg b_neg) q
   | _ ->
     Error.error `TypeError "Tried to neg pair eliminate something thats not a neg sigma."

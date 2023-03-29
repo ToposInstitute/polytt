@@ -49,6 +49,8 @@ struct
       NegSigma.intro (neg_chk a) ~name (fun _ -> neg_chk b)
     | CS.Drop ->
       Hom.drop
+    | CS.NegLam (name, body) ->
+      Prog.neg_lam ~name (fun _ -> prog body)
     | _ ->
       T.NegChk.syn (neg_syn tm)
 
@@ -144,10 +146,34 @@ struct
       Hom.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> hom steps)
     | NegUnpack (scrut, a_name, b_name, body) ->
       NegSigma.elim (neg_syn scrut) ~a_name ~b_name (fun _ _ -> hom body)
+    | Let (name, tm, body) ->
+      Hom.pos_let ~name (syn tm) (fun _ -> hom body)
+    | NegLet (name, tm, body) ->
+      Hom.neg_let ~name (neg_syn tm) (fun _ -> hom body)
     | Done (pos, neg) ->
       Hom.done_ (chk pos) (neg_chk neg)
     | _ ->
       T.Error.error `NotAHom "Cannot be used to build a hom."
+
+  and prog (tm : CS.t) =
+    T.Error.locate tm.loc @@ fun () ->
+    match tm.node with
+    | Set (pos, neg, steps) ->
+      Prog.set (syn pos) (neg_chk neg) (prog steps)
+    | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->
+      Prog.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> prog steps)
+    (* TODO *)
+    (* | NegUnpack (scrut, a_name, b_name, body) ->
+      NegSigma.elim (neg_syn scrut) ~a_name ~b_name (fun _ _ -> prog body) *)
+    | Let (name, tm, body) ->
+      Prog.pos_let ~name (syn tm) (fun _ -> prog body)
+    | NegLet (name, tm, body) ->
+      Prog.neg_let ~name (neg_syn tm) (fun _ -> prog body)
+    | End ->
+      Prog.end_
+    | _ ->
+      (* FIXME *)
+      T.Error.error `NotAHom "Cannot be used to build a program."
 
 
   and syn_var path =

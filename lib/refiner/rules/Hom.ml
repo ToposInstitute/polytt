@@ -15,7 +15,6 @@ let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.t
     let ok =
       Eff.Locals.run_linear @@ fun () ->
       Var.abstract ~name:pos_name p_base @@ fun pos_var ->
-      Debug.print "do_fib Hom.intro@.";
       let p_fib = do_fib p (Var.value pos_var) in
       Core.Debug.print "Introducing negated %a@." D.dump p_fib;
       NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
@@ -46,6 +45,21 @@ let elim hom_tac arg_tac =
     tp, S.HomElim (hom, p_base)
   | _ ->
     Error.error `TypeError "Tried to eliminate from non-hom."
+
+let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
+  Hom.rule @@ fun r ->
+  let tp, tm = Syn.run tm in
+  let v = Eff.eval tm in
+  Var.concrete ~name tp v @@ fun v ->
+  let steps = Hom.run (f v) r in
+  S.Let (name, tm, steps)
+
+let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Hom.tac) =
+  Hom.rule @@ fun r ->
+  let tp, tm = NegSyn.run tm in
+  NegVar.abstract ~name tp @@ fun v ->
+  tm (NegVar.borrow v);
+  Hom.run (f v) r
 
 let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   NegSyn.rule @@ fun () ->
@@ -88,16 +102,12 @@ let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
   | D.Hom (p, q) ->
     let pos = Chk.run pos_tac (do_base p) in
     let vpos = eval pos in
-    Debug.print "do_fib Hom.ap 1@.";
     let neg = NegChk.run neg_tac (do_fib p vpos) in
     let phi_v = do_hom_elim (eval phi) vpos in
-    Debug.print "do_fst Hom.ap@.";
     let phi_base = do_fst phi_v in
     let phi_fib = do_snd phi_v in
     Var.concrete ~name:pos_name (do_base q) phi_base @@ fun pos_var ->
-    Debug.print "do_fib Hom.ap 2@.";
     NegVar.abstract ~name:neg_name (do_fib q (Var.value pos_var)) @@ fun neg_var ->
-    Debug.print "do_ap Hom.ap@.";
     neg (do_ap phi_fib (NegVar.borrow neg_var));
     let steps = Hom.run (steps_tac pos_var neg_var) r in
     S.Let (pos_name, S.Fst (S.HomElim (phi, pos)), steps)
@@ -108,7 +118,6 @@ let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
 let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   Hom.rule @@ fun (r, i) ->
   let pos = Chk.run pos_tac (do_base r) in
-  Debug.print "do_fib Hom.done_@.";
   let fib = (do_fib r (eval pos)) in
   let neg = NegChk.run neg_tac fib in
   Eff.Locals.abstract fib @@ fun v ->

@@ -50,6 +50,18 @@ struct
   let run k tp = k tp
 end
 
+(* TODO: need a better model for this, see Prog.neg_lam *)
+and Prog : sig
+  type tac
+  val rule : (unit -> unit) -> tac
+  val run : tac -> unit -> unit
+end =
+struct
+  type tac = unit -> unit
+  let rule k = k
+  let run k tp = k tp
+end
+
 and NegChk : sig
   type tac
   val rule : (D.t -> (D.t -> unit)) -> tac
@@ -107,8 +119,8 @@ end
 and NegVar : sig
   type tac
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
-  val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
   val borrow : tac -> D.t
+  val set : tac -> D.t -> unit
 end =
 struct
   type tac = { tp : D.tp; lvl : int }
@@ -116,15 +128,11 @@ struct
     Locals.abstract_neg ~name tp @@ fun lvl ->
     k { tp; lvl }
 
-  let concrete ?(name = `Anon) tp value k =
-    Locals.abstract_neg ~name tp @@ fun lvl ->
-    match Locals.consume_neg lvl () with
-    | None -> invalid_arg ""
-    | Some writer ->
-      writer value;
-      k { tp; lvl }
-
   let borrow { tp; lvl } = D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
+  let set { lvl; _ } =
+    match Eff.Locals.consume_neg lvl () with
+    | None -> invalid_arg "Internal error: variable already consumed"
+    | Some setter -> setter
 end
 
 let match_goal k =
