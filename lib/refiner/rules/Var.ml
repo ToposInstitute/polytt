@@ -24,4 +24,7 @@ let negative (cell : Cell.neg) =
   | None ->
     Error.error `LinearVariableDoubleUse "Linear variable already used: %a." Ident.pp cell.name
   | Some writer ->
-    (cell.tp, writer)
+    Debug.print "marking %a@." Ident.pp cell.name;
+    (cell.tp, fun v ->
+      Debug.print "writing %a <- %a@." Ident.pp cell.name D.dump v;
+      writer v)

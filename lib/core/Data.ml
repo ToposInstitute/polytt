@@ -77,14 +77,14 @@ and hd =
   | Skolem of value
 
 and frame =
-  | Ap of { tp : value; arg : value }
-  | Fst
-  | Snd
+  | Ap of { mot : value; tp : value; arg : value }
+  | Fst of { sigma : value }
+  | Snd of { sigma : value }
   | NatElim of { mot : value; zero : value; succ : value }
   | Cases of { mot : value; cases : (string * value) list }
   | Base
   | Fib of { base : value; value : value }
-  | HomElim of { tp : value; arg : value }
+  | HomElim of { shape : value; tp : value; arg : value }
 
 and env = { pos : value bwd; neg_size : int; neg : value bwd }
 (** We need to evaluate positive values, but we only borrow negatives so we just

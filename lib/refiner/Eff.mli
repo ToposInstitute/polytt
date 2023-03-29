@@ -33,6 +33,8 @@ module Locals : sig
   val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
   val local_types : unit -> D.tp bwd
   val ppenv : unit -> S.ppenv
+  val qenv : unit -> QuoteEnv.t
+  val denv : unit -> D.env
   val size : unit -> int
 
   val abstract_neg : ?name:Ident.t -> D.tp -> (int -> 'a) -> 'a

@@ -204,8 +204,8 @@ neg_term:
 plain_neg_term:
   | neg = atomic_neg_term; tms = option(neg_spine)
     { neg_ap_or_atomic neg tms }
-  | LAMBDA_MINUS; nm = name; RIGHT_ARROW; prog = program
-    { CS.NegLam (nm, prog) }
+  | LAMBDA_MINUS; LPR; nm = name; COLON; tp = term; RPR RIGHT_ARROW; prog = program
+    { CS.NegLam (nm, tp, prog) }
 
 atomic_neg_term:
   | t = located(plain_atomic_neg_term)

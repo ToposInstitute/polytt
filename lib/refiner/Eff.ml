@@ -100,6 +100,7 @@ struct
 
   let head () =
     let env = Reader.read () in
+    if (env.neg_size == 0) then invalid_arg (Format.asprintf "Eff.Locals.head on empty context");
     ! (snd (Bwd.nth env.neg_values (env.neg_size - 1)))
 
   let run_linear k =

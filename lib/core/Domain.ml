@@ -40,14 +40,14 @@ and hd = Data.hd =
   | Skolem of tp
 
 and frame = Data.frame =
-  | Ap of { tp : t; arg : t }
-  | Fst
-  | Snd
+  | Ap of { mot : t; tp : t; arg : t }
+  | Fst of { sigma : t }
+  | Snd of { sigma : t }
   | NatElim of { mot : t; zero : t; succ : t }
   | Cases of { mot : t; cases : t labeled }
   | Base
   | Fib of { base : t; value : t }
-  | HomElim of { tp : t; arg : t }
+  | HomElim of { shape : t; tp : t; arg : t }
 
 and env = Data.env = { pos : t bwd; neg_size : int; neg : tp bwd }
 and 'a clo = 'a Data.clo = Clo of { env : env; body : 'a }
@@ -120,9 +120,9 @@ and dump_frm fmt =
   function
   | Ap _ ->
     Format.fprintf fmt "ap"
-  | Fst ->
+  | Fst _ ->
     Format.fprintf fmt "fst"
-  | Snd ->
+  | Snd _ ->
     Format.fprintf fmt "snd"
   | NatElim _ ->
     Format.fprintf fmt "nat-elim"

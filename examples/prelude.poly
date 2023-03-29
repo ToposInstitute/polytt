@@ -1,6 +1,9 @@
 def id : (A : Type) → A → A :=
   λ A x → x
 
+def id_ : (A : Type) → A → A :=
+  λ A x → x
+
 def const : (A : Type) → (B : Type) → A → B → A :=
   λ _ _ x _ → x
 
@@ -129,10 +132,22 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
     let p⁺ = fst pf⁺;
     let f⁺ = snd pf⁺;
     let qf⁺ = f⁺ p⁺;
+    let q⁺ = fst qf⁺;
     pf⁻ → (p⁻ , f⁻);
     f⁻ → (pb⁻ , q⁻);
     (fst pf⁺) → pb⁻;
-    (fst qf⁺) ⇜ ([p⁻ ∘ (snd qf⁺) , q⁻] ∘ (dup (fib Q (fst qf⁺))))
+    let⁻ qf⁻ = λ⁻ (v : fib Q q⁺) →
+      -- ignore this id_ ?, parsing bug
+      (id_ (fib Q q⁺) v) → q⁻;
+      ((snd qf⁺) v) → p⁻;
+      end;
+    (fst qf⁺) ⇜ qf⁻
+    -- the following crashes due to bug :(
+--    (fst qf⁺) ⇜ λ⁻ (v : fib Q q⁺) →
+--      -- ignore this id_ ?, parsing bug
+--      (id_ (fib Q q⁺) v) → q⁻;
+--      ((snd qf⁺) v) → p⁻;
+--      end
 
 #normalize (eval nyan nyan) (3 , nyan-hom 12)
 

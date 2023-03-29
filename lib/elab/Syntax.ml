@@ -41,7 +41,7 @@ and t_ =
   | Set of t * t * t
   | NegAnno of t * t
   | NegLet of Ident.t * t * t
-  | NegLam of Ident.t * t
+  | NegLam of Ident.t * t * t
   | NegAp of t * t list
   | Drop
   | End

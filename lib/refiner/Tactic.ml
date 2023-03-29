@@ -107,12 +107,16 @@ struct
     let tm = Eff.quote ~tp value in
     tp, tm
 
+  let fresh_name : Ident.t -> Ident.t = function
+    | `Anon -> `Machine (Locals.size ())
+    | name -> name
+
   let abstract ?(name = `Anon) tp k =
-    Locals.abstract ~name tp @@ fun value ->
+    Locals.abstract ~name:(fresh_name name) tp @@ fun value ->
     k {tp; value}
 
   let concrete ?(name = `Anon) tp value k =
-    Eff.Locals.concrete ~name tp value @@ fun () ->
+    Locals.concrete ~name:(fresh_name name) tp value @@ fun () ->
     k {tp; value}
 end
 

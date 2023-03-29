@@ -184,7 +184,7 @@ let rec pp (env : ppenv) =
     end
   | Borrow i ->
     begin
-      try Ident.pp fmt (Bwd.nth env.neg ((env.neg_size - 1) - i))
+      try Format.fprintf fmt "borrow %a" Ident.pp (Bwd.nth env.neg ((env.neg_size - 1) - i))
       with Failure _ ->
         Format.fprintf fmt "![bad borrow index %d]!" i
     end

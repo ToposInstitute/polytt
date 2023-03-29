@@ -18,9 +18,16 @@ let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.t
       let p_fib = do_fib p (Var.value pos_var) in
       Core.Debug.print "Introducing negated %a@." D.dump p_fib;
       NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
-      let tail () = quote ~tp:p_fib (Eff.Locals.head ())
+      let tail () =
+        begin
+        let thingy = Eff.Locals.head () in
+        let q = quote ~tp:p_fib thingy in
+        Debug.print "tail %a@.             %a@." D.dump thingy S.dump q;
+        q
+        end
       in
       let bdy = Hom.run (bdy_tac pos_var neg_var) (q, tail) in
+      Debug.print "ran body: %a@." S.dump bdy;
       S.HomLam (S.Lam (pos_name, bdy))
     in ok
   | _ ->
@@ -58,7 +65,9 @@ let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Hom.tac) =
   Hom.rule @@ fun r ->
   let tp, tm = NegSyn.run tm in
   NegVar.abstract ~name tp @@ fun v ->
+  Debug.print "reading from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
   tm (NegVar.borrow v);
+  Debug.print "-> read from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
   Hom.run (f v) r
 
 let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
@@ -119,12 +128,36 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   Hom.rule @@ fun (r, i) ->
   let pos = Chk.run pos_tac (do_base r) in
   let fib = (do_fib r (eval pos)) in
-  let neg = NegChk.run neg_tac fib in
-  Eff.Locals.abstract fib @@ fun v ->
+  let name = `Machine (Eff.Locals.size ()) in
+  Eff.Locals.abstract ~name fib @@ fun v ->
+    let neg = NegChk.run neg_tac fib in
     neg v;
     let fib_act = i () in
     match Eff.Locals.all_consumed () with
     | true ->
-      S.Pair (pos, S.Lam (`Anon, fib_act))
+      ((Eff.Locals.ppenv ()).pos |>
+        Bwd.Bwd.iter @@ fun v ->
+          Debug.print "  - %a@." Ident.pp v);
+      Debug.print " ---- @.";
+      ((Eff.Locals.qenv ()).neg |>
+        Bwd.Bwd.iter @@ fun v ->
+          Debug.print "  - %a@." D.dump v);
+      Debug.print " ---- @.";
+      (Bwd.Bwd.iter2
+        (fun tp v ->
+          Debug.print "  - %a@." S.dump (quote ~tp v))
+        (Eff.Locals.qenv ()).neg
+        (Eff.Locals.denv ()).neg
+      );
+      Debug.print " ---- @.";
+      (Bwd.Bwd.iter2
+        (fun tp v ->
+          Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
+        (Eff.Locals.denv ()).neg
+        (Eff.Locals.qenv ()).neg
+      );
+      Debug.print " ---- @.";
+      Debug.print "%a@." S.dump fib_act;
+      S.Pair (pos, S.Lam (name, fib_act))
     | false ->
       Error.error `LinearVariablesNotUsed "Didn't use all your linear variables."

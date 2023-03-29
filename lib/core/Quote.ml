@@ -133,13 +133,24 @@ struct
       invalid_arg "bad quote"
 
   and unstick tp hd =
+    let old = D.Neu (tp, { hd; spine = Emp }) in
     match hd with
     | D.Borrow lvl ->
-      Env.read_neg_lvl lvl
-    | _ -> D.Neu (tp, { hd; spine = Emp })
+      (* TODO FIXME *)
+      Debug.print "QQ read_neg_lvl@.";
+      let newer = Env.read_neg_lvl lvl in
+      if newer = old then old else
+        try_unstick newer
+    | _ -> old
+
+  and try_unstick = function
+  | D.Neu (tp, { hd; spine }) ->
+    Sem.do_spine (unstick (Sem.undo_spine tp hd spine) hd) spine
+  | e ->
+    e
 
   and quote_neu tp {hd; spine} =
-    match unstick tp hd with
+    match unstick (Sem.undo_spine tp hd spine) hd with
     (* still stuck *)
     | D.Neu (_tp, { hd; spine = spine1 }) ->
       Bwd.fold_left quote_frm (Bwd.fold_left quote_frm (quote_hd hd) spine1) spine
@@ -162,9 +173,9 @@ struct
     match frm with
     | D.Ap {tp; arg} ->
       S.Ap (tm, quote tp arg)
-    | D.Fst ->
+    | D.Fst _ ->
       S.Fst tm
-    | D.Snd ->
+    | D.Snd _ ->
       S.Snd tm
     | D.NatElim {mot; zero; succ} ->
       let mot_tp =

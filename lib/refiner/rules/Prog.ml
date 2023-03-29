@@ -1,14 +1,16 @@
 open Core
 open Tactic
 
-let neg_lam ?(name = `Anon) (bdy_tac : Var.tac -> Prog.tac) : NegChk.tac =
-  NegChk.rule @@ fun tp ->
+let neg_lam ?(name = `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
+  NegSyn.rule @@ fun () ->
+  let tp = eval (Chk.run tp_tac D.Univ) in
   NegVar.abstract tp @@ fun neg_var ->
   Var.concrete ~name tp (NegVar.borrow neg_var) @@ fun var ->
+  Debug.print "hacky consuming %a = %a@." Ident.pp name D.dump (NegVar.borrow neg_var);
   let setter = NegVar.set neg_var in
   Prog.run (bdy_tac var) ();
-  fun actual_value ->
-  Debug.print "hacky neg_lam setting %a@." D.dump actual_value;
+  tp, fun actual_value ->
+  Debug.print "hacky neg_lam setting %a = %a@." Ident.pp name D.dump actual_value;
   setter actual_value
 
 let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Prog.tac) =

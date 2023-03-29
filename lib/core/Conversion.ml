@@ -109,6 +109,7 @@ struct
   and try_unstick tp {hd; spine} =
     match hd with
     | D.Borrow lvl ->
+      Debug.print "CC read_neg_lvl@.";
       Sem.do_spine (Env.read_neg_lvl lvl) spine
     | _ -> D.Neu (tp, { hd; spine })
 
@@ -138,9 +139,9 @@ struct
       (* Don't need to equate the argument types of 2 stuck applications,
          as our invariants require that all terms are well-typed. *)
       equate ap1.tp ap1.arg ap2.arg
-    | D.Fst, D.Fst ->
+    | D.Fst _, D.Fst _ ->
       ()
-    | D.Snd, D.Snd ->
+    | D.Snd _, D.Snd _ ->
       ()
     | D.NatElim elim1, D.NatElim elim2 ->
       let mot_tp =

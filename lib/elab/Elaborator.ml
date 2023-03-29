@@ -49,8 +49,6 @@ struct
       NegSigma.intro (neg_chk a) ~name (fun _ -> neg_chk b)
     | CS.Drop ->
       Hom.drop
-    | CS.NegLam (name, body) ->
-      Prog.neg_lam ~name (fun _ -> prog body)
     | _ ->
       T.NegChk.syn (neg_syn tm)
 
@@ -134,6 +132,8 @@ struct
       T.Error.error `TypeError "Cannot synthesize type of drop."
     | CS.NegPairSimple (p, q) ->
       NegSigma.intro_simple (neg_syn p) (neg_syn q)
+    | CS.NegLam (name, tp, body) ->
+      Prog.neg_lam ~name (chk tp) (fun _ -> prog body)
     | _ ->
       T.Error.error `TypeError "Cannot synthesize (negative) type."
 
