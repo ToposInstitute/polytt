@@ -125,6 +125,7 @@ and NegVar : sig
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
   val borrow : tac -> D.t
   val set : tac -> D.t -> unit
+  val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 end =
 struct
   type tac = { tp : D.tp; lvl : int }
@@ -137,6 +138,9 @@ struct
     match Eff.Locals.consume_neg lvl () with
     | None -> invalid_arg "Internal error: variable already consumed"
     | Some setter -> setter
+
+  let revert =
+    Eff.Locals.revert
 end
 
 let match_goal k =

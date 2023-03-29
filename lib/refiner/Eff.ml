@@ -205,6 +205,43 @@ struct
     | false ->
       consumed := true;
       Some (fun value -> value_ref := value)
+
+  let revert i_tp cb =
+    Debug.print "i_tp: %a@." D.dump i_tp;
+    let env0 = Reader.read () in
+    let already_used = Bwd.map2 (fun (used, _) tp -> !used, tp) env0.neg_values env0.neg_types in
+    cb ();
+    let env1 = Reader.read () in
+    assert (env1.neg_size >= env0.neg_size);
+    let q = qenv () in
+    let d = denv () in
+    let ok = ref true in
+    let reverted =
+      (Bwd.mapi (fun i v -> i,v) env1.neg_values) |>
+      Bwd.filter_map @@ fun (i, (used, value)) ->
+      let used_now = !used in
+      match Bwd.nth_opt already_used i with
+      | None ->
+        if not used_now then ok := false;
+        None
+      | Some (false, o_tp) when used_now ->
+        Debug.print "o_tp: %a@.              %a@." D.dump o_tp S.dump (Quote.quote ~env:q ~tp:D.Univ o_tp);
+        Debug.print "value: %a@." D.dump !value;
+        let quoted = Quote.quote ~env:q ~tp:o_tp !value in
+        Debug.print "       %a@." S.dump quoted;
+        let dropped =
+          match d.pos with
+          | Snoc (pos, _) -> { d with pos = pos }
+          | _ -> d
+        in
+        let abstracted : D.tm_clo = Clo { env = dropped; body = quoted } in
+        Some (fun v -> value := Semantics.inst_clo abstracted v)
+      | Some _ -> None
+    in
+    match !ok with
+    | false -> None
+    | true -> Some
+        (fun value -> Bwd.iter (fun f -> f value) reverted)
 end
 
 

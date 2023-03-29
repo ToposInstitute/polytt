@@ -36,6 +36,7 @@ module Locals : sig
   val qenv : unit -> QuoteEnv.t
   val denv : unit -> D.env
   val size : unit -> int
+  val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 
   val abstract_neg : ?name:Ident.t -> D.tp -> (int -> 'a) -> 'a
   val consume_neg : int -> unit -> (D.t -> unit) option

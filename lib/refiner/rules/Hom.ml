@@ -160,4 +160,4 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
       Debug.print "%a@." S.dump fib_act;
       S.Pair (pos, S.Lam (name, fib_act))
     | false ->
-      Error.error `LinearVariablesNotUsed "Didn't use all your linear variables."
+      Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in hom."

@@ -136,18 +136,11 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
     pf⁻ → (p⁻ , f⁻);
     f⁻ → (pb⁻ , q⁻);
     (fst pf⁺) → pb⁻;
-    let⁻ qf⁻ = λ⁻ (v : fib Q q⁺) →
-      -- ignore this id_ ?, parsing bug
+    (fst qf⁺) ⇜ λ⁻ (v : fib Q q⁺) →
+      -- ignore the (id_ ?), it is a workaround for a parsing bug
       (id_ (fib Q q⁺) v) → q⁻;
       ((snd qf⁺) v) → p⁻;
-      end;
-    (fst qf⁺) ⇜ qf⁻
-    -- the following crashes due to bug :(
---    (fst qf⁺) ⇜ λ⁻ (v : fib Q q⁺) →
---      -- ignore this id_ ?, parsing bug
---      (id_ (fib Q q⁺) v) → q⁻;
---      ((snd qf⁺) v) → p⁻;
---      end
+      end
 
 #normalize (eval nyan nyan) (3 , nyan-hom 12)
 
