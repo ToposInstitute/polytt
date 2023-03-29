@@ -94,9 +94,9 @@ struct
     match f with
     | D.Lam (_t, clo) ->
       inst_clo clo arg
-    | D.Neu (Pi (nm, a, clo), neu) ->
+    | D.Neu (Pi (_nm, a, clo), neu) ->
       let fib = inst_clo clo arg in
-      D.Neu (fib, D.push_frm neu (D.Ap { mot = D.Lam (nm, clo); tp = a; arg }))
+      D.Neu (fib, D.push_frm neu (D.Ap { tp = a; arg }))
     | d ->
       Debug.print "Tried to do_ap against %a@." D.dump d;
       invalid_arg "bad do_ap"
@@ -115,7 +115,7 @@ struct
         TB.sigma (TB.base q) @@ fun q_base ->
         TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
       in
-      D.Neu (tp, D.push_frm neu (D.HomElim { shape = Hom (p, q); tp = do_base p; arg }))
+      D.Neu (tp, D.push_frm neu (D.HomElim { tp = do_base p; arg }))
     | d ->
       Debug.print "Tried to do_hom_elim against %a@." D.dump d;
       invalid_arg "bad do_hom_elim"
@@ -127,8 +127,8 @@ struct
     match v with
     | D.Pair (a, _b) ->
       a
-    | D.Neu (D.Sigma (_, a, _clo) as sigma, neu) ->
-      D.Neu (a, D.push_frm neu (D.Fst { sigma }))
+    | D.Neu (D.Sigma (_, a, _clo), neu) ->
+      D.Neu (a, D.push_frm neu D.Fst)
     | tm ->
       Debug.print "Bad do_fst %a@." D.dump tm;
       invalid_arg "bad do_fst"
@@ -137,9 +137,9 @@ struct
     match v with
     | D.Pair (_a, b) ->
       b
-    | D.Neu (D.Sigma (_, _a, clo) as sigma, neu) ->
+    | D.Neu (D.Sigma (_, _a, clo), neu) ->
       let fib = inst_clo clo (do_fst v) in
-      D.Neu (fib, D.push_frm neu (D.Snd { sigma }))
+      D.Neu (fib, D.push_frm neu D.Snd)
     | _ ->
       invalid_arg "bad do_snd"
 
@@ -235,8 +235,8 @@ let do_hom_elim =
 
   let do_frm hd = function
   | D.Ap { arg; _ } -> do_ap hd arg
-  | D.Fst _ -> do_fst hd
-  | D.Snd _ -> do_snd hd
+  | D.Fst -> do_fst hd
+  | D.Snd -> do_snd hd
   | D.NatElim { mot; zero; succ } -> do_nat_elim ~mot ~zero ~succ ~scrut:hd
   | D.Cases { mot; cases } -> do_cases mot cases hd
   | D.Base -> do_base hd
@@ -245,22 +245,6 @@ let do_hom_elim =
 
 let do_spine hd spine =
   Bwd.fold_left do_frm hd spine
-
-let undo_frm hd =
-  function
-  | D.Ap { mot; arg; _ } -> do_ap mot arg
-  | D.Fst { sigma } -> sigma
-  | D.Snd { sigma } -> sigma
-  | D.NatElim { mot; _ } -> do_ap mot (hd D.Nat)
-  | D.Cases { mot; cases } -> do_ap mot (hd (D.FinSet (List.map fst cases)))
-  | D.Base -> D.Poly
-  | D.Fib _ -> D.Poly
-  | D.HomElim { shape; _ } -> shape
-
-let rec undo_spine tp hd =
-  function
-  | Emp -> tp
-  | Snoc (spine, frm) -> undo_spine (undo_frm (fun atp -> D.Neu (atp, { hd; spine })) frm) hd spine
 
 let inst_clo =
   Internal.inst_clo

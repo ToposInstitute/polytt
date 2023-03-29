@@ -139,9 +139,9 @@ struct
       (* Don't need to equate the argument types of 2 stuck applications,
          as our invariants require that all terms are well-typed. *)
       equate ap1.tp ap1.arg ap2.arg
-    | D.Fst _, D.Fst _ ->
+    | D.Fst, D.Fst ->
       ()
-    | D.Snd _, D.Snd _ ->
+    | D.Snd, D.Snd ->
       ()
     | D.NatElim elim1, D.NatElim elim2 ->
       let mot_tp =

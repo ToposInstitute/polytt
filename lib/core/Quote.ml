@@ -125,38 +125,42 @@ struct
       S.FinSet ls
     | _, D.Label (ls, l) ->
       S.Label (ls, l)
-    | tp, D.Neu (_, neu) ->
-      quote_neu tp neu
+    | tp, (D.Neu (_, neu) as stuck) ->
+      begin
+      match unstick stuck with
+      (* still stuck on something *)
+      | D.Neu (_, neu) ->
+        quote_neu neu
+      (* no longer stuck at the top-level at least *)
+      | e ->
+        quote tp (Sem.do_spine e neu.spine)
+      end
     | tp, tm ->
       Debug.print "Bad quote: %a@." D.dump tm;
       Debug.print "  against: %a@." D.dump tp;
       invalid_arg "bad quote"
 
-  and unstick tp hd =
-    let old = D.Neu (tp, { hd; spine = Emp }) in
-    match hd with
-    | D.Borrow lvl ->
-      (* TODO FIXME *)
-      Debug.print "QQ read_neg_lvl@.";
-      let newer = Env.read_neg_lvl lvl in
-      if newer = old then old else
-        try_unstick newer
-    | _ -> old
+  and progressed_from hd' = function
+    | D.Neu (_tp, { hd; spine = Emp }) -> hd != hd'
+    | _ -> true
 
   and try_unstick = function
-  | D.Neu (tp, { hd; spine }) ->
-    Sem.do_spine (unstick (Sem.undo_spine tp hd spine) hd) spine
-  | e ->
-    e
+    | D.Borrow lvl -> Some (Env.read_neg_lvl lvl)
+    | _ -> None
 
-  and quote_neu tp {hd; spine} =
-    match unstick (Sem.undo_spine tp hd spine) hd with
-    (* still stuck *)
-    | D.Neu (_tp, { hd; spine = spine1 }) ->
-      Bwd.fold_left quote_frm (Bwd.fold_left quote_frm (quote_hd hd) spine1) spine
-    (* made at least a little progress *)
-    | e ->
-      quote tp (Sem.do_spine e spine)
+  and unstick = function
+    | D.Neu (_tp, { hd; spine }) as stuck ->
+      begin
+      match try_unstick hd with
+      | Some newer when newer |> progressed_from hd ->
+        (* We want to eval (e.g. beta-reduce) and _then_ try unsticking more *)
+        unstick @@ Sem.do_spine newer spine
+      | _ -> stuck
+      end
+    | notstuck -> notstuck
+
+  and quote_neu {hd; spine} =
+    Bwd.fold_left quote_frm (quote_hd hd) spine
 
   and quote_hd hd =
     match hd with
@@ -173,9 +177,9 @@ struct
     match frm with
     | D.Ap {tp; arg} ->
       S.Ap (tm, quote tp arg)
-    | D.Fst _ ->
+    | D.Fst ->
       S.Fst tm
-    | D.Snd _ ->
+    | D.Snd ->
       S.Snd tm
     | D.NatElim {mot; zero; succ} ->
       let mot_tp =

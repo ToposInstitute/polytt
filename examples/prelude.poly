@@ -142,6 +142,18 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
       ((snd qf⁺) v) → p⁻;
       end
 
+-- Ideal syntax:
+--def eval (P Q : Poly) : tensor P (internal-hom P Q) ⇒ Q :=
+--  λ (p⁺ , f⁺) (p₁⁻ , (p₂⁻ , q⁻)) ⇝
+--    let (q⁺ , bwd) = f⁺ p⁺;
+--    p⁺ → p₂⁻;
+--    q⁺ ⇜ λ⁻ q →
+--      q → q⁻;
+--      bwd q → p₁⁻;
+--      end
+
+#normalize eval
+
 #normalize (eval nyan nyan) (3 , nyan-hom 12)
 
 def compose : Poly → Poly → Poly :=
@@ -151,4 +163,4 @@ def tensor-to-compose : (P : Poly) → (Q : Poly) → tensor P Q ⇒ compose P Q
   λ P Q → λ pq⁺ pq⁻ ⇝
     (fst pq⁺ , λ _ → snd pq⁺) ⇜ pq⁻
 
-
+#normalize tensor-to-compose
