@@ -1,6 +1,5 @@
 open Core
 open Bwd
-open Bwd.Infix
 include Eff
 
 include TermBuilder

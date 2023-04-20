@@ -87,6 +87,7 @@ and frame =
   | HomElim of { tp : value; arg : value }
 
 and env = { pos : value bwd; neg_size : int; neg : value bwd }
+
 (** We need to evaluate positive values, but we only borrow negatives so we just
     need their types, and we pass the size for quicker level<->index conversion *)
 and 'a clo = Clo of { env : env; body : 'a }

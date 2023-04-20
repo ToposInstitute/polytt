@@ -10,7 +10,6 @@ module Env = QuoteEnv
 
 module Internal =
 struct
-  type env = Env.t
   module Eff = Env.Eff
 
   let bind tp f =
@@ -127,13 +126,13 @@ struct
       S.Label (ls, l)
     | tp, (D.Neu (_, neu) as stuck) ->
       begin
-      match unstick stuck with
-      (* still stuck on something *)
-      | D.Neu (_, neu) ->
-        quote_neu neu
-      (* no longer stuck at the top-level at least *)
-      | e ->
-        quote tp (Sem.do_spine e neu.spine)
+        match unstick stuck with
+        (* still stuck on something *)
+        | D.Neu (_, neu) ->
+          quote_neu neu
+        (* no longer stuck at the top-level at least *)
+        | e ->
+          quote tp (Sem.do_spine e neu.spine)
       end
     | tp, tm ->
       Debug.print "Bad quote: %a@." D.dump tm;
@@ -151,11 +150,11 @@ struct
   and unstick = function
     | D.Neu (_tp, { hd; spine }) as stuck ->
       begin
-      match try_unstick hd with
-      | Some newer when newer |> progressed_from hd ->
-        (* We want to eval (e.g. beta-reduce) and _then_ try unsticking more *)
-        unstick @@ Sem.do_spine newer spine
-      | _ -> stuck
+        match try_unstick hd with
+        | Some newer when newer |> progressed_from hd ->
+          (* We want to eval (e.g. beta-reduce) and _then_ try unsticking more *)
+          unstick @@ Sem.do_spine newer spine
+        | _ -> stuck
       end
     | notstuck -> notstuck
 

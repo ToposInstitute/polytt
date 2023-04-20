@@ -1,4 +1,3 @@
-open Core
 open Tactic
 
 let neg_lam ?(name = `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
@@ -10,7 +9,7 @@ let neg_lam ?(name = `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) :
     Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in prorgam."
   | Some setter ->
     tp, fun actual_value ->
-    setter actual_value
+      setter actual_value
 
 let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Prog.tac) =
   Prog.rule @@ fun () ->

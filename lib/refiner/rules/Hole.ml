@@ -1,7 +1,4 @@
-open Bwd
-open Bwd.Infix
 open Core
-open Errors
 open Tactic
 
 module S = Syntax
