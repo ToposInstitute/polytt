@@ -104,12 +104,22 @@ term:
     { t }
 
 plain_term:
+  | tm = plain_unannotated_term
+    { tm }
+  | tm = term; COLON; ty = term;
+    { CS.Anno (tm, ty) }
+
+unannotated_term:
+  | t = located(plain_unannotated_term)
+    { t }
+
+plain_unannotated_term:
   | tms = nonempty_list(atomic_term)
     { ap_or_atomic tms }
-  | LPR; name = name; COLON; base = term; RPR; TIMES; fam = term
-    { CS.Sigma (name, base, fam) }
+  | LPR; names = nonempty_list(name); COLON; base = term; RPR; TIMES; fam = term
+    { CS.Sigma (names, base, fam) }
   | base = term; TIMES; fam = term
-    { CS.Sigma (`Anon, base, fam) }
+    { CS.Sigma ([`Anon], base, fam) }
   | FST; tm = atomic_term
     { CS.Fst tm }
   | tm1 = atomic_term; EQUALS; tm2 = atomic_term
@@ -124,21 +134,15 @@ plain_term:
     { CS.Base p }
   | FIB; p = atomic_term; i = atomic_term
     { CS.Fib (p, i) }
-  | tm = anno
-    { tm }
   | tm = let_binding
     { tm }
   | tm = arrow
     { tm }
 
-anno:
-  | tm = term; COLON; ty = term;
-    { CS.Anno (tm, ty) }
-
 let_binding:
-  | LET; nm = name; EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = name; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, tm1, tm2) }
-  | LET; nm = name; COLON; ty1 = term; EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = name; COLON; ty1 = term; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, { node = Anno(tm1, ty1) ; loc = get_loc tm1 }, tm2) }
 
 labeled_field(sep):
@@ -146,14 +150,14 @@ labeled_field(sep):
     { (label, term) }
 
 arrow:
-  | LAMBDA; nms = list(name); RIGHT_ARROW; tm = term
+  | LAMBDA; nms = nonempty_list(name); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
+  | LPR; names = nonempty_list(name); COLON; base = term; RPR; RIGHT_ARROW; fam = term
+    { CS.Pi (names, base, fam) }
+  | base = term; RIGHT_ARROW; fam = term
+    { CS.Pi ([`Anon], base, fam) }
   | LAMBDA; pos = name; neg = name; RIGHT_SQUIGGLY_ARROW; body = hom_body
     { CS.HomLam(pos, neg, body) }
-  | LPR; name = name; COLON; base = term; RPR; RIGHT_ARROW; fam = term
-    { CS.Pi (name, base, fam) }
-  | base = term; RIGHT_ARROW; fam = term
-    { CS.Pi (`Anon, base, fam) }
   | p = term; RIGHT_THICK_ARROW; q = term
     { CS.Hom (p, q) }
 

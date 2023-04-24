@@ -16,8 +16,8 @@ struct
     | CS.Let (name, tm1, tm2) ->
       let tm1 = syn tm1 in
       Var.let_bind ~name:name tm1 (fun _ -> chk tm2)
-    | CS.Sigma (name, a, b) ->
-      chk_sigma ~name a b
+    | CS.Sigma (names, a, b) ->
+      chk_sigma ~names a b
     | CS.Pair (a, b) ->
       Sigma.intro (chk a) (chk b)
     | CS.Refl ->
@@ -58,11 +58,16 @@ struct
     | name :: names ->
       Pi.intro ~name @@ fun _ -> chk_lams names tm
 
-  and chk_sigma ?(name = `Anon) a b =
+  and chk_sigma ?(names = [`Anon]) a b =
     T.match_goal @@
     function
-    | D.Univ -> T.Chk.syn @@ Sigma.formation ~name (chk a) (fun _ -> chk b)
-    | D.Poly -> Poly.intro ~name (chk a) (fun _ -> chk b)
+    | D.Univ -> T.Chk.syn @@ Sigma.formation ~names (chk a) (fun _ -> chk b)
+    | D.Poly ->
+      begin
+        match names with
+        | [name] -> Poly.intro ~name (chk a) (fun _ -> chk b)
+        | _ -> T.Error.error `TypeError "Polynomials only bind one name"
+      end
     | _ -> T.Error.error `TypeError "Pair syntax only works for sigma and poly."
 
   and syn (tm : CS.t) =
@@ -72,14 +77,14 @@ struct
       syn_var path
     | CS.Univ ->
       Univ.formation
-    | CS.Pi (name, a, b) ->
-      Pi.formation ~name (chk a) (fun _ -> chk b)
+    | CS.Pi (names, a, b) ->
+      Pi.formation ~names (chk a) (fun _ -> chk b)
     | CS.Ap (fn, args) ->
       syn_aps fn args
     | CS.Let (nm, tm1, tm2) ->
       syn_let ~name:nm tm1 tm2
-    | CS.Sigma (name, a, b) ->
-      Sigma.formation ~name (chk a) (fun _ -> chk b)
+    | CS.Sigma (names, a, b) ->
+      Sigma.formation ~names (chk a) (fun _ -> chk b)
     | CS.Fst tm ->
       Sigma.fst (syn tm)
     | CS.Snd tm ->

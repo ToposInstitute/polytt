@@ -21,6 +21,11 @@ struct
     function
     | Pos {name; _} -> name
     | Neg {name; _} -> name
+
+  let value =
+    function
+    | Pos {value; _} -> value
+    | Neg {tp; lvl; _} -> D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
 end
 
 
@@ -177,6 +182,9 @@ struct
         ppenv_neg = env.ppenv_neg #< name
       }
 
+  let bind_vars cells env =
+    List.fold_left (fun env cell -> bind_var cell env) env cells
+
   let concrete ?(name = `Anon) tp tm k =
     let cell = Cell.Pos { name; tp; value = tm } in
     Reader.scope (bind_var cell) @@ fun () ->
@@ -241,6 +249,17 @@ struct
     | false -> None
     | true -> Some
                 (fun value -> Bwd.iter (fun f -> f value) reverted)
+
+  let abstracts ?(names = [`Anon]) tp k =
+    let cells =
+      names
+      |> List.mapi @@ fun i name ->
+      (* TODO cleanup *)
+      (Pos { Cell.name; tp; value = D.var tp ((Reader.read ()).size + i) } : Cell.t)
+    in
+    let vars = List.map Cell.value cells in
+    Reader.scope (bind_vars cells) @@ fun () ->
+    k vars
 end
 
 

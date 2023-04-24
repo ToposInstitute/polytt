@@ -30,6 +30,7 @@ module Locals : sig
   val resolve_neg : Ident.path -> Cell.neg option
   val concrete : ?name:Ident.t -> D.tp -> D.t -> (unit -> 'a) -> 'a
   val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
+  val abstracts : ?names:Ident.t list -> D.tp -> (D.t list -> 'a) -> 'a
   val local_types : unit -> D.tp bwd
   val ppenv : unit -> S.ppenv
   val qenv : unit -> QuoteEnv.t
