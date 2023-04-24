@@ -95,6 +95,7 @@ and Var : sig
   val value : tac -> D.t
   val syn : tac -> Syn.tac
   val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val abstracts : ?names:Ident.t list -> D.tp -> (tac list -> 'a) -> 'a
   val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
 end =
 struct
@@ -109,6 +110,15 @@ struct
   let fresh_name : Ident.t -> Ident.t = function
     | `Anon -> `Machine (Locals.size ())
     | name -> name
+
+  let abstracts ?(names = [`Anon]) tp k =
+    (* TODO: fresh_name *)
+    Locals.abstracts ~names tp @@ fun values ->
+    let tacs =
+      values
+      |> List.map @@ fun value -> { tp; value }
+    in
+    k tacs
 
   let abstract ?(name = `Anon) tp k =
     Locals.abstract ~name:(fresh_name name) tp @@ fun value ->

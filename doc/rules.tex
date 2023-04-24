@@ -1,0 +1,259 @@
+\documentclass[final]{amsart}
+\usepackage{rules}
+
+
+\title{The Synthetic Theory of Polynomial Functors}
+\author{David Spivak}
+\author{Owen Lynch}
+\author{Reed Mullanix}
+\author{Solomon Bothwell}
+\author{Verity Scheel}
+
+\begin{document}
+\maketitle
+
+The theory of polynomial functors is a powerful mathematical tool that sees
+use across a broad range of mathematics, ranging from the very applied
+(modelling dynamical systems) to the very abstract (constructing models of type theory).
+However, mechanizing the theory of polynomial functors makes it unwieldy to use; you
+either forgo all the power of abstraction and work at the level of sets,
+or are forced to work in a setting entirely without variables, which is mentally taxing,
+and does not scale well to large expressions. There currently exist some graphical tools
+such as wiring diagrams that do help the situation, but these only cover a fragment of
+the theory, and are difficult to integrate into proof assistants.
+
+In light of this, we argue that we ought to be working in the \emph{synthetic} theory
+of polynomial functors, where polynomials and their morphisms are defined as part of the
+theory directly. This has several benefits. From a purely ergonomic standpoint, having
+the theory be aware of the existence of maps of polynomials means that working with
+them is much more pleasant; gone are the days of massive chains of composites! Furthermore,
+we are able to exploit the rich structure of polynomials during evaluation.
+
+To back up these claims, we present $\PolyTT$, a type-theoretic encoding of the synthetic
+theory of polynomial functors. It combines Martin Lo\"f Type Theory with a fragment of
+linear type theory, used for constructing morphisms of polynomials.
+
+\section{The Type Theory}
+
+We omit the standard rules for Martin L\"of Type Theory with Tarski Universes. The first
+extension we add is a judgement $\Gamma \vdash \IsPoly{P}$, which denotes that $P$ is
+polynomial functor.
+
+\begin{mathpar}
+  \inferrule[Poly-judgement]{
+    \IsCtx{\Gamma}
+  } {
+    \Gamma \vdash \IsPoly{P}
+  }
+\end{mathpar}
+
+There is a single formation rule, which constructs a polynomial functor from a base type $I : \TpUniv{}$
+and a family $J : I \to \TpUniv{}$.
+
+\begin{mathpar}
+  \inferrule[Poly-formation] {
+    \Gamma \vdash \IsTp{I} \\
+    \Gamma, a : A \vdash \IsTp{J} \\
+  } {
+    \Gamma \vdash \IsPoly{((i : I) \times J\ i)}
+  }
+\end{mathpar}
+
+We also a projection for obtaining the the base type of a polynomial, along with a projection
+that allows us to get the fibre of the family at a point. These have the expected equations
+when applied to a concrete polynomial.
+
+\begin{mathpar}
+  \inferrule[Poly-base] {
+    \Gamma \vdash \IsPoly{P}
+  } {
+    \Gamma \vdash \IsTp{\Base{P}}
+  }
+  \and
+  \inferrule[Poly-fibre] {
+    \Gamma \vdash \IsPoly{P} \\
+    \Gamma \vdash i : \Base{P}
+  } {
+    \Gamma \vdash \IsTp{\Fib{P}{i}}
+  }
+  \and
+  \\
+  \inferrule[Poly-base-decoding] {
+  } {
+    \Base{((a : A) \times B\ a)} \equiv A
+  }
+  \and
+  \inferrule[Poly-fibre-decoding] {
+    \\
+  } {
+    \Fib{((a : A) \times B\ a)}{i} \equiv B\ i
+  }
+\end{mathpar}
+
+\subsection{Polynomial Maps}
+
+As evidenced above, it is relatively simple to add a type of polynomial functors
+directly to the theory. In fact, if we have 2 universes $\TpUniv{}_0 : \TpUniv{}_1$
+then we can directly define a type of polynomials as
+$((I : \TpUniv{}_0) \times I \to \TpUniv{}_0) : \TpUniv{}_1$. The complexity of the theory
+lies in the \emph{maps} of polynomials. In elementary terms, we can define a morphism
+of polynomials $P \Rightarrow Q$ as a function of type
+\[ P \Rightarrow Q \coloneqq (i : \Base{P}) \to (j : \Base{Q}) \times (\Fib{Q}{j} \to \Fib{P}{i})
+\]
+\todo{Insert a good example of something that's annoying to write.}
+However, writing morphisms in this form is somewhat tedious and counter-intuitive.
+
+\todo{Provide citation for wiring diagrams.}
+Instead, we opt for a syntax that allows for the construction of the ``forward'' and ``backward''
+components of a polynomial map simultaneously. To do this, we shall introduce a notion
+of ``obligation'' of type $A$ that must be somehow discharged. In
+a wiring diagram, these obligations correspond to input wires to boxes. This suggests that
+obligations must be linear; all inputs in a wiring diagram must be provided, and provided \emph{exactly} once.
+Constructing a map $\Hom{P}{Q}$ then consists of constructing a value $q^{+} : \Base{Q}$ from a value
+$p^{+} : \Base{P}$, while also consuming an obligations of type $\Fib{P}{p^{+}}$ and
+creating an obligation of type $\Fib{Q}{q^{+}}$.
+
+With that high-level picture in our minds, we define a new collection of judgments.
+
+\begin{mathpar}
+  \inferrule[\label{jdg:hom-ctx}Hom-ctx-judgment] {
+    \IsCtx{\Gamma} \\
+  } {
+    \Gamma \vdash \IsHomCtx{\Psi}
+  }
+  \\
+  \and
+  \inferrule[\label{jdg:resolver}Resolver-judgment] {
+    \IsCtx{\Gamma} \\
+    \Gamma \vdash \IsHomCtx{\Psi}
+  } {
+    \Gamma \mid \Psi \vdash \IsResolver{\pi}
+  }
+  \\
+  \and
+  \inferrule[\label{jdg:hom}Hom-judgment] {
+    \IsCtx{\Gamma} \\
+    \Gamma \vdash \IsHomCtx{\Psi} \\
+    \Gamma \vdash \IsPoly{Q}
+  } {
+    \Gamma \mid \Psi \vdash \IsHom{\phi}{Q}
+  }
+\end{mathpar}
+
+Hom contexts are linear contexts containing obligations that
+may or may not have been fulfilled.
+
+\begin{mathpar}
+  \inferrule[\label{rule:hom-context-empty}Hom-ctx-empty]{
+    \\
+  } {
+    \Gamma \vdash \IsHomCtx{\cdot}
+  }
+  \and
+  \inferrule[\label{rule:hom-context-bind}Hom-ctx-bind]{
+    \Gamma \vdash \IsHomCtx{\Psi} \\
+    a^{-}\ \text{is a name} \\
+    \Gamma \mid \Psi \vdash \IsTp{A}
+  } {
+    \Gamma \vdash \IsHomCtx{\Psi, a^{-} : A}
+  }
+  \and
+  \inferrule[\label{rule:hom-context-set}Hom-ctx-set]{
+    \Gamma \vdash \IsHomCtx{\Psi} \\
+    a^{-}\ \text{is a name} \\
+    \Gamma \mid \Psi \vdash \IsTp{A} \\
+    \Gamma \mid \Psi \vdash v : A \\
+  } {
+    \Gamma \vdash \IsHomCtx{\Psi, a^{-} : A \coloneqq v}
+  }
+\end{mathpar}
+
+We omit the judgement signatures and rules for the hom context relative judgements
+of MLTT; these are identical to the standard ones, with following addition.
+In order to allow for dependent obligations, we add a notion of ``borrowing''
+from a (potentially unfulfilled) obligation. When the obligation has not
+yet been fulfilled, we have no equations governing a borrow. If the obligation
+has been fulfilled, the value of a borrow is equal to the value used to
+fulfill the obligation.
+
+\begin{mathpar}
+  \inferrule[\label{rule:borrow}Borrow]{
+    a^{-} : A \in \Psi
+  } {
+    \Gamma \mid \Psi \vdash \Borrow{a^{-}} : A
+  }
+  \and
+  \inferrule[\label{rule:borrow-value}Borrow-value]{
+    a^{-} : A \coloneqq v \in \Psi
+  } {
+    \Gamma \mid \Psi \vdash \Borrow{a^{-}} \equiv v
+  }
+\end{mathpar}
+
+We proceed by giving rules for resolvers; these consist of a sequence of obligations,
+and values used to fulfill those obligations. Note that linearity of $\Psi$ is enforced
+by requiring that we can only fulfill an obligation exactly once.
+
+\begin{mathpar}
+  \inferrule[\label{rule:resolver-done}Resolver-done] {
+    \text{all obligations in $\Psi$ are fulfilled}
+  } {
+    \Gamma \mid \Psi \vdash \IsResolver{\Done{}}
+  }
+  \and
+  \inferrule[\label{rule:resolver-fulfill}Resolver-fulfill] {
+    \Gamma \vdash a^{+} : A \\
+    \Gamma \mid \Psi_1, a^{-} : A \coloneqq a^{+}, \Psi_2 \vdash \IsResolver{\pi}
+  } {
+    \Gamma \mid \Psi_1, a^{-} : A, \Psi_2 \vdash \IsResolver{a^{-} \coloneqq a^{+}; \pi}
+  }
+\end{mathpar}
+
+We can use this to define hom expressions $\IsHom{\phi}{Q}$, which denote morphisms
+\emph{into} some polynomial $Q$. Much like resolvers, we can also fulfill obligations
+in a hom expression. The crucial difference is how we terminate a hom expression; we
+are required to give a $q^{+} : \Base{Q}$, along with a resolver that is allowed
+to use reference some $i : \Fib{Q}{q^{+}}$.
+
+\begin{mathpar}
+  \inferrule[\label{rule:hom-fulfill}Hom-fulfill] {
+    \Gamma \vdash a^{+} : A \\
+    \Gamma \mid \Psi_1, a^{-} : A \coloneqq a^{+}, \Psi_2 \vdash \IsHom{\phi}{Q}
+  } {
+    \Gamma \mid \Psi_1, a^{-} : A, \Psi_2 \vdash \IsHom{a^{-} \coloneqq a^{+}; \phi}{Q}
+  }
+  \and
+  \inferrule[\label{rule:hom-done}Hom-done] {
+    \Gamma \vdash q^{+} : \Base{Q} \\
+    \Gamma, i : \Fib{Q}{q^{+}} \mid \Psi \vdash \IsResolver{\pi}
+  } {
+    \Gamma \mid \Psi \vdash \IsHom{(q^{+}, i. \pi)}{Q}
+  }
+\end{mathpar}
+
+With this in place, we can define the type of morphisms, along with the associated introduction
+and elimination rules.
+
+\begin{mathpar}
+  \inferrule[\label{rule:hom-formation}Hom-formation] {
+    \Gamma \vdash \IsPoly{P} \\
+    \Gamma \vdash \IsPoly{Q} \\
+  } {
+    \Gamma \vdash \IsTp{\Hom{P}{Q}}
+  }
+  \and
+  \inferrule[\label{rule:hom-intro}Hom-intro] {
+    \Gamma, p^{+} : \Base{P} \mid p^{-} : \Fib{P}{p^{+}} \vdash \IsHom{\phi}{Q}
+  } {
+    \Gamma \vdash \lambda\ p^{+}\ p^{-}.\ \phi : \Hom{P}{Q}
+  }
+  \and
+  \inferrule[\label{rule:hom-elim}Hom-elim] {
+    \Gamma \vdash f : \Hom{P}{Q} \\
+    \Gamma \vdash p^{+} : \Base{P}
+  } {
+    \Gamma \vdash f\ p^{+} : \Sigma\ (q^{+} : \Base{Q})\ (\Fib{Q}{q^{+}} \to \Fib{P}{p^+})
+  }
+\end{mathpar}
+
+\end{document}
