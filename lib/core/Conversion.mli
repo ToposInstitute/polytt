@@ -2,7 +2,8 @@
 
 module S := Syntax
 module D := Domain
+module Env := QuoteEnv
 
 exception Unequal
 
-val equate : size:int -> tp:D.tp -> D.t -> D.t -> unit
+val equate : env:Env.t -> tp:D.tp -> D.t -> D.t -> unit

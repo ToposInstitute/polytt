@@ -5,6 +5,7 @@ module D = Domain
 module Sem = Semantics
 module SS = Set.Make(String)
 module MS = Map.Make(String)
+module Env = QuoteEnv
 
 open TermBuilder
 
@@ -12,17 +13,45 @@ exception Unequal
 
 module Internal =
 struct
-  module Eff = Algaeff.Reader.Make (struct type env = int end)
+  module Eff = Env.Eff
 
   let bind tp f =
-    let arg = D.var tp @@ Eff.read() in
-    Eff.scope (fun size -> size + 1) @@ fun () ->
-    f arg
+    let arg = D.var tp @@ Env.read_pos_size () in
+    let df () = Eff.scope Env.incr_pos @@ fun () -> f arg in
+    match tp with
+    | D.FinSet ls ->
+      begin
+        try df () with
+        | Unequal ->
+          Debug.print "CC FinSet ETA@.";
+          ls |> List.iter @@ fun l ->
+          f (D.Label (ls, l))
+      end
+    | _ ->
+      df ()
 
   let rec equate tp v1 v2 =
     match (tp, v1, v2) with
-    | _, D.Neu (_, neu1), D.Neu (_, neu2) ->
-      equate_neu neu1 neu2
+    | tp, D.Neu (tp1, neu1), D.Neu (tp2, neu2) ->
+      begin
+        match (try_unstick tp1 neu1, try_unstick tp2 neu2) with
+        | D.Neu (_, neu3), D.Neu (_, neu4) -> equate_neu neu3 neu4
+        | D.Neu _, _ -> raise Unequal
+        | _, D.Neu _ -> raise Unequal
+        | v3, v4 -> equate tp v3 v4
+      end
+    | _, D.Neu (tp, neu), other ->
+      begin
+        match try_unstick tp neu with
+        | D.Neu _ -> raise Unequal
+        | e -> equate tp e other
+      end
+    | _, other, D.Neu (tp, neu) ->
+      begin
+        match try_unstick tp neu with
+        | D.Neu _ -> raise Unequal
+        | e -> equate tp other e
+      end
     | _, D.Pi (_, a1, clo1), D.Pi (_, a2, clo2) ->
       equate D.Univ a1 a2;
       bind a1 @@ fun v ->
@@ -38,8 +67,15 @@ struct
       equate D.Univ (Sem.inst_clo clo1 v) (Sem.inst_clo clo2 v)
     | D.Sigma (_, a, clo), v1, v2 ->
       equate a (Sem.do_fst v1) (Sem.do_fst v2);
-      let fib = Sem.inst_clo clo v1 in
+      let fib = Sem.inst_clo clo (Sem.do_fst v1) in
       equate fib (Sem.do_snd v1) (Sem.do_snd v2)
+    | _, D.Eq (t1, a1, b1), D.Eq (t2, a2, b2) ->
+      equate D.Univ t1 t2;
+      equate t1 a1 a2;
+      equate t1 b1 b2
+    | _, D.Refl _, D.Refl _ ->
+      (* They must have the same type by the time they got here *)
+      ()
     | _, D.Nat, D.Nat ->
       ()
     | _, D.Zero, D.Zero ->
@@ -52,8 +88,29 @@ struct
       ()
     | _, D.Univ, D.Univ ->
       ()
+    | _, D.Poly, D.Poly ->
+      ()
+    | D.Poly, v1, v2 ->
+      let base1 = Sem.do_base v1 in
+      let base2 = Sem.do_base v2 in
+      equate D.Univ base1 base2;
+      bind base1 @@ fun i ->
+      equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
+    | _, D.Hom (p1, q1), D.Hom (p2, q2) ->
+      equate D.Poly p1 p2;
+      equate D.Poly q1 q2;
     | _, _, _ ->
+      Debug.print "Could not equate %a and %a@."
+        D.dump v1
+        D.dump v2;
       raise Unequal
+
+  and try_unstick tp {hd; spine} =
+    match hd with
+    | D.Borrow lvl ->
+      Debug.print "CC read_neg_lvl@.";
+      Sem.do_spine (Env.read_neg_lvl lvl) spine
+    | _ -> D.Neu (tp, { hd; spine })
 
   and equate_neu (neu1 : D.neu) (neu2 : D.neu) =
     equate_hd neu1.hd neu2.hd;
@@ -66,7 +123,14 @@ struct
       ()
     | D.Hole (_, n) , D.Hole (_, m) when n = m ->
       ()
-    | _ -> raise Unequal
+    | D.Skolem _, D.Skolem _ ->
+      (* Skolems don't equate with themselves. This is used
+         in the skolem check, as we equate something with itself to
+         flush out any skolems. *)
+      raise Unequal
+    | _ ->
+      Debug.print "Could not equate heads.@.";
+      raise Unequal
 
   and equate_frm frm1 frm2 =
     match frm1, frm2 with
@@ -110,7 +174,16 @@ struct
       let m2 = MS.of_seq (List.to_seq r2.cases) in
       let _ = equate_maps apply_motives m1 m2 in
       ()
+    | D.Base, D.Base ->
+      ()
+    | D.Fib fib1, D.Fib fib2 ->
+      equate fib1.base fib1.value fib2.value
+    | D.HomElim {tp; arg = v1}, D.HomElim {arg = v2; _} ->
+      equate tp v1 v2
     | _ ->
+      Debug.print "Could not equate frames %a and %a@."
+        D.dump_frm frm1
+        D.dump_frm frm2;
       raise Unequal
 
   and equate_maps apply_motives =
@@ -124,6 +197,6 @@ struct
     | _, _ -> raise Unequal
 end
 
-let equate ~size ~tp v1 v2 =
-  Internal.Eff.run ~env:size @@ fun () ->
+let equate ~env ~tp v1 v2 =
+  Internal.Eff.run ~env @@ fun () ->
   Internal.equate tp v1 v2

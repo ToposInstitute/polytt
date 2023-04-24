@@ -6,21 +6,38 @@ module Sem = Semantics
 
 open TermBuilder
 
+module Env = QuoteEnv
+
 module Internal =
 struct
-  module Eff = Algaeff.Reader.Make (struct type env = int end)
+  module Eff = Env.Eff
 
   let bind tp f =
-    let arg = D.var tp @@ Eff.read() in
-    Eff.scope (fun size -> size + 1) @@ fun () ->
+    let arg = D.var tp (Env.read_pos_size ()) in
+    Eff.scope Env.incr_pos @@ fun () ->
     f arg
 
   let quote_lvl lvl =
-    let env = Eff.read () in
+    let env = Env.read_pos_size () in
     env - (lvl + 1)
 
   let rec quote (tp : D.t) (v : D.t) : S.t =
     match tp, v with
+    (* | D.Pi (_nm, D.FinSet ls, tp_clo), D.Lam (nm, clo) when ls != [] ->
+       Debug.print "Lam-FinSet ETA%a@." D.dump_clo clo;
+       let r = S.Lam (nm,
+        bind (D.FinSet ls) @@ fun arg ->
+        S.Cases
+          ( S.Lam (_nm, bind (D.FinSet ls) @@ fun arg -> quote D.Univ (Sem.inst_clo tp_clo arg))
+          , List.map (fun l ->
+                let arg = D.Label (ls, l) in
+                l, quote (Sem.inst_clo tp_clo arg) (Sem.inst_clo clo arg)
+            ) ls
+          , S.Var 0
+          )
+       ) in
+       Debug.print "ETAD%a@." S.dump r;
+       r *)
     | D.Pi (_, a, tp_clo), D.Lam (nm, clo) ->
       let body = bind a @@ fun arg ->
         quote (Sem.inst_clo tp_clo arg) (Sem.inst_clo clo arg)
@@ -31,6 +48,18 @@ struct
         quote (Sem.inst_clo clo arg) @@ Sem.do_ap v arg
       in
       S.Lam(nm, body)
+    (* | _, D.Pi (nm, D.FinSet ls, clo) when ls != [] ->
+       (* Debug.print "Pi-FinSet ETA@."; *)
+       S.Pi (nm, S.FinSet ls,
+        S.Cases
+          ( S.Lam (nm, S.Univ)
+          , List.map (fun l ->
+                let arg = D.Label (ls, l) in
+                l, quote D.Univ (Sem.inst_clo clo arg)
+            ) ls
+          , S.Var 0
+          )
+       ) *)
     | _, D.Pi (nm, a, clo) ->
       let qa = quote D.Univ a in
       let b = bind a @@ fun arg ->
@@ -64,14 +93,70 @@ struct
       S.Succ (quote D.Nat n)
     | _, D.Univ ->
       S.Univ
+    | _, D.Poly ->
+      S.Poly
+    | D.Poly, D.PolyIntro (nm, vbase, vfib) ->
+      let base = quote D.Univ vbase in
+      let fib = bind vbase @@ fun arg ->
+        quote D.Univ (Sem.inst_clo vfib arg)
+      in
+      S.PolyIntro (nm, base, fib)
+    | D.Poly, v ->
+      let base = Sem.do_base v in
+      let qbase = quote D.Univ base in
+      let fib = bind base @@ fun i ->
+        quote D.Univ (Sem.do_fib v i)
+      in S.PolyIntro (`Anon, qbase, fib)
+    | _, D.Hom (p, q) ->
+      S.Hom (quote D.Poly p, quote D.Poly q)
+    | D.Hom (p, q), D.HomLam wrapped ->
+      let tp =
+        Sem.graft_value @@
+        Graft.value p @@ fun p ->
+        Graft.value q @@ fun q ->
+        Graft.build @@
+        TB.pi (TB.base p) @@ fun p_base ->
+        TB.sigma (TB.base q) @@ fun q_base ->
+        TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
+      in
+      S.HomLam (quote tp wrapped)
     | _, D.FinSet ls ->
       S.FinSet ls
     | _, D.Label (ls, l) ->
       S.Label (ls, l)
-    | _, D.Neu (_, neu) ->
-      quote_neu neu
-    | _ ->
+    | tp, (D.Neu (_, neu) as stuck) ->
+      begin
+        match unstick stuck with
+        (* still stuck on something *)
+        | D.Neu (_, neu) ->
+          quote_neu neu
+        (* no longer stuck at the top-level at least *)
+        | e ->
+          quote tp (Sem.do_spine e neu.spine)
+      end
+    | tp, tm ->
+      Debug.print "Bad quote: %a@." D.dump tm;
+      Debug.print "  against: %a@." D.dump tp;
       invalid_arg "bad quote"
+
+  and progressed_from hd' = function
+    | D.Neu (_tp, { hd; spine = Emp }) -> hd != hd'
+    | _ -> true
+
+  and try_unstick = function
+    | D.Borrow lvl -> Some (Env.read_neg_lvl lvl)
+    | _ -> None
+
+  and unstick = function
+    | D.Neu (_tp, { hd; spine }) as stuck ->
+      begin
+        match try_unstick hd with
+        | Some newer when newer |> progressed_from hd ->
+          (* We want to eval (e.g. beta-reduce) and _then_ try unsticking more *)
+          unstick @@ Sem.do_spine newer spine
+        | _ -> stuck
+      end
+    | notstuck -> notstuck
 
   and quote_neu {hd; spine} =
     Bwd.fold_left quote_frm (quote_hd hd) spine
@@ -80,8 +165,12 @@ struct
     match hd with
     | D.Var lvl ->
       S.Var (quote_lvl lvl)
+    | D.Borrow lvl ->
+      S.Borrow lvl
     | D.Hole (tp, n) ->
       S.Hole (quote D.Univ tp, n)
+    | D.Skolem tp ->
+      S.Skolem (quote D.Univ tp)
 
   and quote_frm tm frm =
     match frm with
@@ -113,12 +202,17 @@ struct
       let ls = List.map fst cases in
       let quote_key (l, v) = l, quote (Sem.do_ap mot (D.Label (ls, l))) v in
       S.Cases (quote (Sem.graft_value (Graft.build (TB.pi (TB.finset ls) (fun _ -> TB.univ)))) mot, List.map quote_key cases, tm)
+    | D.Base ->
+      S.Base tm
+    | D.Fib {base; value} ->
+      S.Fib (tm, quote base value)
+    | D.HomElim {tp; arg} ->
+      S.HomElim (tm, quote tp arg)
 end
 
-let quote ~size ~tp v =
-  Internal.Eff.run ~env:size @@ fun () ->
+let quote ~env ~tp v =
+  Internal.Eff.run ~env @@ fun () ->
   Internal.quote tp v
 
 let quote_top ~tp v =
-  Internal.Eff.run ~env:0 @@ fun () ->
-  Internal.quote tp v
+  quote ~env:Env.empty ~tp v

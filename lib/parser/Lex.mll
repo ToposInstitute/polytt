@@ -30,6 +30,9 @@ let keywords =
   make_table 0 [
     ("def", DEF);
     ("Type", TYPE);
+    ("Poly", POLY);
+    ("base", BASE);
+    ("fib", FIB);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);
@@ -37,6 +40,7 @@ let keywords =
     ("refl", REFL);
     ("fst", FST);
     ("snd", SND);
+    ("end", END);
   ]
 
 (* Some Lexing Utilities *)
@@ -94,24 +98,42 @@ and token = parse "" { skip_whitespace real_token lexbuf }
 
 and real_token = parse
   (* Symbols *)
-  | "λ"
+  | "λ" | "\\"
     { LAMBDA }
+  | "λ-" | "\\-" | "λ⁻" | "\\⁻"
+    { LAMBDA_MINUS }
   | "let"
     { LET }
+  | "let-" | "let⁻"
+    { LET_MINUS }
   | "in"
     { IN }
   | "forall" | "∀"
     { FORALL }
   | "->" | "→"
     { RIGHT_ARROW }
+  | "=>" | "⇒"
+    { RIGHT_THICK_ARROW }
+  | "." | "∘"
+    { CIRC }
+  | "~>" | "⇝"
+    { RIGHT_SQUIGGLY_ARROW }
+  | "<~" | "⇜"
+    { LEFT_SQUIGGLY_ARROW }
+  | ">-" | "⤚"
+    { RIGHT_ARROW_TAIL }
   | "*" | "×"
     { TIMES }
   | ':'
      { COLON }
+  | ';'
+     { SEMICOLON }
   | "::"
     { COLON_COLON }
   | '_'
     { UNDERSCORE }
+  | '!'
+    { BANG }
   | ":="
     { COLON_EQUALS }
   | ","

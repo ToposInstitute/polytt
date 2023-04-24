@@ -10,6 +10,8 @@ type 'a labeled = (string * 'a) list
 
 type syn =
   | Var of int
+  | Borrow of int
+  (** Negative variables are DeBruijn levels, even in the syntax! *)
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
   | Lam of Ident.t * syn (* λ x. e *)
   | Let of Ident.t * syn * syn (* let x = e in t *)
@@ -21,12 +23,12 @@ type syn =
   | Eq of syn * syn * syn
   | Refl of syn
   (* Axiom J
-    J : {A : Type} {x : A}
+     J : {A : Type} {x : A}
       -> (P : (y : A) -> x = y -> Type)
       -> P x refl
       -> {y : A} (p : x = y)
       -> P y p
-    *)
+  *)
   (* | AxiomJ of  *)
   | Nat (* ℕ *)
   | Zero (* zero *)
@@ -35,14 +37,23 @@ type syn =
   | FinSet of labelset (* #{ foo, bar } *)
   | Label of labelset * label (* .foo *)
   | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
-  | Univ (* A *)
+  | Univ
+  | Poly
+  | PolyIntro of Ident.t * syn * syn
+  | Base of syn
+  | Fib of syn * syn
+  | Hom of syn * syn
+  | HomLam of syn
+  | HomElim of syn * syn
   | Hole of syn * int
+  | Skolem of syn
+  (** Used for ensuring that pi types are not dependent, see Skolem.ml *)
 
 and value =
   | Neu of value * neu
-  | Pi of Ident.t * value * clo
-  | Lam of Ident.t * clo
-  | Sigma of Ident.t * value * clo
+  | Pi of Ident.t * value * tm_clo
+  | Lam of Ident.t * tm_clo
+  | Sigma of Ident.t * value * tm_clo
   | Pair of value * value
   | Eq of value * value * value
   | Refl of value
@@ -52,12 +63,18 @@ and value =
   | FinSet of labelset
   | Label of labelset * label
   | Univ
+  | Poly
+  | PolyIntro of Ident.t * value * tm_clo
+  | Hom of value * value
+  | HomLam of value
 
 and neu = { hd : hd; spine : frame bwd }
 
 and hd =
   | Var of int
+  | Borrow of int
   | Hole of value * int
+  | Skolem of value
 
 and frame =
   | Ap of { tp : value; arg : value }
@@ -65,6 +82,13 @@ and frame =
   | Snd
   | NatElim of { mot : value; zero : value; succ : value }
   | Cases of { mot : value; cases : (string * value) list }
+  | Base
+  | Fib of { base : value; value : value }
+  | HomElim of { tp : value; arg : value }
 
-and env = value bwd
-and clo = Clo of { env : env; body : syn }
+and env = { pos : value bwd; neg_size : int; neg : value bwd }
+
+(** We need to evaluate positive values, but we only borrow negatives so we just
+    need their types, and we pass the size for quicker level<->index conversion *)
+and 'a clo = Clo of { env : env; body : 'a }
+and tm_clo = syn clo

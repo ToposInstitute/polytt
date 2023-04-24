@@ -30,5 +30,22 @@ and t_ =
   | RecordLit of t labeled
   | Lit of int
   | Univ
+  | NegPair of t * Ident.t * t
+  | NegPairSimple of t * t
+  | NegUnpack of t * Ident.t * Ident.t * t
+  | Poly
+  | Base of t
+  | Fib of t * t
+  | Hom of t * t
+  | HomLam of Ident.t * Ident.t * t
+  | Set of t * t * t
+  | NegAnno of t * t
+  | NegLet of Ident.t * t * t
+  | NegLam of Ident.t * t * t
+  | NegAp of t * t list
+  | Drop
+  | End
+  | HomAp of t * t * t * Ident.t * Ident.t * t
+  | Done of t * t
   | Anno of t * t (* (t : ty) *)
   | Hole

@@ -1,7 +1,5 @@
 open Core
-open Errors
 open Tactic
-open TermBuilder
 
 module D = Domain
 module S = Syntax

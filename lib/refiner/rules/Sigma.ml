@@ -1,4 +1,3 @@
-open Errors
 open Tactic
 
 let formation ?(names = [`Anon]) base_tac fam_tac =

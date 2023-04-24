@@ -1,4 +1,3 @@
-open Asai
 open Bwd
 open Bwd.Infix
 open Core
@@ -7,19 +6,29 @@ open Errors
 module D = Domain
 module S = Syntax
 
+module IntSet = Set.Make (Int)
 
 module Cell =
 struct
-  type t = {
-    name : Ident.t;
-    tp : D.tp;
-    value : D.t;
-  }
+  type pos = { name : Ident.t; tp : D.tp; value : D.t; }
+  type neg = { name : Ident.t; tp : D.tp; lvl : int }
 
-  let name cell = cell.name
-  let tp cell = cell.tp
-  let value cell = cell.value
+  type t =
+    | Pos of pos
+    | Neg of neg
+
+  let name =
+    function
+    | Pos {name; _} -> name
+    | Neg {name; _} -> name
+
+  let value =
+    function
+    | Pos {value; _} -> value
+    | Neg {tp; lvl; _} -> D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
 end
+
+
 
 module Globals =
 struct
@@ -50,7 +59,11 @@ struct
     local_types : D.tp bwd;
     local_names : (Cell.t, unit) Yuujinchou.Trie.t;
     size : int;
-    ppenv : Ident.t bwd
+    neg_size : int;
+    neg_values : (bool ref * D.t ref) bwd;
+    neg_types : D.tp bwd;
+    ppenv_pos : Ident.t bwd;
+    ppenv_neg : Ident.t bwd
   }
 
   let top_env = {
@@ -58,78 +71,197 @@ struct
     local_types = Emp;
     local_names = Yuujinchou.Trie.empty;
     size = 0;
-    ppenv = Emp
+    neg_size = 0;
+    neg_values = Emp;
+    neg_types = Emp;
+    ppenv_pos = Emp;
+    ppenv_neg = Emp
   }
 
-  module Eff = Algaeff.Reader.Make(struct type nonrec env = env end)
+  let drop_linear env =
+    { env with
+      local_names = Yuujinchou.Trie.filter
+          ( fun _ (cell, _) ->
+              match cell with
+              | Cell.Pos _ -> true
+              | Cell.Neg _ -> false
+          )
+          env.local_names;
+      neg_size = 0;
+      neg_values = Emp;
+      neg_types = Emp;
+      ppenv_neg = Emp
+    }
+
+  module Reader = Algaeff.Reader.Make(struct type nonrec env = env end)
 
   let run_top k =
-    Eff.run ~env:top_env k
+    Reader.run ~env:top_env k
+
+  let all_consumed () =
+    let env = Reader.read () in
+    Bwd.for_all (fun (c, _) -> !c) env.neg_values
+
+  let head () =
+    let env = Reader.read () in
+    if (env.neg_size == 0) then invalid_arg (Format.asprintf "Eff.Locals.head on empty context");
+    ! (snd (Bwd.nth env.neg_values (env.neg_size - 1)))
+
+  let run_linear k =
+    Reader.scope drop_linear @@ fun () ->
+    k ()
 
   let env () =
-    Eff.read ()
+    Reader.read ()
 
   let local_types () =
-    let env = Eff.read () in
+    let env = Reader.read () in
     env.local_types
 
-  let ppenv () =
-    let env = Eff.read () in
-    env.ppenv
+  let ppenv () : S.ppenv =
+    let env = Reader.read () in
+    { pos = env.ppenv_pos; neg_size = env.neg_size; neg = env.ppenv_neg }
+
+  let qenv () : QuoteEnv.t =
+    let env = Reader.read () in
+    { pos_size = env.size; neg_size = env.neg_size; neg = Bwd.map (fun (_, r) -> !r) env.neg_values }
+
+  let denv () : D.env =
+    let env = Reader.read () in
+    { pos = env.locals; neg_size = env.neg_size; neg = env.neg_types }
 
   let size () =
-    let env = Eff.read () in
+    let env = Reader.read () in
     env.size
 
   let resolve path =
-    let env = Eff.read () in
+    let env = Reader.read () in
     Yuujinchou.Trie.find_singleton path env.local_names
-    |> Option.map @@ fun (cell, ()) -> cell
+    |> function
+    | Some (Pos pos, ()) -> Some pos
+    | _ -> None
+
+  let resolve_neg path =
+    let env = Reader.read () in
+    Yuujinchou.Trie.find_singleton path env.local_names
+    |> function
+    | Some (Neg neg, ()) -> Some neg
+    | _ -> None
 
   let fresh_var tp () =
-    let env = Eff.read () in
+    let env = Reader.read () in
     D.var tp env.size
 
+  let fresh_neg_var () =
+    let env = Reader.read () in
+    env.neg_size
+
   let bind_var cell env =
-    let name = Cell.name cell in
-    let value = Cell.value cell in
     let local_names =
-      match name with
+      match Cell.name cell with
       | `User path ->
         Yuujinchou.Trie.update_singleton path (fun _ -> Some (cell, ())) env.local_names
       | _ -> env.local_names
-    in {
-      locals = env.locals #< value;
-      local_types = env.local_types #< cell.tp;
-      local_names;
-      size = env.size + 1;
-      ppenv = env.ppenv #< name
-    }
+    in
+    match cell with
+    | Cell.Pos {name; value; tp} -> {
+        env with
+        locals = env.locals #< value;
+        local_types = env.local_types #< tp;
+        local_names;
+        size = env.size + 1;
+        ppenv_pos = env.ppenv_pos #< name
+      }
+    | Cell.Neg {name; lvl; tp} ->
+      {
+        env with
+        local_names;
+        neg_size = env.neg_size + 1;
+        neg_types = env.neg_types #< tp;
+        neg_values = env.neg_values #< (ref false, ref (D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })));
+        ppenv_neg = env.ppenv_neg #< name
+      }
 
   let bind_vars cells env =
-    List.fold_left (fun env cell -> bind_var cell env) env cells 
+    List.fold_left (fun env cell -> bind_var cell env) env cells
 
   let concrete ?(name = `Anon) tp tm k =
-    let cell = { Cell.name; tp; value = tm } in
-    Eff.scope (bind_var cell) @@ fun () ->
+    let cell = Cell.Pos { name; tp; value = tm } in
+    Reader.scope (bind_var cell) @@ fun () ->
     k ()
 
   let abstract ?(name = `Anon) tp k =
     let var = fresh_var tp () in
-    let cell = { Cell.name; tp; value = var } in
-    Eff.scope (bind_var cell) @@ fun () ->
+    let cell = Cell.Pos { name; tp; value = var } in
+    Reader.scope (bind_var cell) @@ fun () ->
     k var
+
+  let abstract_neg ?(name = `Anon) tp k =
+    let lvl = fresh_neg_var () in
+    let neg_cell = { Cell.name; tp; lvl } in
+    let cell = Cell.Neg neg_cell in
+    Reader.scope (bind_var cell) @@ fun () ->
+    k lvl
+
+  let consume_neg lvl () =
+    let env = Reader.read () in
+    let (consumed, value_ref) = Bwd.nth env.neg_values ((env.neg_size - 1) - lvl) in
+    match !consumed with
+    | true ->
+      None
+    | false ->
+      consumed := true;
+      Some (fun value -> value_ref := value)
+
+  let revert i_tp cb =
+    Debug.print "i_tp: %a@." D.dump i_tp;
+    let env0 = Reader.read () in
+    let already_used = Bwd.map2 (fun (used, _) tp -> !used, tp) env0.neg_values env0.neg_types in
+    cb ();
+    let env1 = Reader.read () in
+    assert (env1.neg_size >= env0.neg_size);
+    let q = qenv () in
+    let d = denv () in
+    let ok = ref true in
+    let reverted =
+      (Bwd.mapi (fun i v -> i,v) env1.neg_values) |>
+      Bwd.filter_map @@ fun (i, (used, value)) ->
+      let used_now = !used in
+      match Bwd.nth_opt already_used i with
+      | None ->
+        if not used_now then ok := false;
+        None
+      | Some (false, o_tp) when used_now ->
+        Debug.print "o_tp: %a@.              %a@." D.dump o_tp S.dump (Quote.quote ~env:q ~tp:D.Univ o_tp);
+        Debug.print "value: %a@." D.dump !value;
+        let quoted = Quote.quote ~env:q ~tp:o_tp !value in
+        Debug.print "       %a@." S.dump quoted;
+        let dropped =
+          match d.pos with
+          | Snoc (pos, _) -> { d with pos = pos }
+          | _ -> d
+        in
+        let abstracted : D.tm_clo = Clo { env = dropped; body = quoted } in
+        Some (fun v -> value := Semantics.inst_clo abstracted v)
+      | Some _ -> None
+    in
+    match !ok with
+    | false -> None
+    | true -> Some
+                (fun value -> Bwd.iter (fun f -> f value) reverted)
 
   let abstracts ?(names = [`Anon]) tp k =
     let cells =
       names
-      |> List.map @@ fun name ->
-      { Cell.name; tp; value = fresh_var tp () } 
+      |> List.mapi @@ fun i name ->
+      (* TODO cleanup *)
+      (Pos { Cell.name; tp; value = D.var tp ((Reader.read ()).size + i) } : Cell.t)
     in
     let vars = List.map Cell.value cells in
-    Eff.scope (bind_vars cells) @@ fun () ->
+    Reader.scope (bind_vars cells) @@ fun () ->
     k vars
 end
+
 
 module Error =
 struct
@@ -138,6 +270,15 @@ struct
   let error code fmt =
     let loc = Eff.read () in
     Logger.fatalf ~loc:loc code fmt
+
+  let type_error tp conn =
+    let loc = Eff.read () in
+    let env = Locals.qenv () in
+    let ppenv = Locals.ppenv () in
+    let qtp = Quote.quote ~env ~tp:D.Univ tp in
+    Logger.fatalf ~loc:loc `TypeError "Expected %a, but got %s@."
+      (S.pp ppenv Precedence.isolated) qtp
+      conn
 
   let locate loc k =
     Eff.scope (fun _ -> loc) k
@@ -158,23 +299,30 @@ struct
 end
 
 let quote ~tp tm =
-  let env = Locals.env () in
-  Quote.quote ~size:env.size ~tp tm
+  let env = Locals.qenv () in
+  Quote.quote ~env ~tp tm
 
 let equate ~tp v1 v2 =
-  let env = Locals.env () in
+  let env = Locals.qenv () in
+  let ppenv = Locals.ppenv () in
   try
-    Conversion.equate ~size:env.size ~tp v1 v2
+    Conversion.equate ~env ~tp v1 v2
   with Conversion.Unequal ->
-    let tm1 = Quote.quote ~size:env.size ~tp v1 in
-    let tm2 = Quote.quote ~size:env.size ~tp v2 in
+    Debug.print "Unequal:@.%a@.%a@." D.dump v1 D.dump v2;
+    let tm1 = Quote.quote ~env ~tp v1 in
+    let tm2 = Quote.quote ~env ~tp v2 in
+    Debug.print "Unequal:@.%a@.%a@." S.dump tm1 S.dump tm2;
     Error.error `ConversionError "Could not solve %a = %a@."
-      (S.pp env.ppenv (Precedence.left_of S.equals)) tm1
-      (S.pp env.ppenv (Precedence.right_of S.equals)) tm2
+      (S.pp ppenv (Precedence.left_of S.equals)) tm1
+      (S.pp ppenv (Precedence.right_of S.equals)) tm2
+
+let inst_const_clo ~tp clo =
+  let env = Locals.qenv () in
+  Skolem.inst_const_clo ~env ~tp clo
 
 let eval tm =
-  let env = Locals.env () in
-  Semantics.eval ~env:env.locals tm
+  let env = Locals.denv () in
+  Semantics.eval ~env tm
 
 let inst_clo clo v =
   Semantics.inst_clo clo v
@@ -193,3 +341,12 @@ let do_snd tm =
 
 let do_nat_elim ~mot ~zero ~succ ~scrut =
   Semantics.do_nat_elim ~mot ~zero ~succ ~scrut
+
+let do_base p =
+  Semantics.do_base p
+
+let do_fib p i =
+  Semantics.do_fib p i
+
+let do_hom_elim p i =
+  Semantics.do_hom_elim p i

@@ -1,7 +1,5 @@
 open Core
-open Errors
 open Tactic
-open TermBuilder
 
 module D = Domain
 module S = Syntax
@@ -51,21 +49,30 @@ let record cases_tac =
 let record_lit cases_tac =
   Chk.rule @@
   function
-  | D.Pi (nm, D.FinSet ls', clo) as tp ->
+  | D.Pi (nm, D.FinSet ls', clo) ->
     let ls = List.map fst cases_tac in
     if SS.cardinal (SS.of_list ls) != List.length ls then Error.error `TypeError "Duplicate record labels";
     if SS.equal (SS.of_list ls) (SS.of_list ls')
     then
-      let mot = D.Lam (nm, clo) in
+      let mot_tp =
+        graft_value @@
+        Graft.build @@
+        TB.pi ~name:nm (TB.finset ls') (fun _ -> TB.univ) in
       (* We bind an (anonymous) variable here, as we will be placing
          the cases underneath a lambda binder. *)
       let cases =
-        List.map (fun (l, case_tac) -> l,
-                                       Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun v ->
-                                       let x = (Sem.inst_clo clo (Var.value v)) in
-                                       let r = Chk.run case_tac x in
-                                       r) cases_tac in
-      S.Lam (Ident.anon, S.Cases (quote ~tp mot, cases, S.Var 0))
+        cases_tac
+        |> List.map @@
+        function
+        | l, case_tac ->
+          l,
+          Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun v ->
+          Chk.run case_tac (Sem.inst_clo clo (Var.value v))
+      in
+      S.Lam ( Ident.anon,
+              Locals.abstract (D.FinSet ls) @@ fun _ ->
+              S.Cases (quote ~tp:mot_tp (D.Lam (nm, clo)), cases, S.Var 0)
+            )
     else
       Error.error `TypeError "Record labels did not match expected type."
   | _ ->
@@ -77,15 +84,23 @@ let record_lit_syn cases_tac =
   (* We bind an (anonymous) variable here, as we will be placing
      the cases underneath a lambda binder. *)
   let cases_tp_tm =
-    List.map (fun (l, case_tac) -> l,
-                                   Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun _ ->
-                                   let r = Syn.run case_tac in
-                                   r) cases_tac in
+    cases_tac
+    |> List.map @@ fun (l, case_tac) ->
+    l, Var.concrete (D.FinSet ls) (D.Label (ls, l)) @@ fun _ ->
+    let tp, tm = Syn.run case_tac in
+    let tp = quote ~tp:D.Univ tp in
+    (tp, tm)
+  in
   let cases_tp = List.map (fun (l, (tp, _)) -> l, tp) cases_tp_tm in
   let cases_tm = List.map (fun (l, (_, tm)) -> l, tm) cases_tp_tm in
   let mot_tp = S.Lam (Ident.anon, S.Univ) in
-  let thingy = S.Cases (mot_tp, List.map (fun (l, tp) -> l, quote ~tp:D.Univ tp) cases_tp, S.Var 0) in
-  let mot =
-    S.Lam (Ident.anon, thingy) in
+  let is_univ = fun (_, tp) -> tp = S.Univ in
+  let thingy =
+    (* FIXME bad hack *)
+    if ((List.for_all is_univ cases_tp) && (List.exists is_univ cases_tp))
+    then S.Univ
+    else S.Cases (mot_tp, cases_tp, S.Var 0)
+  in
+  let mot = S.Lam (Ident.anon, thingy) in
   let tp = eval (S.Pi (Ident.anon, S.FinSet ls, thingy)) in
   tp , S.Lam (Ident.anon, S.Cases (mot, cases_tm, S.Var 0))

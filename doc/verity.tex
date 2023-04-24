@@ -1,0 +1,449 @@
+\documentclass[final]{amsart}
+\usepackage{mathpartir}
+\usepackage{mathtools}
+\usepackage{mlmodern}
+\usepackage{todonotes}
+\usepackage{mathabx}
+
+\usepackage{rules}
+
+\NewDocumentCommand\IsNegCtx{m}{#1\ \mathit{NegCtx}}
+\NewDocumentCommand\IsNegEnv{m}{#1\ \mathit{NegEnv}}
+\NewDocumentCommand\IsFilled{m}{#1\ \mathit{Filled}}
+\NewDocumentCommand\IsProg{m}{#1\ \mathit{Program}}
+\NewDocumentCommand\Let{m}{\operatorname{let}\ #1}
+\NewDocumentCommand\In{}{\text{\ in\ }}
+\NewDocumentCommand\Fst{m}{\operatorname{fst} #1}
+\NewDocumentCommand\Snd{m}{\operatorname{snd} #1}
+\NewDocumentCommand\BOX{m}{\mathsf{Box} #1}
+
+\NewDocumentCommand\Judg{m}{\textsc{\textcolor{gray}{Judg:}#1}}
+\NewDocumentCommand\Deriv{m}{\textsc{\textcolor{gray}{Deriv:}#1}}
+
+\title{The Synthetic Theory of Polynomial Functors}
+\author{David Spivak}
+\author{Owen Lynch}
+\author{Reed Mullanix}
+\author{Solomon Bothwell}
+\author{Verity Scheel}
+
+\begin{document}
+\maketitle
+
+\section{Verity's Rules (Working Document)}
+
+Blah blah blah Martin-L\"of Type Theory.
+
+We will write variables as $x^{(\pm)}, y^{(\pm)}, z^{(\pm)}$ when we are referencing explicit bindings, as opposed to general expressions.
+We will use $x^{+}$ for normal variables in the forwards direction of morphisms, $x^{-}$ for sinks (negative variables, which are necessarily in the reverse direction of morphisms), and plain $x$ for binding the positive value being threaded through the reverse direction.
+That is, our convention will be that $x^{-} = (\lambda x \to (x \mapsto x^{-}); \Done)$ (eta-expansion of sinks).
+In terms of polynomial functors, $x^{+}$ will usually have type $\Base{P}$, and $x^{-}$ and $x$ will both have type $\Fib{P}{x^{+}}$ but as negative and positive terms respectively.\\
+
+MLTT has three things (``kinds''?):
+\begin{enumerate}
+  \item Contexts $\IsCtx{\Gamma}$, with variables of specified types, and possibly definitions for those variables (e.g. we allow a concrete variable $(one := 1 : \mathbb{N})$ to be in context, not just an abstract $(n : \mathbb{N})$).
+  \item Types $\IsTp{A}$
+  \item Terms $a : A$
+\end{enumerate}
+
+To this we add (... a lot of machinery in my presentation here ...):
+\begin{enumerate}
+  \item A type of polynomial functors $P, Q : \PolyUniv$, and a type of morphisms between them $\phi, \psi : \Hom{P}{Q}$
+  % see it's a nice loop, graphically signifying control flow
+  \item Negative (linear) contexts $\IsNegCtx{\Omega}$, which introduces sinks (negative variables of negative types) and later will fill in their values (this forms compound contexts $\Gamma \mid \Omega$, where the vertical bar is mere syntax)
+  \item Negative types $\IsTp{A^{-}}$ for sinks, which are exactly like MLTT types but may mention negative values via borrowing (note that ${-}^{-}$ is no longer an operation, just notation to distinguish negative types, which represent sinks)
+  \item Programs $\IsProg{\pi}$, which set negative terms (sinks) to values, which then are reflected in the context $\Omega$
+  \item Negative terms $a^{-} : A^{-}$ (i.e. sinks), which can be set to values in programs (that is, they are abstracted programs which take in a positive value)
+  % \rho for [r]eturn
+  \item Morphism bodies $\rho :\Rightarrow Q$, which have a sequence of programs and then conclude in a positive return value and negative fibrational component (this is a technical wart of our presentation: for a poly-morphism of type $P \Rightarrow Q$, after introducing the bits from $P$ we still need to hold onto the right return type $Q$ for the end of the body, so we encode this in a judgment which I cheekily call $- :\Rightarrow Q$ since it is the ``type'' of being a program ``into $Q$'')
+\end{enumerate}
+
+Programs have a few operations:
+\begin{enumerate}
+  \item Writing a positive value to a negative term of the same type. We will write it as $a^{+} \mapsto a^{-}$.
+  \item Done, the program which does nothing, which is necessary for the grammar to be right-associative. We will write it as $\Done$.
+  %\item Borrow, which abstracts over an opaque value of a sink. We do not need this yet, so we omit it. We may also restrict it to borrowing variables only, as opposed to general negative terms.
+  \item Unpack, which splits a sigma-sink into two sinks (with a type dependency). We will write it as $v^{-} \prec (x^{-}, y^{-})$.
+  \item Pair, which bundles up two sinks into a sink of the corresponding sigma type. This can be implemented in user-land with $ab^{-} := \lambda\ ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-}); \Done$, in place of a builtin combinator like $(a^{-}, b^{-})$, or $(a^{-}, \lambda a \to b^{-})$ for a dependent pair.
+  \item Morphism application $(p^{+}, p^{-}) \xrightarrow{\phi} (q^{+}, q^{-})$ can also be implemented in user-land. (Note: if we make boxes (section \ref{boxes}) first-class, this will just be interpreting $P \Rightarrow Q$ as a function $\BOX{P} \to \BOX{Q}$ and applying it to $(p^{+}, p^{-})$.)
+\end{enumerate}
+
+All of these operations are allowed in both programs and morphism bodies.
+We will only write out the judgments for the latter: the former can be derived by replacing all instances of $\rho :\Rightarrow Q$ with $\IsProg{\pi}$, except for \Deriv{Body-Done} which corresponds simply to this derivation:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Done}] {
+  } {
+    \Gamma \mid \Omega \vdash \IsProg{\Done{}}
+  }
+\end{mathpar}
+
+Note that this means there is no linearity checking at the end of programs: we only care about linearity at the very end of a morphism, and programs are only small pieces of them.
+Well, we need to check that any additional sinks introduced during the program are written to, in particular since they cannot be referenced outside of the program at all, but we do not expect that every sink already in the context is written to by the end of a program.
+
+
+
+
+\section{Overview on linearity}
+
+Linearity is checked by writing a negative variable's written value in context $\Omega$, never allowing it to be written twice, and checking that all variables introduced in $\Omega$ have been written by the end of a morphism-body.
+
+Writing a variable only occurs in programs and morphism bodies.
+This introduces additional definitional equalities for $\Borrow a^{-}$ into scope.
+Namely, $a \mapsto x^{-}$ allows for the reduction $\Borrow x^{-} \equiv a$, like so:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Borrow-reduce}] {
+  } {
+    \Gamma \mid \Omega_L, (x^{-} : A^{-}), \Omega_M, (a \mapsto x^{-}), \Omega_R \vdash \Borrow x^{-} \equiv a : A
+  }
+\end{mathpar}
+
+We can more succinctly write this like so:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Borrow-reduce}] {
+  	(a \mapsto x^{-} : A^{-}) \in \Omega
+  } {
+    \Gamma \mid \Omega \vdash \Borrow x^{-} \equiv a : A
+  }
+\end{mathpar}
+
+\textsc{Todo}: what to do about compound negative terms? disallow borrowing them? yes! definitely.
+
+Negative terms in negative types are not consumed.
+In particular, mentioning a negative variable in $\Borrow a^{-}$ does not consume it, so this means that the only difference between types and negative types are that the latter may mention $\Borrow a^{-}$.
+
+\begin{mathpar}
+  \inferrule[\Deriv{Borrow-negative}] {
+    \Gamma \mid \Omega \vdash a^{-} : A^{-}
+  } {
+    \Gamma \mid \Omega \vdash \Borrow a^{-} : A
+  }
+\end{mathpar}
+
+This means that the MLTT fragment does not need to care about linearity.
+It only needs to pass along the compound context $\Gamma \mid \Omega$.
+For example, the application rule looks like this:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Ap}] {
+    \Gamma \mid \Omega \vdash f : (a : A) \to B[a]\\
+    \Gamma \mid \Omega \vdash v : A
+  } {
+    \Gamma \mid \Omega \vdash f(v) : B[v]
+  }
+\end{mathpar}
+
+%It would be nice to get rid of the morphism-body, since various judgments are polymorphic over it in their return (e.g. sequencing and negsima-elim), but let's gloss over that for now.
+%Sequencing is right-associative: each statement may bind variables and write values that appear in all following statements.
+%In fact that needs to be baked into the syntax, so that the environment can remain a reader context and not devolve into writer or state context.
+
+%\begin{mathpar}
+%  \inferrule[\Deriv{Seq-Program}] {
+%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\pi_1}\\
+%    \Gamma \mid \Psi \mid {\downarrow \pi_1}; \chi \vdash \IsProg{\pi_2}
+%  } {
+%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\pi_1 ; \pi_2}
+%  }
+%\end{mathpar}
+%\begin{mathpar}
+%  \inferrule[\Deriv{Seq-Body}] {
+%    \Gamma \mid \Psi \mid \chi \vdash \IsProg{\pi}\\
+%    \Gamma \mid \Psi \mid {\downarrow \pi}; \chi \vdash \rho :\Rightarrow Q
+%  } {
+%    \Gamma \mid \Psi \mid \chi \vdash \pi ; \rho :\Rightarrow Q
+%  }
+%\end{mathpar}
+
+\section{Negative contexts and types}
+
+Negative contexts are a bit weird in my presentation here: they introduce variables of specified negative types, but they also write them to values.
+They are inductively generated with three constructors: empty, introducing a variable, and writing a previously-introduced variable.
+
+Negative types are exactly regular types with access to $\Omega$ (namely giving $\Borrow{x^{-}}$ for all negative variables $x^{-}$ in scope thus far and any known definitional equalities from them), so we omit its derivation rules as they are inherited from MLTT, with the addition of the two mentioned earlier regarding $\mathsf{borrow}$.
+
+\begin{mathpar}
+  \inferrule[\Judg{Neg-ctx}] {
+    \IsCtx{\Gamma}
+  } {
+    \Gamma \vdash \IsNegCtx{\Omega}
+  }
+
+  \inferrule[\Judg{Neg-type}] {
+  	\IsCtx{\Gamma}\\
+    \Gamma \vdash \IsNegCtx{\Omega}
+  } {
+    \Gamma \mid \Omega \vdash \IsTp{A^{-}}
+  }
+\end{mathpar}
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-ctx-empty}] {
+  	\IsCtx{\Gamma}
+  } {
+    \Gamma \vdash \IsNegCtx{\cdot}
+  }
+\end{mathpar}
+
+We can always introduce a negative variable of a valid negative type (assuming uniqueness of variables blah blah):
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-ctx-intro}] {
+    \Gamma \vdash \IsNegCtx{\Omega}\\
+    \Gamma \mid \Omega \vdash \IsTp{A^{-}}
+  } {
+    \Gamma \vdash \IsNegCtx{\Omega, (x^{-} : A^{-})}
+  }
+\end{mathpar}
+
+But to write to a variable, we need to know that it is defined in context (with the corresponding type) \emph{and} was not yet written to (the asterisk here is a wildcard):
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-ctx-write}] {
+    \Gamma \vdash \IsNegCtx{\Omega}\\
+    \Gamma \mid \Omega \vdash a : A\\
+    (x^{-} : A^{-}) \in \Omega\\
+    (* \mapsto x^{-}) \notin \Omega\\
+  } {
+    \Gamma \vdash \IsNegCtx{\Omega, (a \mapsto x^{-})}
+  }
+\end{mathpar}
+
+There is a weird side condition here: we need to know that the graph of $\mathsf{borrow}$-dependencies is acyclic (a DAG).
+(Perhaps we could encode this invariant more deeply into the context, representing it as a tree or something, but then we need to unblock dependencies when things compute away ...)
+
+Anyways.
+What happens right now is that we enforce that side-condition by
+\begin{enumerate}
+\item
+not allowing users to mention $\mathsf{borrow}$ themselves (see \Deriv{Neg-Write}); and
+\item
+being careful with the dependencies we introduce in the few rules that do include $\mathsf{borrow}$ (\Deriv{Unpack}, \Deriv{Morph-Ap}, \Deriv{Lending}).
+\end{enumerate}
+
+We could state this as a metatheorem about our theory: that all derivations from the rules here result in sinks never borrowing their own value.
+This is clearly necessary for $\PolyUniv$ to be a model, thus we also want it to hold for the initial (syntactic) model.\\
+
+% Ugly? I don't know, I'm just hoping it works out.
+%(It seems to work out.)
+
+
+The linearity check is ensured by never writing to the same variable twice and by checking that each variable in $\Omega$ is written exactly once by the end of the hom-body.
+
+In particular, this is used for program extraction of the backwards action on fibrations, by seeing what the input sink $p^{-}$ is set to in the environment when the output sink $q^{-}$ is written with an abstract test value $q$.
+That is, the context will ultimately contain a description of $p^{-}$ in terms of $q$, and this is the action on fibrations.
+
+
+
+
+
+\section{Negative terms and programs and program environments}
+
+Programs are exactly the bodies of eta-expanded negative terms:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-Eta}] {
+    \Gamma, a : A \mid \Omega \vdash \IsProg{\pi}
+  } {
+    \Gamma \mid \Omega \vdash (\lambda a \to \pi) : A^{-}
+  }
+\end{mathpar}
+
+As an example, there is a negative term $\mathsf{drop}$ that accepts anything and writes nothing: $\mathsf{drop} := (\lambda a \to \Done{}) : A^{-}$.
+
+We can eta-expand sinks, so a sink $a^{-} : A^{-}$ becomes $(\lambda a \to (a \mapsto a^{-}); \Done{}) : A^{-}$, where we abstract out the value being eventually written to the sink and then have the program that writes it to the original sink.
+
+We can even apply a non-dependent function $f : A \to B$ to map sinks contravariantly: from $b^{-} : B^{-}$ we get $(b^{-} \circ f) := (\lambda a \to (f(a) \mapsto b^{-}); \Done{}) : A^{-}$.
+(This is what we called \textsc{Neg-Ap} in our previous iteration, but it no longer needs to be built-in)
+
+
+
+Programs can write positive values $a$ to negative terms $a^{-}$.
+Two things:
+\begin{enumerate}
+\item
+Note that $a$ cannot depend on any negative terms (in particular, cannot borrow).
+That means that $a^{-}$ needs its type $A^{-}$ to reduce to a term that does not mention borrowed values, either by having no dependence on other sinks in the first place or by already being written to a value from previous writes in $\Omega$.
+\item
+Speaking of $\Omega$, $a^{-}$ may not be a variable, so we need to be able to write out the side-effects of writing to it back into $\Omega'$.
+We do this with an operation ${\downarrow (a \mapsto a^{-})}$ that we will write out later in section \ref{running}.
+\end{enumerate}
+
+\begin{mathpar}
+  \inferrule[\Deriv{Neg-Write}] {
+    \Gamma \vdash a : A\\
+    \Gamma \mid \Omega \vdash a^{-} : A^{-}\\
+    \Gamma \mid \Omega, {\downarrow (a \mapsto a^{-})} \vdash \rho :\Rightarrow Q
+  } {
+    \Gamma \mid \Omega \vdash ((a \mapsto a^{-}); \rho) :\Rightarrow Q
+  }
+\end{mathpar}
+
+
+We can let-bind negative terms as a form of lending: passing forward the obligation to write to the sinks mentioned in $a^{-}$ as an obligation to write to $x^{-}$.
+This basic mechanism is also used in \Deriv{Morph-Ap}.
+
+\begin{mathpar}
+  \inferrule[\Deriv{Lending}] {
+    \Gamma \mid \Omega \vdash a^{-} : A^{-}\\
+    \Gamma \mid \Omega, x^{-} : A^{-}, {\downarrow (\Borrow{x^{-}} \mapsto a^{-})} \vdash \rho :\Rightarrow Q
+  } {
+    \Gamma \mid \Omega \vdash (\Let{x^{-}} : A^{-} := a^{-}; \rho) :\Rightarrow Q
+  }
+\end{mathpar}
+
+
+\subsection{Running programs into context} \label{running}
+
+To write programs into context, we need to run them.
+(Note: this is where I differ from Reed's rules in that I want to be able to write to arbitrary negative terms, instead of simplifying the rules to only write to negative variables.)
+
+It is doing nothing more than encapsulating how the existing rules for each program constructor manipulate the context as they proceed to the next typing derivation.
+
+The reason for having this encapsulation is to keep the meta-theory first-order, pen-and-paper style.
+If we had continuations/HOAS in the meta-theory, we could use those to avoid writing this out.
+(In fact, this is what I did in the implementation.)
+But at least it is not hard.
+
+(Note that this isn't an inductive constructor for negative contexts, it is a function in the metatheory that produces negative contexts.)
+
+
+\begin{mathpar}
+  \inferrule[\Judg{Exec}] {
+    \Gamma \vdash \IsNegCtx{\Omega}\\
+    \Gamma \mid \Omega \vdash \IsProg{\pi}
+  } {
+    \Gamma \vdash \IsNegCtx{\Omega, \downarrow \pi}
+  }
+\end{mathpar}
+
+Uhh I am describing its behavior in English for now:
+A program is a series of writes that we want to write into context (and it ends with $\Done{}$).
+\begin{enumerate}
+\item
+Writing to a variable is easy $a \mapsto x^{-}$: we add the appropriate constructor into context, so we produce $\Omega, (a \mapsto x^{-})$.
+\item
+Writing to an eta-expanded negative term is also easy $a \mapsto (\lambda x \to \pi[x])$: we now know the value of $x$, so we substitute it in, and write that program into context, $\Omega, \downarrow \pi[a]$.
+(This is recursive.)
+\item
+If we have a let-binding (lending) of the form $\Let{x^{-}} : A^{-} := a^{-}$ we need to represent that by adding this, just as the typing rule \Deriv{Lending} does: $\Omega, x^{-} : A^{-}, {\downarrow (\Borrow{x^{-}} \mapsto a^{-})}$.
+\item
+We similarly deal with \Deriv{Morph-Ap} and \Deriv{Unpack} which are also recursive.
+\end{enumerate}
+
+Again, the semantics of this model the obvious thing they are already doing in their respective typing rules, since we had to write their behavior into the judgments already.
+
+
+\section{Morphism body}
+
+This provides the forward component $p^{+}$ and adds a sink $p^{-}$, then checks that the body of the morphism $\rho$ will fulfill the obligation by writing to the sink.
+
+\begin{mathpar}
+  \inferrule[\Deriv{Morph-Intro}] {
+    \Gamma, p^{+} : \Base{P} \mid p^{-} : (\Fib{P}{p^{+}})^{-} \vdash \rho :\Rightarrow Q\\
+  } {
+    \Gamma \vdash (\lambda (p^{+} \leftsquigarrow p^{-}) \rightsquigarrow \rho) : P \Rightarrow Q
+  }
+\end{mathpar}
+
+The obligation is fulfilled when the body ends, providing a positive value for the base and a negative sink for the fibration, and every negative variable has been set to a value in $\Omega$ after writing to $q^{-}$ (yes we invent a new variable $q$ to write to $q^{-}$).
+
+\begin{mathpar}
+  \inferrule[\Deriv{Body-Done}] {
+    \Gamma \vdash q^{+} : \Base{Q}\\
+    \Gamma \mid \Omega \vdash q^{-} : (\Fib{Q}{q^{+}})^{-}\\
+    \IsFilled{\Omega, \downarrow (q \mapsto q^{-})}
+  } {
+    \Gamma \mid \Omega \vdash (q^{+} \leftsquigarrow q^{-}) :\Rightarrow Q
+  }
+\end{mathpar}
+
+The action on fibrations can be recovered as something like $\lambda q \to p[q]$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid \Omega$, where $\Omega := (p^{-} : \Fib{P}{p^{+}}, \downarrow (q \mapsto q^{-})) = (p^{-} : \Fib{P}{p^{+}}, ..., (p[q] \mapsto p^{-}), ...)$ means $p^{-}$ gets set to $p[q]$ in the process of setting $q^{-}$ to $q$.\\
+
+
+Apply a morphism.
+This takes a base, fib pair and turns it into a new base, fib pair by applying the forward and backwards components of the morphism.
+It can be implemented via positive and negative let in the obvious way, so it is a conservative extension, but then again, so is everything we are doing here.
+
+\begin{mathpar}
+  \inferrule[\Deriv{Morph-Ap}] {
+    \Gamma \vdash \phi : P \Rightarrow Q\\
+  	\Gamma \vdash p^{+} : \Base{P}\\
+  	\Gamma \mid \Omega \vdash p^{-} : (\Fib{P}{p^{+}})^{-}\\\\
+	\Gamma' := \Gamma, q^{+} := \Base{\phi}(p^{+}) : \Base{Q}\\\\
+	\Omega' := \Omega, q^{-} : (\Fib{Q}{q^{+}})^{-}, \downarrow (\Fib{\phi}{p^{+}}(\Borrow{q^{-}}) \mapsto p^{-})\\\\
+    \Gamma' \mid \Omega' \vdash \rho :\Rightarrow Q
+  } {
+    \Gamma \mid \Omega \vdash ((p^{+} \leftsquigarrow p^{-}) \xrightarrow{\phi} (q^{+} \leftsquigarrow q^{-}); \rho) :\Rightarrow Q
+  }
+\end{mathpar}
+
+
+
+
+\section{Sigmas}
+
+Consumes $ab^{-}$, splitting it into two new sinks $(x^{-}, y^{-})$ whose values get paired and written to $ab^{-}$.
+Note that the type of the second sink depends on the value written to the first sink.
+Since $\Borrow{x^{-}}$ cannot be mentioned in user-code, due to the typing restriction in \textsc{\Deriv{Neg-Write}}, if $B[\Borrow{x^{-}}]^{-}$ does not reduce by virtue of being a constant family, one must write to $x^{-}$ before $y^{-}$.
+%(In theory one could borrow ahead of time but it requires cycle checking, see above.)
+
+\begin{mathpar}
+  \inferrule[\Deriv{Unpack}] {
+    \Gamma \mid \Omega_1 \vdash ab^{-} : ((a : A) \times B[a])^{-}\\
+    \Omega_2 := \Omega_1, x^{-} : A^{-}, y^{-} : B[\Borrow{x^{-}}]^{-}, {\downarrow ((\Borrow{x^{-}}, \Borrow{y^{-}}) \mapsto ab^{-})} \\
+    \Gamma \mid \Omega_2 \vdash \rho :\Rightarrow Q\\
+  } {
+    \Gamma \mid \Omega_1 \vdash (ab^{-} \prec (x^{-}, y^{-}); \rho) :\Rightarrow Q
+  }
+\end{mathpar}
+
+The inverse can be implemented simply in user-land, as $$\Let{ab^{-}} := \lambda\ ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-}); \Done.$$
+
+
+
+\section{Boxes} \label{boxes}
+
+
+Probably the better UX is to provide (un)tensoring for polynomials, that handles forwards and backwards directions at once.
+Macros, anyone???
+
+I guess this corresponds to boxes in the sense of wiring diagrams, and to values in the polynomial functor over a generic type $R$: $(p^{+}, p^{-}) : \Sigma(p^{+} : \Base{P}), \Fib{P}{p^{+}} \to R$, since sinks are conceptually maps into the generic $R$.
+
+(What are programs, then?)
+
+The complication is that boxes are positive mixed with negative, and it's not clear where they should live and how much additional rules they need.
+In particular, I want to have to avoid special let-binding constructs for every kind of syntax we want to add.
+
+Like, I don't think this works since it doesn't keep track of linearity properly maybe? but maybe it really is okay to pass around sinks freely and only check linearity when they are written to:
+
+\begin{mathpar}
+  \inferrule[\Deriv{Box}] {
+    \Gamma \vdash P : \PolyUniv
+  } {
+    \Gamma \mid \Omega \vdash \BOX{P} : \TpUniv
+  }
+\end{mathpar}
+
+\begin{mathpar}
+  \inferrule[\Deriv{Box-Intro}] {
+    \Gamma \vdash p^{+} : \Base{P}\\
+    \Gamma \mid \Omega \vdash p^{-} : \Fib{P}{p^{+}}\\
+  } {
+    \Gamma \mid \Omega \vdash (p^{+} \leftsquigarrow p^{-}) : \BOX{P}
+  }
+\end{mathpar}
+
+\section{Future work}
+
+Could extend with higher-order abstraction, e.g. the ability to lambda-bind \emph{sinks} and not just positive values.
+(Note that we just support let-binding sinks right now.)
+
+Could allow users to mention $\mathsf{borrow}$ themselves and implement actual cycle-checking to ensure it is still safe.
+
+Could implement control flow for select primitive recursors, such as on enumerations (i.e. case/switch statements) and maybe natural numbers.
+You need to check that the same sinks are written to in each branch, and then abstract out their values over the recursor.
+(This could interact badly with higher-order abstraction.)
+
+\end{document}

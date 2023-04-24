@@ -131,3 +131,10 @@ _opam/
 # for Nix
 result/
 /.envrc.local
+
+# Tex
+*.log
+*.aux
+*.synctex.gz
+*.out
+

@@ -28,6 +28,9 @@ let normalize tm =
 let execute_cmd  (cmd : CS.cmd) =
   match cmd.node with
   | CS.Def {name; tp = Some tp; tm} ->
+    Debug.print "-------------------------------------------------@.";
+    Debug.print "> Elaborating %a@." Ident.pp name;
+    Debug.print "-------------------------------------------------@.";
     let tp = Sem.eval_top @@ Elaborator.chk tp D.Univ in
     let tm = Sem.eval_top @@ Elaborator.chk tm tp in
     Eff.define name (Def { tm; tp })
@@ -53,9 +56,11 @@ let execute_cmd  (cmd : CS.cmd) =
     profile normalize tm
   | CS.Print tm ->
     let (vtp, tm) = Elaborator.syn tm in
+    Debug.print "Preprint: %a@." S.dump tm;
     let tp = Quote.quote_top ~tp:D.Univ vtp in
     Format.printf "%a : %a@."
-      S.pp_toplevel tm
+      (* FIXME may not be correct precedence *)
+      (S.pp { pos = Emp; neg_size = 0; neg = Emp } (Precedence.left_of S.juxtaposition)) tm
       S.pp_toplevel tp
   | CS.Debug b ->
     Debug.debug_mode b

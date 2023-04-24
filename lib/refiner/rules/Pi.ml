@@ -1,6 +1,5 @@
 open Tactic
 open Eff
-open Errors
 
 let formation ?(names = [`Anon]) base_tac fam_tac =
   Syn.rule @@ fun () ->
