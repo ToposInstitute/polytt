@@ -1,4 +1,3 @@
-open Asai
 open Bwd
 open Bwd.Infix
 open Core
@@ -105,7 +104,7 @@ struct
 
   let run_linear k =
     Reader.scope drop_linear @@ fun () ->
-      k ()
+    k ()
 
   let env () =
     Reader.read ()
@@ -241,7 +240,7 @@ struct
     match !ok with
     | false -> None
     | true -> Some
-        (fun value -> Bwd.iter (fun f -> f value) reverted)
+                (fun value -> Bwd.iter (fun f -> f value) reverted)
 end
 
 

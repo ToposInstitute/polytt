@@ -5,6 +5,7 @@ module D = Domain
 module Sem = Semantics
 
 type t = { pos_size : int; neg : D.t bwd; neg_size : int }
+
 (** Here we do need negative values, and sizes for level<->index conversions *)
 module Eff = Algaeff.Reader.Make (struct type env = t end)
 

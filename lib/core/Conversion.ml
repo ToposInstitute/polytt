@@ -13,23 +13,22 @@ exception Unequal
 
 module Internal =
 struct
-  type env = Env.t
   module Eff = Env.Eff
 
   let bind tp f =
     let arg = D.var tp @@ Env.read_pos_size () in
     let df () = Eff.scope Env.incr_pos @@ fun () -> f arg in
-      match tp with
-      | D.FinSet ls ->
-        begin
-          try df () with
-          | Unequal ->
-            Debug.print "CC FinSet ETA@.";
-              ls |> List.iter @@ fun l ->
-                f (D.Label (ls, l))
-        end
-      | _ ->
-        df ()
+    match tp with
+    | D.FinSet ls ->
+      begin
+        try df () with
+        | Unequal ->
+          Debug.print "CC FinSet ETA@.";
+          ls |> List.iter @@ fun l ->
+          f (D.Label (ls, l))
+      end
+    | _ ->
+      df ()
 
   let rec equate tp v1 v2 =
     match (tp, v1, v2) with

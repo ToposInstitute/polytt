@@ -138,8 +138,8 @@ and dump_frm fmt =
 (* TODO *)
 and dump_clo fmt (Clo { env = { pos; neg_size; _ }; body }) =
   Format.fprintf fmt "[%d, %d] %a"
-  (Bwd.length pos)
-  neg_size
+    (Bwd.length pos)
+    neg_size
 
     S.dump body
 and dump_hom_clo fmt (Clo { env; body }) = Format.fprintf fmt "FIXME :)"

@@ -1,14 +1,13 @@
 open Tactic
 open Eff
-open Errors
 
 let formation ?(name = `Anon) base_tac fam_tac =
   Syn.rule @@ fun () ->
-    let base = Chk.run base_tac D.Univ in
-    let fam = Var.abstract ~name (eval base) @@ fun a ->
-      Chk.run (fam_tac a) D.Univ
-    in
-    (D.Univ, S.Pi(name, base, fam))
+  let base = Chk.run base_tac D.Univ in
+  let fam = Var.abstract ~name (eval base) @@ fun a ->
+    Chk.run (fam_tac a) D.Univ
+  in
+  (D.Univ, S.Pi(name, base, fam))
 
 let intro ?(name = `Anon) tac =
   Chk.rule @@ function
