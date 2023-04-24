@@ -68,7 +68,6 @@ struct
     S.Base (p size)
 
   let fib p i size =
-    Debug.print "build fib %a %a@." S.dump (p size) S.dump (i size);
     S.Fib (p size, i size)
 end
 

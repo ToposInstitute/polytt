@@ -40,6 +40,7 @@ let keywords =
     ("refl", REFL);
     ("fst", FST);
     ("snd", SND);
+    ("end", END);
   ]
 
 (* Some Lexing Utilities *)
@@ -97,10 +98,14 @@ and token = parse "" { skip_whitespace real_token lexbuf }
 
 and real_token = parse
   (* Symbols *)
-  | "λ"
+  | "λ" | "\\"
     { LAMBDA }
+  | "λ-" | "\\-" | "λ⁻" | "\\⁻"
+    { LAMBDA_MINUS }
   | "let"
     { LET }
+  | "let-" | "let⁻"
+    { LET_MINUS }
   | "in"
     { IN }
   | "forall" | "∀"
@@ -127,6 +132,8 @@ and real_token = parse
     { COLON_COLON }
   | '_'
     { UNDERSCORE }
+  | '!'
+    { BANG }
   | ":="
     { COLON_EQUALS }
   | ","

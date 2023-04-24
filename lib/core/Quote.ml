@@ -78,7 +78,6 @@ struct
       let t2 = quote (Sem.inst_clo tp_clo v1) v2 in
       S.Pair (t1, t2)
     | D.Sigma (_, a, tp_clo), v ->
-      Debug.print "do_fst eta@.";
       let v1 = Sem.do_fst v in
       let t1 = quote a v1 in
       let t2 = quote (Sem.inst_clo tp_clo v1) (Sem.do_snd v) in
@@ -104,11 +103,9 @@ struct
       in
       S.PolyIntro (nm, base, fib)
     | D.Poly, v ->
-      Debug.print "do_base eta@.";
       let base = Sem.do_base v in
       let qbase = quote D.Univ base in
       let fib = bind base @@ fun i ->
-        Debug.print "do_fib eta@.";
         quote D.Univ (Sem.do_fib v i)
       in S.PolyIntro (`Anon, qbase, fib)
     | _, D.Hom (p, q) ->
@@ -121,7 +118,6 @@ struct
         Graft.build @@
         TB.pi (TB.base p) @@ fun p_base ->
         TB.sigma (TB.base q) @@ fun q_base ->
-        Debug.print "building HomLam quote type@.";
         TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
       in
       S.HomLam (quote tp wrapped)
@@ -129,27 +125,42 @@ struct
       S.FinSet ls
     | _, D.Label (ls, l) ->
       S.Label (ls, l)
-    | tp, D.Neu (_, neu) ->
-      quote_neu tp neu
+    | tp, (D.Neu (_, neu) as stuck) ->
+      begin
+      match unstick stuck with
+      (* still stuck on something *)
+      | D.Neu (_, neu) ->
+        quote_neu neu
+      (* no longer stuck at the top-level at least *)
+      | e ->
+        quote tp (Sem.do_spine e neu.spine)
+      end
     | tp, tm ->
       Debug.print "Bad quote: %a@." D.dump tm;
       Debug.print "  against: %a@." D.dump tp;
       invalid_arg "bad quote"
 
-  and unstick tp hd =
-    match hd with
-    | D.Borrow lvl ->
-      Env.read_neg_lvl lvl
-    | _ -> D.Neu (tp, { hd; spine = Emp })
+  and progressed_from hd' = function
+    | D.Neu (_tp, { hd; spine = Emp }) -> hd != hd'
+    | _ -> true
 
-  and quote_neu tp {hd; spine} =
-    match unstick tp hd with
-    (* still stuck *)
-    | D.Neu (_tp, { hd; spine = spine1 }) ->
-      Bwd.fold_left quote_frm (Bwd.fold_left quote_frm (quote_hd hd) spine1) spine
-    (* made at least a little progress *)
-    | e ->
-      quote tp (Sem.do_spine e spine)
+  and try_unstick = function
+    | D.Borrow lvl -> Some (Env.read_neg_lvl lvl)
+    | _ -> None
+
+  and unstick = function
+    | D.Neu (_tp, { hd; spine }) as stuck ->
+      begin
+      match try_unstick hd with
+      | Some newer when newer |> progressed_from hd ->
+        (* We want to eval (e.g. beta-reduce) and _then_ try unsticking more *)
+        unstick @@ Sem.do_spine newer spine
+      | _ -> stuck
+      end
+    | notstuck -> notstuck
+
+  and quote_neu {hd; spine} =
+    Bwd.fold_left quote_frm (quote_hd hd) spine
 
   and quote_hd hd =
     match hd with

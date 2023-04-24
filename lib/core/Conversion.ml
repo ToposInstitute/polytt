@@ -92,12 +92,10 @@ struct
     | _, D.Poly, D.Poly ->
       ()
     | D.Poly, v1, v2 ->
-      Debug.print "do_base conversion@.";
       let base1 = Sem.do_base v1 in
       let base2 = Sem.do_base v2 in
       equate D.Univ base1 base2;
       bind base1 @@ fun i ->
-      Debug.print "do_fib conversion@.";
       equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
     | _, D.Hom (p1, q1), D.Hom (p2, q2) ->
       equate D.Poly p1 p2;
@@ -111,6 +109,7 @@ struct
   and try_unstick tp {hd; spine} =
     match hd with
     | D.Borrow lvl ->
+      Debug.print "CC read_neg_lvl@.";
       Sem.do_spine (Env.read_neg_lvl lvl) spine
     | _ -> D.Neu (tp, { hd; spine })
 

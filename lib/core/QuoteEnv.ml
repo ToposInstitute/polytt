@@ -14,6 +14,7 @@ let read_pos_size () = (Eff.read ()).pos_size
 
 let read_neg_lvl lvl =
   let env = Eff.read () in
+  if (lvl >= env.neg_size) then invalid_arg (Format.asprintf "QuoteEnv.read_neg_lvl out of bounds: %d >= %d" lvl env.neg_size);
   Bwd.nth env.neg ((env.neg_size - 1) - lvl)
 
 let empty = { pos_size = 0; neg = Emp; neg_size = 0 }

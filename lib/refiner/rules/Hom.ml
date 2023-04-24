@@ -15,13 +15,19 @@ let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.t
     let ok =
       Eff.Locals.run_linear @@ fun () ->
       Var.abstract ~name:pos_name p_base @@ fun pos_var ->
-      Debug.print "do_fib Hom.intro@.";
       let p_fib = do_fib p (Var.value pos_var) in
       Core.Debug.print "Introducing negated %a@." D.dump p_fib;
       NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
-      let tail () = quote ~tp:p_fib (Eff.Locals.head ())
+      let tail () =
+        begin
+        let thingy = Eff.Locals.head () in
+        let q = quote ~tp:p_fib thingy in
+        Debug.print "tail %a@.             %a@." D.dump thingy S.dump q;
+        q
+        end
       in
       let bdy = Hom.run (bdy_tac pos_var neg_var) (q, tail) in
+      Debug.print "ran body: %a@." S.dump bdy;
       S.HomLam (S.Lam (pos_name, bdy))
     in ok
   | _ ->
@@ -46,6 +52,23 @@ let elim hom_tac arg_tac =
     tp, S.HomElim (hom, p_base)
   | _ ->
     Error.error `TypeError "Tried to eliminate from non-hom."
+
+let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
+  Hom.rule @@ fun r ->
+  let tp, tm = Syn.run tm in
+  let v = Eff.eval tm in
+  Var.concrete ~name tp v @@ fun v ->
+  let steps = Hom.run (f v) r in
+  S.Let (name, tm, steps)
+
+let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Hom.tac) =
+  Hom.rule @@ fun r ->
+  let tp, tm = NegSyn.run tm in
+  NegVar.abstract ~name tp @@ fun v ->
+  Debug.print "reading from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
+  tm (NegVar.borrow v);
+  Debug.print "-> read from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
+  Hom.run (f v) r
 
 let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   NegSyn.rule @@ fun () ->
@@ -88,16 +111,12 @@ let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
   | D.Hom (p, q) ->
     let pos = Chk.run pos_tac (do_base p) in
     let vpos = eval pos in
-    Debug.print "do_fib Hom.ap 1@.";
     let neg = NegChk.run neg_tac (do_fib p vpos) in
     let phi_v = do_hom_elim (eval phi) vpos in
-    Debug.print "do_fst Hom.ap@.";
     let phi_base = do_fst phi_v in
     let phi_fib = do_snd phi_v in
     Var.concrete ~name:pos_name (do_base q) phi_base @@ fun pos_var ->
-    Debug.print "do_fib Hom.ap 2@.";
     NegVar.abstract ~name:neg_name (do_fib q (Var.value pos_var)) @@ fun neg_var ->
-    Debug.print "do_ap Hom.ap@.";
     neg (do_ap phi_fib (NegVar.borrow neg_var));
     let steps = Hom.run (steps_tac pos_var neg_var) r in
     S.Let (pos_name, S.Fst (S.HomElim (phi, pos)), steps)
@@ -108,14 +127,37 @@ let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
 let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   Hom.rule @@ fun (r, i) ->
   let pos = Chk.run pos_tac (do_base r) in
-  Debug.print "do_fib Hom.done_@.";
   let fib = (do_fib r (eval pos)) in
-  let neg = NegChk.run neg_tac fib in
-  Eff.Locals.abstract fib @@ fun v ->
+  let name = `Machine (Eff.Locals.size ()) in
+  Eff.Locals.abstract ~name fib @@ fun v ->
+    let neg = NegChk.run neg_tac fib in
     neg v;
     let fib_act = i () in
     match Eff.Locals.all_consumed () with
     | true ->
-      S.Pair (pos, S.Lam (`Anon, fib_act))
+      ((Eff.Locals.ppenv ()).pos |>
+        Bwd.Bwd.iter @@ fun v ->
+          Debug.print "  - %a@." Ident.pp v);
+      Debug.print " ---- @.";
+      ((Eff.Locals.qenv ()).neg |>
+        Bwd.Bwd.iter @@ fun v ->
+          Debug.print "  - %a@." D.dump v);
+      Debug.print " ---- @.";
+      (Bwd.Bwd.iter2
+        (fun tp v ->
+          Debug.print "  - %a@." S.dump (quote ~tp v))
+        (Eff.Locals.qenv ()).neg
+        (Eff.Locals.denv ()).neg
+      );
+      Debug.print " ---- @.";
+      (Bwd.Bwd.iter2
+        (fun tp v ->
+          Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
+        (Eff.Locals.denv ()).neg
+        (Eff.Locals.qenv ()).neg
+      );
+      Debug.print " ---- @.";
+      Debug.print "%a@." S.dump fib_act;
+      S.Pair (pos, S.Lam (name, fib_act))
     | false ->
-      Error.error `LinearVariablesNotUsed "Didn't use all your linear variables."
+      Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in hom."
