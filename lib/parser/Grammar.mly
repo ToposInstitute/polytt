@@ -28,7 +28,7 @@ let neg_ap_or_atomic neg fns =
 %token <string> LABEL
 %token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW LEFT_ARROW UNDERSCORE EQUALS QUESTION BANG
 (* Symbols *)
-%token FORALL LAMBDA LET IN LET_MINUS LAMBDA_MINUS RETURN DONE
+%token FORALL EXISTS LAMBDA LET IN LET_MINUS LAMBDA_MINUS RETURN DONE
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
 %token POLY BASE FIB RIGHT_THICK_ARROW
@@ -43,7 +43,7 @@ let neg_ap_or_atomic neg fns =
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
-%right COLON
+%right COLON COMMA
 %right RIGHT_ARROW TIMES IN
 %left CIRC
 %nonassoc RIGHT_THICK_ARROW
@@ -112,7 +112,7 @@ plain_term:
 plain_unannotated_term:
   | tms = nonempty_list(atomic_term)
     { ap_or_atomic tms }
-  | LPR; names = nonempty_list(name); COLON; base = term; RPR; TIMES; fam = term
+  | EXISTS; LPR; names = nonempty_list(name); COLON; base = term; RPR; COMMA; fam = term
     { CS.Sigma (names, base, fam) }
   | base = term; TIMES; fam = term
     { CS.Sigma ([`Anon], base, fam) }
@@ -148,7 +148,7 @@ labeled_field(sep):
 arrow:
   | LAMBDA; nms = nonempty_list(name); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
-  | LPR; names = nonempty_list(name); COLON; base = term; RPR; RIGHT_ARROW; fam = term
+  | FORALL; LPR; names = nonempty_list(name); COLON; base = term; RPR; COMMA; fam = term
     { CS.Pi (names, base, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi ([`Anon], base, fam) }

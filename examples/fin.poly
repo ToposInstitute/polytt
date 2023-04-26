@@ -1,6 +1,6 @@
 -- Helpers (TODO: abstract and import)
 def ofP : Poly → Type → Type :=
-  λ P A → (p : base P) × (fib P p → A)
+  λ P A → Π (p : base P), fib P p → A
 
 def Void := #{}
 
@@ -11,10 +11,10 @@ def Unit := #{ .unit }
 
 def unit : Unit := .unit
 
-def unit-elim : (mot : Unit → Type) → mot .unit → (u : Unit) → mot u :=
+def unit-elim : Π (mot : Unit → Type), mot .unit → Π (u : Unit), mot u :=
   λ mot mot-unit → { .unit = mot-unit }
 
-def unique : (u : Unit) → u = .unit :=
+def unique : Π (u : Unit), u = .unit :=
   unit-elim (λ u → u = .unit) (refl)
 
 def ×-rec :

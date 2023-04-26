@@ -1,10 +1,10 @@
-def id : (A : Type) → A → A :=
+def id : Π (A : Type), A → A :=
   λ A x → x
 
-def id_ : (A : Type) → A → A :=
+def id_ : Π (A : Type), A → A :=
   λ A x → x
 
-def const : (A B : Type) → A → B → A :=
+def const : Π (A B : Type), A → B → A :=
   λ _ _ x _ → x
 
 def four : ℕ := 4
@@ -15,13 +15,13 @@ def double : ℕ → ℕ :=
 def add : ℕ → ℕ → ℕ :=
   λ m n → elim (λ _ → ℕ) n (λ _ n → succ n) m
 
-def sigma : (A : Type) → (A → Type) → Type :=
-  λ A → λ B → (x : A) × B x
+def sigma : Π (A : Type), (A → Type) → Type :=
+  λ A B → Σ (x : A), B x
 
-def dup : (A : Type) → A → (A × A) :=
+def dup : Π (A : Type), A → (A × A) :=
   λ _ a → (a , a)
 
-def pair : ℕ → ℕ → (_ : ℕ) × ℕ :=
+def pair : ℕ → ℕ → ℕ × ℕ :=
   λ n m → (n , m : ℕ)
 
 def projl : (ℕ × ℕ) → ℕ :=
@@ -29,7 +29,7 @@ def projl : (ℕ × ℕ) → ℕ :=
 
 def Bool := #{ .true, .false }
 
-def Unit := (t : #{}) -> ({} : #{} -> Type) t
+def Unit := Π (t : #{}), ({} : #{} -> Type) t
 
 def unit : Unit := {}
 
@@ -37,7 +37,7 @@ def ARecord := { .true : ℕ, .false : Bool }
 
 def record_lit : ARecord := { .true = 0, .false = .true }
 
-def Anything := (T : Type) * T
+def Anything := Σ (T : Type), T
 
 def let-example :=
   let n := 5 : ℕ
@@ -49,19 +49,19 @@ def nyan : Poly :=
   (ℕ × ℕ)
 
 def tensor : Poly → Poly → Poly :=
-  λ P Q → (pq : base P × base Q) × (fib P (fst pq) × fib Q (snd pq))
+  λ P Q → Σ (pq : base P × base Q), fib P (fst pq) × fib Q (snd pq)
 
 #normalize base (tensor nyan nyan)
 #normalize fib (tensor nyan nyan) (1 , 2)
 
 
-def id : (P : Poly) → P ⇒ P :=
+def id : Π (P : Poly), P ⇒ P :=
   λ P → λ a⁺ a⁻ ⇝
     return a⁺ ⇜ a⁻
 
 #print (λ P → P) : Poly → Poly
 
-#print (λ P → λ a⁺ a⁻ ⇝ return a⁺ ⇜ a⁻) : (P : Poly) → P ⇒ P
+#print (λ P → λ a⁺ a⁻ ⇝ return a⁺ ⇜ a⁻) : Π (P : Poly), P ⇒ P
 
 def nyan-hom : ℕ → nyan ⇒ nyan :=
   λ n → λ a⁺ a⁻ ⇝
@@ -77,7 +77,7 @@ def nyan-hom2 : nyan ⇒ nyan :=
 
 #normalize nyan-hom2 1
 
-def compose : (P : Poly) → (Q : Poly) → (R : Poly) → Q ⇒ R → P ⇒ Q → P ⇒ R :=
+def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
   λ P Q R f g → λ p⁺ p⁻ ⇝
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
@@ -98,7 +98,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
 def Moore : Type → Type → Type → Type :=
   λ S I O → (S × S) ⇒ (O × I)
 
-def mds : (A : Type) → (B : Type) → (A → B) → Moore B A B :=
+def mds : Π (A B : Type), (A → B) → Moore B A B :=
   λ A B f → λ b⁺ b⁻ ⇝
     return b⁺ ⇜ b⁻ ∘ f
 
@@ -112,7 +112,7 @@ def test-pair : nyan ⇒ tensor nyan nyan :=
 
 #normalize (test-pair 1)
 
-def swap : (P : Poly) → (Q : Poly) → tensor P Q ⇒ tensor Q P :=
+def swap : Π (P Q : Poly), tensor P Q ⇒ tensor Q P :=
   λ P Q → λ pq⁺ pq⁻ ⇝
     let⁻ (p⁻ , q⁻) := pq⁻;
     return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
@@ -122,7 +122,7 @@ def swap : (P : Poly) → (Q : Poly) → tensor P Q ⇒ tensor Q P :=
 #normalize swap nyan nyan (1, 2)
 
 def internal-hom : Poly → Poly → Poly :=
-  λ P Q → (f : P ⇒ Q) × ((p : base P) × fib Q (fst (f p)))
+  λ P Q → Σ (f : P ⇒ Q), (Σ (p : base P), fib Q (fst (f p)))
 
     -- ? → (q⁻ ∘ (snd ((snd pf⁺) (fst pf⁺))));
     -- (fst pf⁺ , p⁻) ⤚ (snd pf⁺) → (q₁⁺ , q₁⁻);
@@ -135,7 +135,7 @@ def internal-hom : Poly → Poly → Poly :=
 -- fib Q q⁺ *-|-----------------------------( fib Q (fst (f⁺ (borrow pb⁻))) )-[ f : P=>Q ]            -|- q⁺ : base Q
 --            |----------------------------------------------------------------------------------------|
 
-def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
+def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
   λ P Q → λ pf⁺ pf⁻ ⇝
     let p⁺ := fst pf⁺;
     let f⁺ := snd pf⁺;
@@ -187,17 +187,17 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
 #normalize eval nyan nyan (3 , nyan-hom 12)
 
 def compose : Poly → Poly → Poly :=
-  λ P Q → (pf : (p : base P) × (fib P p → base Q)) × (i : fib P (fst pf)) × fib Q ((snd pf) i)
+  λ P Q → Σ (pf : Σ (p : base P), fib P p → base Q), Σ (i : fib P (fst pf)), fib Q ((snd pf) i)
 
-def tensor-to-compose : (P : Poly) → (Q : Poly) → tensor P Q ⇒ compose P Q :=
+def tensor-to-compose : Π (P Q : Poly), tensor P Q ⇒ compose P Q :=
   λ P Q → λ pq⁺ pq⁻ ⇝
     return (fst pq⁺ , λ _ → snd pq⁺) ⇜ pq⁻
 
 #normalize tensor-to-compose
 
-def Lens : (S T A B : Type) → Type := λ S T A B → { .get : S → A, .set : S → B → T }
+def Lens : Π (S T A B : Type), Type := λ S T A B → { .get : S → A, .set : S → B → T }
 
-def compose : (A B C : Type) → (B → C) → (A → B) → A → C :=
+def compose : Π (A B C : Type), (B → C) → (A → B) → A → C :=
   λ _ _ _ f g a → f (g a)
 
 #normalize Lens

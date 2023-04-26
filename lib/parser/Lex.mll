@@ -109,8 +109,10 @@ and real_token = parse
     { LET_MINUS }
   | "in"
     { IN }
-  | "forall" | "∀"
+  | "forall" | "∀" | "Π"
     { FORALL }
+  | "exists" | "∃" | "Σ"
+    { EXISTS }
   | "->" | "→"
     { RIGHT_ARROW }
   | "<-" | "←"
