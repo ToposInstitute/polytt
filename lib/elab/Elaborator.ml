@@ -2,6 +2,7 @@ module CS = Syntax
 module D = Core.Domain
 module S = Core.Syntax
 module Sem = Core.Semantics
+module Ident = Core.Ident
 
 open Refiner
 module T = Tactic
@@ -16,8 +17,8 @@ struct
     | CS.Let (name, tm1, tm2) ->
       let tm1 = syn tm1 in
       Var.let_bind ~name:name tm1 (fun _ -> chk tm2)
-    | CS.Sigma (names, a, b) ->
-      chk_sigma ~names a b
+    | CS.Sigma (qs, b) ->
+      List.fold_right (fun (names, a) b -> chk_sigma ~names a b) qs (fun _ -> chk b) []
     | CS.Pair (a, b) ->
       Sigma.intro (chk a) (chk b)
     | CS.Refl ->
@@ -58,17 +59,20 @@ struct
     | name :: names ->
       Pi.intro ~name @@ fun _ -> chk_lams names tm
 
-  and chk_sigma ?(names = [`Anon]) a b =
+  and chk_sigma ?(names = [`Anon]) a b _ =
     T.match_goal @@
     function
-    | D.Univ -> T.Chk.syn @@ Sigma.formation ~names (chk a) (fun _ -> chk b)
+    | D.Univ -> T.Chk.syn @@ Sigma.formation ~names (chk a) b
     | D.Poly ->
       begin
         match names with
-        | [name] -> Poly.intro ~name (chk a) (fun _ -> chk b)
+        | [name] -> Poly.intro ~name (chk a) (fun n -> b [n])
         | _ -> T.Error.error `TypeError "Polynomials only bind one name"
       end
     | _ -> T.Error.error `TypeError "Pair syntax only works for sigma and poly."
+
+  and syn_univ b =
+    T.Syn.ann (chk b) (T.Chk.syn Univ.formation)
 
   and syn (tm : CS.t) =
     T.Error.locate tm.loc @@ fun () ->
@@ -77,14 +81,22 @@ struct
       syn_var path
     | CS.Univ ->
       Univ.formation
-    | CS.Pi (names, a, b) ->
-      Pi.formation ~names (chk a) (fun _ -> chk b)
+    | CS.Pi (qs, b) ->
+      List.fold_left
+        (fun b (names, a) ms -> Pi.formation ~names (chk a) (fun ns -> T.Chk.syn (b (ms @ ns))))
+        (fun _ -> syn_univ b)
+        (List.rev qs)
+        []
     | CS.Ap (fn, args) ->
       syn_aps fn args
     | CS.Let (nm, tm1, tm2) ->
       syn_let ~name:nm tm1 tm2
-    | CS.Sigma (names, a, b) ->
-      Sigma.formation ~names (chk a) (fun _ -> chk b)
+    | CS.Sigma (qs, b) ->
+      List.fold_left
+        (fun b (names, a) ms -> Sigma.formation ~names (chk a) (fun ns -> T.Chk.syn (b (ms @ ns))))
+        (fun _ -> syn_univ b)
+        (List.rev qs)
+        []
     | CS.Fst tm ->
       Sigma.fst (syn tm)
     | CS.Snd tm ->

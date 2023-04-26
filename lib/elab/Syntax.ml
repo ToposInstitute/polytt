@@ -10,11 +10,11 @@ type 'a node = { node : 'a; loc : Span.t }
 type t = t_ node
 and t_ =
   | Var of Yuujinchou.Trie.path
-  | Pi of Ident.t list * t * t
+  | Pi of (Ident.t list * t) list * t
   | Lam of Ident.t list * t
   | Let of Ident.t * t * t
   | Ap of t * t list
-  | Sigma of Ident.t list * t * t
+  | Sigma of (Ident.t list * t) list * t
   | Pair of t * t
   | Fst of t
   | Snd of t

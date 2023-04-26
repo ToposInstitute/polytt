@@ -1,10 +1,10 @@
 -- Helpers (TODO: abstract and import)
 def ofP : Poly → Type → Type :=
-  λ P A → Π (p : base P), fib P p → A
+  λ P A → Σ (p : base P), fib P p → A
 
 def Void := #{}
 
-def absurd : (R : Type) → Void → R :=
+def absurd : Π (R : Type), Void → R :=
   λ R → {}
 
 def Unit := #{ .unit }
@@ -18,22 +18,22 @@ def unique : Π (u : Unit), u = .unit :=
   unit-elim (λ u → u = .unit) (refl)
 
 def ×-rec :
-  (A : Type) → (B : A → Type) →
-  (R : ((a : A) × B a) → Type) →
-  ((a : A) → (b : B a) → R (a , b)) →
-  (ab : ((a : A) × B a)) → R ab :=
+  Π (A : Type) (B : A → Type),
+  Π (R : (Σ (a : A), B a) → Type),
+  (Π (a : A), Π (b : B a), R (a , b)) →
+  Π (ab : Σ (a : A), B a), R ab :=
   λ A B R fn ab → fn (fst ab) (snd ab)
 
 -- Maybe monad: one layer of a fin
 def fin-step : Type → Type :=
-  λ A → (tag : #{ .zero, .succ }) × { .zero = Unit, .succ = A } tag
+  λ A → Σ (tag : #{ .zero, .succ }), { .zero = Unit, .succ = A } tag
 
 def ℕ-elim :
-  (mot : ℕ → Type) →
+  Π (mot : ℕ → Type),
   { .zero : mot zero
-  , .succ : (n : ℕ) → mot n → mot (succ n)
+  , .succ : Π (n : ℕ), mot n → mot (succ n)
   } →
-  (n : ℕ) → mot n :=
+  Π (n : ℕ), mot n :=
   λ mot r n → elim mot (r .zero) (r .succ) n
 
 -- Recursively-defined type of finite natural numbers
@@ -41,22 +41,22 @@ def fin : ℕ → Type :=
   λ n → elim (λ _ → Type) Void (λ _ → fin-step) n
 
 -- zero as a finite number
-def z : (n : ℕ) → fin (succ n) :=
+def z : Π (n : ℕ), fin (succ n) :=
   λ n → (.zero, unit)
 
 -- successor in finite numbers
-def s : (n : ℕ) → fin n → fin (succ n) :=
+def s : Π (n : ℕ), fin n → fin (succ n) :=
   λ n i → (.succ, i)
 
 -- ex falso quodlibet
-def fin0-elim : (mot : fin 0 → Type) → (i : fin 0) → mot i :=
+def fin0-elim : Π (mot : fin 0 → Type), Π (i : fin 0), mot i :=
   λ mot → {}
 
 -- Handle zero and successor, non-recursively
 def fin-case :
-  (n : ℕ) → (mot : fin (succ n) → Type) →
-  mot (z n) → ((i : fin n) → mot (s n i)) →
-  (i : fin (succ n)) → mot i :=
+  Π (n : ℕ) (mot : fin (succ n) → Type),
+  mot (z n) → (Π (i : fin n), mot (s n i)) →
+  Π (i : fin (succ n)), mot i :=
   λ n mot motz mots →
     ×-rec #{ .zero, .succ } { .zero = Unit, .succ = fin n } mot
       { .zero = { .unit = motz }
@@ -64,20 +64,20 @@ def fin-case :
       }
 
 -- Full elimination principle for arbitrary finite numbers
-def fin-elim :
-  (mot : (n : ℕ) → fin n → Type) →
-  ((n : ℕ) → mot (succ n) (z n)) →
-  ((n : ℕ) → (i : fin n) → mot n i → mot (succ n) (s n i)) →
-  (n : ℕ) → (i : fin n) → mot n i :=
-  λ mot motz mots →
-    ℕ-elim (λ n → (i : fin n) → mot n i)
-      { .zero = {}
-      , .succ = λ n ih →
-        ×-rec #{ .zero, .succ } { .zero = Unit, .succ = fin n } (mot (succ n))
-          { .zero = { .unit = motz n }
-          , .succ = λ i → mots n i (ih i)
-          }
-      }
+-- def fin-elim :
+--   Π (mot : Π (n : ℕ), fin n → Type),
+--   (Π (n : ℕ), mot (succ n) (z n)) →
+--   (Π (n : ℕ) (i : fin n), mot n i → mot (succ n) (s n i)) →
+--   Π (n : ℕ) (i : fin n), mot n i :=
+--   λ mot motz mots →
+--     ℕ-elim (λ n → Π (i : fin n), mot n i)
+--       { .zero = {}
+--       , .succ = λ n ih →
+--         ×-rec #{ .zero, .succ } { .zero = Unit, .succ = fin n } (mot (succ n))
+--           { .zero = { .unit = motz n }
+--           , .succ = λ i → mots n i (ih i)
+--           }
+--       }
 
 def vec : ℕ → Type → Type := λ n A → fin n → A
 
@@ -86,23 +86,22 @@ def vec : ℕ → Type → Type := λ n A → fin n → A
 --   λ A v1 v2 → refl
 
 
-def listP : Poly := (n : ℕ) × fin n
+def listP : Poly := Σ (n : ℕ), fin n
 
 def list : Type → Type := ofP listP
 
-def nil : (A : Type) → list A := λ A → (0 , {})
+def nil : Π (A : Type), list A := λ A → (0 , {})
 
-def cons : (A : Type) → A → list A → list A :=
+def cons : Π (A : Type), A → list A → list A :=
   λ A a as → (succ (fst as) , fin-case (fst as) (λ _ → A) a (snd as))
 
-def list-rec : (A : Type) →
-  (mot : Type) →
+def list-rec : Π (A : Type) (mot : Type),
   mot →
   (A → mot → mot) →
   list A → mot :=
   λ A mot iz is →
     ×-rec ℕ (λ n → fin n → A) (λ _ → mot)
-      (ℕ-elim (λ n → (as : fin n → A) → mot)
+      (ℕ-elim (λ n → Π (as : fin n → A), mot)
         { .zero = λ _ → iz
         , .succ = λ n ih as →
           is (as (z n)) (ih (λ i → as (s n i)))
@@ -113,19 +112,20 @@ def list-rec : (A : Type) →
 -- This makes it into a list we can more easily prove things about
 -- since it constructions a definitionally-*different* list though it is still
 -- propositionally-equal. Good luck proving that, though!
-def list-ext : (A : Type) → list A → list A :=
+def list-ext : Π (A : Type), list A → list A :=
   λ A → list-rec A (list A) (nil A) (cons A)
 
 -- Needs even more extensionality
 -- Workaround: apply to `list-ext A as` instead
-def list-elim-ext : (A : Type) →
-  (mot : list A → Type) →
+def list-elim-ext :
+  Π (A : Type)
+    (mot : list A → Type),
   (mot (nil A)) →
-  ((a : A) → (as : list A) → mot as → mot (cons A a as)) →
-  (as : list A) → mot (list-ext A as) :=
+  (Π (a : A) (as : list A), mot as → mot (cons A a as)) →
+  Π (as : list A), mot (list-ext A as) :=
   λ A mot iz is →
     ×-rec ℕ (λ n → fin n → A) (λ as → mot (list-ext A as))
-      (ℕ-elim (λ n → (as : fin n → A) → mot (list-ext A (n , as)))
+      (ℕ-elim (λ n → Π (as : fin n → A), mot (list-ext A (n , as)))
         { .zero = λ _ → iz
         , .succ = λ n ih as →
           is (as (z n)) (list-ext A (n , λ i → as (s n i))) (ih (λ i → as (s n i)))

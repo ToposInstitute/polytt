@@ -20,6 +20,11 @@ let neg_ap_or_atomic neg fns =
   match fns with
   | None -> unlocate neg
   | Some fns -> CS.NegAp (neg, fns)
+
+let rec quantifier quant =
+  function
+  | [] -> fun t -> unlocate t
+  | (name, ty) :: more -> fun t -> quant (name, ty, quantifier quant more t)
 %}
 
 %token <int> NUMERAL
@@ -109,13 +114,17 @@ plain_term:
   | tm = term; COLON; ty = term;
     { CS.Anno (tm, ty) }
 
+quantifiers:
+  | r = nonempty_list(LPR; names = nonempty_list(name); COLON; base = term; RPR { (names, base) })
+    { r }
+
 plain_unannotated_term:
   | tms = nonempty_list(atomic_term)
     { ap_or_atomic tms }
-  | EXISTS; LPR; names = nonempty_list(name); COLON; base = term; RPR; COMMA; fam = term
-    { CS.Sigma (names, base, fam) }
+  | EXISTS; quantifiers = quantifiers; COMMA; fam = term
+    { CS.Sigma (quantifiers, fam) }
   | base = term; TIMES; fam = term
-    { CS.Sigma ([`Anon], base, fam) }
+    { CS.Sigma ([[`Anon], base], fam) }
   | FST; tm = atomic_term
     { CS.Fst tm }
   | tm1 = atomic_term; EQUALS; tm2 = atomic_term
@@ -148,10 +157,10 @@ labeled_field(sep):
 arrow:
   | LAMBDA; nms = nonempty_list(name); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
-  | FORALL; LPR; names = nonempty_list(name); COLON; base = term; RPR; COMMA; fam = term
-    { CS.Pi (names, base, fam) }
+  | FORALL; quantifiers = quantifiers; COMMA; fam = term
+    { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term
-    { CS.Pi ([`Anon], base, fam) }
+    { CS.Pi ([[`Anon], base], fam) }
   | LAMBDA; pos = name; neg = name; RIGHT_SQUIGGLY_ARROW; body = hom_body
     { CS.HomLam(pos, neg, body) }
   | p = term; RIGHT_THICK_ARROW; q = term
