@@ -172,9 +172,9 @@ plain_hom_body:
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
   | p = atomic_neg_term; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
     { CS.NegUnpack (p, a_name, b_name, body) }
-  | LET; nm = name; EQUALS; tm = term; SEMICOLON; hom = hom_body
+  | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = hom_body
     { CS.Let (nm, tm, hom) }
-  | LET_MINUS; nm = name; EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
+  | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
     { CS.NegLet (nm, tm, hom) }
   | pos = atomic_term; LEFT_SQUIGGLY_ARROW; neg = neg_term
     { CS.Done (pos, neg) }
@@ -190,9 +190,9 @@ plain_program:
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
   | p = atomic_neg_term; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = program
     { CS.NegUnpack (p, a_name, b_name, body) }
-  | LET; nm = name; EQUALS; tm = term; SEMICOLON; hom = program
+  | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = program
     { CS.Let (nm, tm, hom) }
-  | LET_MINUS; nm = name; EQUALS; tm = neg_term; SEMICOLON; hom = program
+  | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = program
     { CS.NegLet (nm, tm, hom) }
   | END
     { CS.End }

@@ -91,7 +91,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
   λ n⁺ n⁻ ⇝
     n⁺ ⇜ λ⁻ (x : #{ .single }) → (succ n⁺) → n⁻; end
 
-#normalize (const x) ℕ
+#normalize (const ℕ) ℕ
 
 #normalize counter
 
@@ -137,13 +137,13 @@ def internal-hom : Poly → Poly → Poly :=
 
 def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
   λ P Q → λ pf⁺ pf⁻ ⇝
-    let p⁺ = fst pf⁺;
-    let f⁺ = snd pf⁺;
+    let p⁺ := fst pf⁺;
+    let f⁺ := snd pf⁺;
     -- pf⁻ : ((fib P p⁺) × (fib (internal-hom P Q) f⁺))⁻
     pf⁻ → (p⁻ , f⁻);
     -- borrow pf⁻ = (borrow p⁻ , borrow f⁻)
-    let qf⁺ = f⁺ p⁺;
-    let q⁺ = fst qf⁺;
+    let qf⁺ := f⁺ p⁺;
+    let q⁺ := fst qf⁺;
     -- f⁻ : ((p : base P) × fib Q (fst (f⁺ p)))⁻
     f⁻ → (pb⁻ , q⁻);
     -- pb⁻ : (base P)⁻
@@ -164,7 +164,7 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
 --  -- λ (p⁺ , f⁺) ⇜ (p₁⁻ , (p₂⁻ , q⁻)) ⇝
 --  -- or we take two boxes (implicitly tensored), and deconstruct each base and fiber separately
 --  λ (p⁺ ⇜ p₁⁻) (f⁺ ⇜ (p₂⁻ , q⁻)) ⇝
---    let (q⁺ , bwd) = f⁺ p⁺;
+--    let (q⁺ , bwd) := f⁺ p⁺;
 --    p₂⁻ ← p⁺;
 --    return
 --      q⁺ ⇜ λ⁻ (q : fib Q q⁺) →
