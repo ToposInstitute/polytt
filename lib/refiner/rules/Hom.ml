@@ -94,10 +94,10 @@ let drop : NegChk.tac =
   NegChk.rule @@ fun _ ->
   fun _ -> ()
 
-let set (pos_tac : Syn.tac) (neg_tac : NegChk.tac) (steps_tac : Hom.tac) : Hom.tac =
+let set (pos_tac : Chk.tac) (neg_tac : NegSyn.tac) (steps_tac : Hom.tac) : Hom.tac =
   Hom.rule @@ fun q ->
-  let pos_tp, pos = Syn.run pos_tac in
-  let neg = NegChk.run neg_tac pos_tp in
+  let neg_tp, neg = NegSyn.run neg_tac in
+  let pos = Chk.run pos_tac neg_tp in
   neg (eval pos);
   Hom.run steps_tac q
 

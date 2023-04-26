@@ -153,8 +153,7 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
     -- q⁻ : (fib Q (fst (f⁺ p⁺)))⁻
     -- q⁻ : (fib Q q⁺)⁻
     return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
-      q⁻ ← v;
-      q₁⁻ ← v;
+      (q⁻ , q₁⁻) ← (v , v);
       done
 
 -- Ideal syntax:

@@ -13,7 +13,7 @@ val drop : NegChk.tac
 val pos_let : ?name:Ident.t -> Syn.tac -> (Var.tac -> Hom.tac) -> Hom.tac
 val neg_let : ?name:Ident.t -> NegSyn.tac -> (NegVar.tac -> Hom.tac) -> Hom.tac
 
-val set : Syn.tac -> NegChk.tac -> Hom.tac -> Hom.tac
+val set : Chk.tac -> NegSyn.tac -> Hom.tac -> Hom.tac
 val ap : Chk.tac -> NegChk.tac
   -> Syn.tac
   -> ?pos_name:Ident.t -> ?neg_name:Ident.t

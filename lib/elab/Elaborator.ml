@@ -146,7 +146,7 @@ struct
     T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | Set (pos, neg, steps) ->
-      Hom.set (syn pos) (neg_chk neg) (hom steps)
+      Hom.set (chk pos) (neg_syn neg) (hom steps)
     | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->
       Hom.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> hom steps)
     | NegUnpack (scrut, a_name, b_name, body) ->
@@ -164,7 +164,7 @@ struct
     T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | Set (pos, neg, steps) ->
-      Prog.set (syn pos) (neg_chk neg) (prog steps)
+      Prog.set (chk pos) (neg_syn neg) (prog steps)
     | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->
       Prog.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> prog steps)
     (* TODO *)
