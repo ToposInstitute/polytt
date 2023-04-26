@@ -15,8 +15,8 @@ let profile f x =
   let res = f x in
   let post = Gc.allocated_bytes () in
   let stop = Unix.gettimeofday () in
-  let () = Printf.printf "Allocated Bytes: %f\n%!" (post -. pre) in
-  let () = Printf.printf "Execution time: %fs\n%!" (stop -. start) in
+  let () = Debug.print "Allocated Bytes: %f\n%!" (post -. pre) in
+  let () = Debug.print "Execution time: %fs\n%!" (stop -. start) in
   res
 
 let normalize tm =

@@ -57,31 +57,31 @@ def tensor : Poly → Poly → Poly :=
 
 def id : (P : Poly) → P ⇒ P :=
   λ P → λ a⁺ a⁻ ⇝
-    a⁺ ⇜ a⁻
+    return a⁺ ⇜ a⁻
 
 #print (λ P → P) : Poly → Poly
 
-#print (λ P → λ a⁺ a⁻ ⇝ a⁺ ⇜ a⁻) : (P : Poly) → P ⇒ P
+#print (λ P → λ a⁺ a⁻ ⇝ return a⁺ ⇜ a⁻) : (P : Poly) → P ⇒ P
 
 def nyan-hom : ℕ → nyan ⇒ nyan :=
   λ n → λ a⁺ a⁻ ⇝
-    (a⁺ , a⁻) ⤚ (id nyan) → (b⁺ , b⁻);
-    n ⇜ (b⁻ ∘ succ ∘ succ)
+    let (b⁺ ⇜ b⁻) := (id nyan) (a⁺ ⇜ a⁻);
+    return n ⇜ (b⁻ ∘ succ ∘ succ)
 
 #normalize nyan-hom 42 1
 
 def nyan-hom2 : nyan ⇒ nyan :=
   λ a⁺ a⁻ ⇝
-    (a⁺ , a⁻) ⤚ (nyan-hom 12) → (b⁺ , b⁻);
-    b⁺ ⇜ b⁻
+    let (b⁺ ⇜ b⁻) := (nyan-hom 12) (a⁺ ⇜ a⁻);
+    return b⁺ ⇜ b⁻
 
 #normalize nyan-hom2 1
 
 def compose : (P : Poly) → (Q : Poly) → (R : Poly) → Q ⇒ R → P ⇒ Q → P ⇒ R :=
   λ P Q R f g → λ p⁺ p⁻ ⇝
-    (p⁺ , p⁻) ⤚ g → (q⁺ , q⁻);
-    (q⁺ , q⁻) ⤚ f → (r⁺ , r⁻);
-    r⁺ ⇜ r⁻
+    let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
+    let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
+    return r⁺ ⇜ r⁻
 
 
 -- 🐈🌈
@@ -89,7 +89,7 @@ def compose : (P : Poly) → (Q : Poly) → (R : Poly) → Q ⇒ R → P ⇒ Q �
 
 def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
   λ n⁺ n⁻ ⇝
-    n⁺ ⇜ λ⁻ (x : #{ .single }) → (succ n⁺) → n⁻; end
+    return n⁺ ⇜ λ⁻ (x : #{ .single }) → n⁻ ← succ n⁺; done
 
 #normalize (const ℕ) ℕ
 
@@ -100,22 +100,22 @@ def Moore : Type → Type → Type → Type :=
 
 def mds : (A : Type) → (B : Type) → (A → B) → Moore B A B :=
   λ A B f → λ b⁺ b⁻ ⇝
-    b⁺ ⇜ (b⁻ ∘ f)
+    return b⁺ ⇜ b⁻ ∘ f
 
 def Gate : Type → Type → Type :=
   λ I O → Moore O I O
 
 def test-pair : nyan ⇒ tensor nyan nyan :=
   λ n⁺ n⁻ ⇝
-    (n⁺ , n⁻) ⤚ (nyan-hom 12) → (b⁺ , b⁻);
-    ((n⁺ , b⁺)) ⇜ [! , λ _ → b⁻ ∘ succ]
+    let (b⁺ ⇜ b⁻) := (nyan-hom 12) (n⁺ ⇜ n⁻);
+    return (n⁺ , b⁺) ⇜ (! ← _ , b⁻ ∘ succ)
 
 #normalize (test-pair 1)
 
 def swap : (P : Poly) → (Q : Poly) → tensor P Q ⇒ tensor Q P :=
   λ P Q → λ pq⁺ pq⁻ ⇝
-    pq⁻ → (p⁻ , q⁻);
-    ((snd pq⁺ , fst pq⁺)) ⇜ [q⁻ , λ _ → p⁻]
+    let⁻ (p⁻ , q⁻) := pq⁻;
+    return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
 
 -- λ (p⁺, q⁺) (p⁻, q⁻) ⇝ (q⁺ , p⁺) , (q⁻ , p⁻)
 
@@ -140,22 +140,22 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
     let p⁺ := fst pf⁺;
     let f⁺ := snd pf⁺;
     -- pf⁻ : ((fib P p⁺) × (fib (internal-hom P Q) f⁺))⁻
-    pf⁻ → (p⁻ , f⁻);
+    let⁻ (p⁻ , f⁻) := pf⁻;
     -- borrow pf⁻ = (borrow p⁻ , borrow f⁻)
     let qf⁺ := f⁺ p⁺;
     let q⁺ := fst qf⁺;
+    let⁻ q₁⁻ := p⁻ ∘ (snd qf⁺);
     -- f⁻ : ((p : base P) × fib Q (fst (f⁺ p)))⁻
-    f⁻ → (pb⁻ , q⁻);
+    let⁻ (pb⁻ , q⁻) := f⁻;
     -- pb⁻ : (base P)⁻
     -- q⁻ : (fib Q (fst (f⁺ (borrow pb⁻))))⁻
-    (fst pf⁺) → pb⁻;
+    pb⁻ ← p⁺;
     -- q⁻ : (fib Q (fst (f⁺ p⁺)))⁻
     -- q⁻ : (fib Q q⁺)⁻
-    q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
-      -- ignore the (id_ ?), it is a workaround for a parsing bug
-      (id_ (fib Q q⁺) v) → q⁻;
-      ((snd qf⁺) v) → p⁻;
-      end
+    return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
+      q⁻ ← v;
+      q₁⁻ ← v;
+      done
 
 -- Ideal syntax:
 --def eval (P Q : Poly) : tensor P (internal-hom P Q) ⇒ Q :=
@@ -170,7 +170,7 @@ def eval : (P : Poly) → (Q : Poly) → tensor P (internal-hom P Q) ⇒ Q :=
 --      q⁺ ⇜ λ⁻ (q : fib Q q⁺) →
 --        q⁻ ← q;
 --        p₁⁻ ← bwd q;
---        end
+--        done
 
 -- Π Σ
 -- P => Q
@@ -192,7 +192,7 @@ def compose : Poly → Poly → Poly :=
 
 def tensor-to-compose : (P : Poly) → (Q : Poly) → tensor P Q ⇒ compose P Q :=
   λ P Q → λ pq⁺ pq⁻ ⇝
-    (fst pq⁺ , λ _ → snd pq⁺) ⇜ pq⁻
+    return (fst pq⁺ , λ _ → snd pq⁺) ⇜ pq⁻
 
 #normalize tensor-to-compose
 

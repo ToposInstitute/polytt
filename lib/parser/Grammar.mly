@@ -26,13 +26,13 @@ let neg_ap_or_atomic neg fns =
 %token <bool> FLAG
 %token <string> ATOM
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW UNDERSCORE EQUALS QUESTION BANG
+%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW LEFT_ARROW UNDERSCORE EQUALS QUESTION BANG
 (* Symbols *)
-%token FORALL LAMBDA LET IN LET_MINUS LAMBDA_MINUS END
+%token FORALL LAMBDA LET IN LET_MINUS LAMBDA_MINUS RETURN DONE
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
 %token POLY BASE FIB RIGHT_THICK_ARROW
-%token LEFT_SQUIGGLY_ARROW RIGHT_SQUIGGLY_ARROW RIGHT_ARROW_TAIL CIRC
+%token LEFT_SQUIGGLY_ARROW RIGHT_SQUIGGLY_ARROW CIRC
 %token HASH
 (* Delimiters *)
 %token LPR RPR LSQ RSQ LBR RBR
@@ -43,10 +43,10 @@ let neg_ap_or_atomic neg fns =
 %token DEF FAIL NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
-%right SEMICOLON COLON
+%right COLON
 %right RIGHT_ARROW TIMES IN
 %left CIRC
-%nonassoc RIGHT_THICK_ARROW RIGHT_SQUIGGLY_ARROW
+%nonassoc RIGHT_THICK_ARROW
 
 %start <Vernacular.Syntax.cmd list> commands
 
@@ -109,10 +109,6 @@ plain_term:
   | tm = term; COLON; ty = term;
     { CS.Anno (tm, ty) }
 
-unannotated_term:
-  | t = located(plain_unannotated_term)
-    { t }
-
 plain_unannotated_term:
   | tms = nonempty_list(atomic_term)
     { ap_or_atomic tms }
@@ -166,36 +162,36 @@ hom_body:
     { t }
 
 plain_hom_body:
-  | tm = atomic_term; RIGHT_ARROW; neg = neg_term; SEMICOLON; hom = hom_body
+  | neg = neg_term; LEFT_ARROW; tm = term; SEMICOLON; hom = hom_body
     { CS.Set (tm, neg, hom) }
-  | LPR; pos = term; COMMA; neg = neg_term; RPR; RIGHT_ARROW_TAIL; hom = atomic_term; RIGHT_ARROW; LPR; pos_name = name; COMMA; neg_name = name; RPR; SEMICOLON; body = hom_body
+  | LET; LPR; pos_name = name; LEFT_SQUIGGLY_ARROW; neg_name = name; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = hom_body
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
-  | p = atomic_neg_term; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = hom_body
+  | LET_MINUS; LPR; a_name = name; COMMA; b_name = name; RPR; COLON_EQUALS; p = neg_term; SEMICOLON; body = hom_body
     { CS.NegUnpack (p, a_name, b_name, body) }
   | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = hom_body
     { CS.Let (nm, tm, hom) }
   | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
     { CS.NegLet (nm, tm, hom) }
-  | pos = atomic_term; LEFT_SQUIGGLY_ARROW; neg = neg_term
-    { CS.Done (pos, neg) }
+  | RETURN; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term
+    { CS.Return (pos, neg) }
 
 program:
   | t = located(plain_program)
     { t }
 
 plain_program:
-  | tm = atomic_term; RIGHT_ARROW; neg = neg_term; SEMICOLON; hom = program
+  | neg = neg_term; LEFT_ARROW; tm = term; SEMICOLON; hom = program
     { CS.Set (tm, neg, hom) }
-  | LPR; pos = term; COMMA; neg = neg_term; RPR; RIGHT_ARROW_TAIL; hom = atomic_term; RIGHT_ARROW; LPR; pos_name = name; COMMA; neg_name = name; RPR; SEMICOLON; body = program
+  | LET; LPR; pos_name = name; LEFT_SQUIGGLY_ARROW; neg_name = name; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = program
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
-  | p = atomic_neg_term; RIGHT_ARROW; LPR; a_name = name; COMMA; b_name = name; RPR; SEMICOLON; body = program
+  | LET_MINUS; LPR; a_name = name; COMMA; b_name = name; RPR; COLON_EQUALS; p = neg_term; SEMICOLON; body = program
     { CS.NegUnpack (p, a_name, b_name, body) }
   | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = program
     { CS.Let (nm, tm, hom) }
   | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = program
     { CS.NegLet (nm, tm, hom) }
-  | END
-    { CS.End }
+  | DONE
+    { CS.Done }
 
 neg_spine:
   | CIRC; tms = separated_nonempty_list(CIRC, atomic_term)
@@ -218,9 +214,9 @@ atomic_neg_term:
 plain_atomic_neg_term:
   | LPR; tm = plain_neg_term; RPR
     { tm }
-  | LSQ; a = neg_term; COMMA; LAMBDA; a_name = name; RIGHT_ARROW; b = neg_term; RSQ
+  | LPR; a = neg_term; LEFT_ARROW; a_name = name; COMMA; b = neg_term; RPR
     { CS.NegPair (a, a_name, b) }
-  | LSQ; a = neg_term; COMMA; b = neg_term; RSQ
+  | LPR; a = neg_term; COMMA; b = neg_term; RPR
     { CS.NegPairSimple (a, b) }
   | path = path
     { CS.Var path }

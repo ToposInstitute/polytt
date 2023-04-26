@@ -44,8 +44,8 @@ and t_ =
   | NegLam of Ident.t * t * t
   | NegAp of t * t list
   | Drop
-  | End
+  | Done
   | HomAp of t * t * t * Ident.t * Ident.t * t
-  | Done of t * t
+  | Return of t * t
   | Anno of t * t (* (t : ty) *)
   | Hole

@@ -40,7 +40,8 @@ let keywords =
     ("refl", REFL);
     ("fst", FST);
     ("snd", SND);
-    ("end", END);
+    ("done", DONE);
+    ("return", RETURN);
   ]
 
 (* Some Lexing Utilities *)
@@ -112,6 +113,8 @@ and real_token = parse
     { FORALL }
   | "->" | "→"
     { RIGHT_ARROW }
+  | "<-" | "←"
+    { LEFT_ARROW }
   | "=>" | "⇒"
     { RIGHT_THICK_ARROW }
   | "." | "∘"
@@ -120,8 +123,6 @@ and real_token = parse
     { RIGHT_SQUIGGLY_ARROW }
   | "<~" | "⇜"
     { LEFT_SQUIGGLY_ARROW }
-  | ">-" | "⤚"
-    { RIGHT_ARROW_TAIL }
   | "*" | "×"
     { TIMES }
   | ':'

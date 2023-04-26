@@ -155,7 +155,7 @@ struct
       Hom.pos_let ~name (syn tm) (fun _ -> hom body)
     | NegLet (name, tm, body) ->
       Hom.neg_let ~name (neg_syn tm) (fun _ -> hom body)
-    | Done (pos, neg) ->
+    | Return (pos, neg) ->
       Hom.done_ (chk pos) (neg_chk neg)
     | _ ->
       T.Error.error `NotAHom "Cannot be used to build a hom."
@@ -174,7 +174,7 @@ struct
       Prog.pos_let ~name (syn tm) (fun _ -> prog body)
     | NegLet (name, tm, body) ->
       Prog.neg_let ~name (neg_syn tm) (fun _ -> prog body)
-    | End ->
+    | Done ->
       Prog.end_
     | _ ->
       (* FIXME *)
