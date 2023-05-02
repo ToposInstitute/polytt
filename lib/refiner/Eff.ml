@@ -60,6 +60,8 @@ struct
     local_names : (Cell.t, unit) Yuujinchou.Trie.t;
     size : int;
     neg_size : int;
+    (* Snoc list of whether this cell has been consumed, and its value (which
+       will be written sometime after it is consumed) *)
     neg_values : (bool ref * D.t ref) bwd;
     neg_types : D.tp bwd;
     ppenv_pos : Ident.t bwd;
@@ -201,7 +203,7 @@ struct
     let neg_cell = { Cell.name; tp; lvl } in
     let cell = Cell.Neg neg_cell in
     Reader.scope (bind_var cell) @@ fun () ->
-    k lvl
+    k (compound_consumer)
 
   let consume_neg lvl () =
     let env = Reader.read () in

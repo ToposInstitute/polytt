@@ -61,14 +61,16 @@ let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
   let steps = Hom.run (f v) r in
   S.Let (name, tm, steps)
 
-let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Hom.tac) =
+
+(* let- name = tm; f *)
+let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac Ident.pat -> Hom.tac) =
   Hom.rule @@ fun r ->
   let tp, tm = NegSyn.run tm in
-  NegVar.abstract ~name tp @@ fun v ->
+  NegVar.abstract ~name tp @@ fun { borrowed; consumer_fn } ->
   Debug.print "reading from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
   tm (NegVar.borrow v);
   Debug.print "-> read from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
-  Hom.run (f v) r
+  Hom.run (f consumer_fn) r
 
 let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
   NegSyn.rule @@ fun () ->

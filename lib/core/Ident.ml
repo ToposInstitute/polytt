@@ -1,7 +1,15 @@
 type path = Yuujinchou.Trie.path
 
-(** The type of identifiers *) 
+(** The type of identifiers *)
 type t = [ `Anon | `User of path | `Machine of int ]
+
+(** The functor of pattern trees, used for binders *)
+type 'a pat =
+  | Var of 'a
+  | Tuple of 'a pat * 'a pat
+
+(** Patterns with identifiers in them *)
+type binder = t pat
 
 (** Anonymous names, eg., underscores *)
 let anon = `Anon
@@ -15,7 +23,7 @@ let machine nm = `Machine nm
 let equal n1 n2 =
   match (n1, n2) with
   | `Anon, `Anon -> true
-  | `User path1, `User path2 -> List.equal String.equal path1 path2 
+  | `User path1, `User path2 -> List.equal String.equal path1 path2
   | `Machine i1, `Machine i2 -> Int.equal i1 i2
   | _ -> false
 

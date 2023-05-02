@@ -49,7 +49,7 @@ def nyan : Poly :=
   (ℕ × ℕ)
 
 def tensor : Poly → Poly → Poly :=
-  λ P Q → Σ (pq : base P × base Q), fib P (fst pq) × fib Q (snd pq)
+  λ P Q → Σ ((p , q) : base P × base Q), fib P p × fib Q q
 
 #normalize base (tensor nyan nyan)
 #normalize fib (tensor nyan nyan) (1 , 2)
@@ -108,7 +108,7 @@ def Gate : Type → Type → Type :=
 def test-pair : nyan ⇒ tensor nyan nyan :=
   λ n⁺ n⁻ ⇝
     let (b⁺ ⇜ b⁻) := (nyan-hom 12) (n⁺ ⇜ n⁻);
-    return (n⁺ , b⁺) ⇜ (! ← _ , b⁻ ∘ succ)
+    return (n⁺ , b⁺) ⇜ ( ! ← _ , b⁻ ∘ succ )
 
 #normalize (test-pair 1)
 
@@ -154,6 +154,7 @@ def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
     -- q⁻ : (fib Q q⁺)⁻
     return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
       (q⁻ , q₁⁻) ← (v , v);
+      p⁻ ← (snd qf⁺) v;
       done
 
 -- Ideal syntax:

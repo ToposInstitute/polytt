@@ -76,6 +76,12 @@ name:
   | UNDERSCORE
     { `Anon }
 
+pattern:
+  | name = name
+    { Var name }
+  | LPR; l = pattern; COMMA; r = pattern; RPR
+    { Tuple (l, r) }
+
 commands:
   | EOF
     { [] }
@@ -115,8 +121,12 @@ plain_term:
     { CS.Anno (tm, ty) }
 
 quantifiers:
-  | r = nonempty_list(LPR; names = nonempty_list(name); COLON; base = term; RPR { (names, base) })
+  | r = nonempty_list(quantifier)
     { r }
+
+quantifier:
+  | LPR; names = nonempty_list(pattern); COLON; base = term; RPR
+    { (names, base) }
 
 plain_unannotated_term:
   | tms = nonempty_list(atomic_term)
@@ -145,9 +155,9 @@ plain_unannotated_term:
     { tm }
 
 let_binding:
-  | LET; nm = name; COLON_EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = pattern; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, tm1, tm2) }
-  | LET; nm = name; COLON; ty1 = term; COLON_EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = pattern; COLON; ty1 = term; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, { node = Anno(tm1, ty1) ; loc = get_loc tm1 }, tm2) }
 
 labeled_field(sep):
@@ -155,13 +165,13 @@ labeled_field(sep):
     { (label, term) }
 
 arrow:
-  | LAMBDA; nms = nonempty_list(name); RIGHT_ARROW; tm = term
+  | LAMBDA; nms = nonempty_list(pattern); RIGHT_ARROW; tm = term
     { CS.Lam(nms, tm) }
   | FORALL; quantifiers = quantifiers; COMMA; fam = term
     { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi ([[`Anon], base], fam) }
-  | LAMBDA; pos = name; neg = name; RIGHT_SQUIGGLY_ARROW; body = hom_body
+  | LAMBDA; pos = pattern; neg = pattern; RIGHT_SQUIGGLY_ARROW; body = hom_body
     { CS.HomLam(pos, neg, body) }
   | p = term; RIGHT_THICK_ARROW; q = term
     { CS.Hom (p, q) }
@@ -173,13 +183,11 @@ hom_body:
 plain_hom_body:
   | neg = neg_term; LEFT_ARROW; tm = term; SEMICOLON; hom = hom_body
     { CS.Set (tm, neg, hom) }
-  | LET; LPR; pos_name = name; LEFT_SQUIGGLY_ARROW; neg_name = name; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = hom_body
+  | LET; LPR; pos_name = pattern; LEFT_SQUIGGLY_ARROW; neg_name = pattern; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = hom_body
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
-  | LET_MINUS; LPR; a_name = name; COMMA; b_name = name; RPR; COLON_EQUALS; p = neg_term; SEMICOLON; body = hom_body
-    { CS.NegUnpack (p, a_name, b_name, body) }
-  | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = hom_body
+  | LET; nm = pattern; COLON_EQUALS; tm = term; SEMICOLON; hom = hom_body
     { CS.Let (nm, tm, hom) }
-  | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
+  | LET_MINUS; nm = pattern; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
     { CS.NegLet (nm, tm, hom) }
   | RETURN; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term
     { CS.Return (pos, neg) }
@@ -191,13 +199,11 @@ program:
 plain_program:
   | neg = neg_term; LEFT_ARROW; tm = term; SEMICOLON; hom = program
     { CS.Set (tm, neg, hom) }
-  | LET; LPR; pos_name = name; LEFT_SQUIGGLY_ARROW; neg_name = name; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = program
+  | LET; LPR; pos_name = pattern; LEFT_SQUIGGLY_ARROW; neg_name = pattern; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = program
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
-  | LET_MINUS; LPR; a_name = name; COMMA; b_name = name; RPR; COLON_EQUALS; p = neg_term; SEMICOLON; body = program
-    { CS.NegUnpack (p, a_name, b_name, body) }
-  | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = program
+  | LET; nm = pattern; COLON_EQUALS; tm = term; SEMICOLON; hom = program
     { CS.Let (nm, tm, hom) }
-  | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = program
+  | LET_MINUS; nm = pattern; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = program
     { CS.NegLet (nm, tm, hom) }
   | DONE
     { CS.Done }

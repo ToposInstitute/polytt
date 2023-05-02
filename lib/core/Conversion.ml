@@ -11,6 +11,15 @@ open TermBuilder
 
 exception Unequal
 
+(* NOTE: May 1, 2023 *)
+(* We will probably need to conversion check pattern lambdas against regular
+   lambdas, which would involve a pattern unifier (unfold every time you see
+   a tuple on one side and a variable on the other) if we want to do it properly
+
+   Would not be able to use the bump allocator for quoting? … tbd *)
+(* \(a, b) -> a + b *)
+(* \ab -> fst a + snd b *)
+
 module Internal =
 struct
   module Eff = Env.Eff

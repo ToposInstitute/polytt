@@ -28,9 +28,9 @@ module Locals : sig
   val run_top : (unit -> 'a) -> 'a
   val resolve : Ident.path -> Cell.pos option
   val resolve_neg : Ident.path -> Cell.neg option
-  val concrete : ?name:Ident.t -> D.tp -> D.t -> (unit -> 'a) -> 'a
-  val abstract : ?name:Ident.t -> D.tp -> (D.t -> 'a) -> 'a
-  val abstracts : ?names:Ident.t list -> D.tp -> (D.t list -> 'a) -> 'a
+  val concrete : ?name:Ident.binder -> D.tp -> D.t -> (unit -> 'a) -> 'a
+  val abstract : ?name:Ident.binder -> D.tp -> (D.t -> 'a) -> 'a
+  val abstracts : ?names:Ident.binder list -> D.tp -> (D.t list -> 'a) -> 'a
   val local_types : unit -> D.tp bwd
   val ppenv : unit -> S.ppenv
   val qenv : unit -> QuoteEnv.t
@@ -38,7 +38,7 @@ module Locals : sig
   val size : unit -> int
   val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 
-  val abstract_neg : ?name:Ident.t -> D.tp -> (int -> 'a) -> 'a
+  val abstract_neg : ?name:Ident.binder -> D.tp -> (borrowed:D.t -> bound:int Ident.pat -> 'a) -> 'a
   val consume_neg : int -> unit -> (D.t -> unit) option
   val all_consumed : unit -> bool
   val head : unit -> D.t

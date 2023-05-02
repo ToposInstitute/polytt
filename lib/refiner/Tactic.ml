@@ -94,9 +94,9 @@ and Var : sig
 
   val value : tac -> D.t
   val syn : tac -> Syn.tac
-  val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
-  val abstracts : ?names:Ident.t list -> D.tp -> (tac list -> 'a) -> 'a
-  val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
+  val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
+  val abstracts : ?names:Ident.binder list -> D.tp -> (tac list -> 'a) -> 'a
+  val concrete : ?name:Ident.binder -> D.tp -> D.t -> (tac -> 'a) -> 'a
 end =
 struct
   type tac = { tp : D.tp; value : D.t }
@@ -111,7 +111,7 @@ struct
     | `Anon -> `Machine (Locals.size ())
     | name -> name
 
-  let abstracts ?(names = [`Anon]) tp k =
+  let abstracts ?(names = [Var `Anon]) tp k =
     (* TODO: fresh_name *)
     Locals.abstracts ~names tp @@ fun values ->
     let tacs =
@@ -120,20 +120,19 @@ struct
     in
     k tacs
 
-  let abstract ?(name = `Anon) tp k =
+  let abstract ?(name = Var `Anon) tp k =
     Locals.abstract ~name:(fresh_name name) tp @@ fun value ->
     k {tp; value}
 
-  let concrete ?(name = `Anon) tp value k =
+  let concrete ?(name = Var `Anon) tp value k =
     Locals.concrete ~name:(fresh_name name) tp value @@ fun () ->
     k {tp; value}
 end
 
 and NegVar : sig
   type tac
-  val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
   val borrow : tac -> D.t
-  val set : tac -> D.t -> unit
   val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 end =
 struct
@@ -143,10 +142,6 @@ struct
     k { tp; lvl }
 
   let borrow { tp; lvl } = D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
-  let set { lvl; _ } =
-    match Eff.Locals.consume_neg lvl () with
-    | None -> invalid_arg "Internal error: variable already consumed"
-    | Some setter -> setter
 
   let revert =
     Eff.Locals.revert
