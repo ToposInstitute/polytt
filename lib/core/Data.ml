@@ -12,12 +12,12 @@ type syn =
   | Var of int
   | Borrow of int
   (** Negative variables are DeBruijn levels, even in the syntax! *)
-  | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)
-  | Lam of Ident.t * syn (* λ x. e *)
-  | Let of Ident.t * syn * syn (* let x = e in t *)
-  | Ap of syn * syn (* f a *)
-  | Sigma of Ident.t * syn * syn (* Σ[ a ∈ A] (B a) *)
-  | Pair of syn * syn (* A × B *)
+  | Pi of Ident.t * syn * syn 
+  | Lam of Ident.t * syn 
+  | Let of Ident.t * syn * syn 
+  | Ap of syn * syn 
+  | Sigma of Ident.t * syn * syn
+  | Pair of syn * syn
   | Fst of syn
   | Snd of syn
   | Eq of syn * syn * syn
@@ -30,13 +30,13 @@ type syn =
       -> P y p
   *)
   (* | AxiomJ of  *)
-  | Nat (* ℕ *)
-  | Zero (* zero *)
-  | Succ of syn (* succ n *)
+  | Nat 
+  | Zero 
+  | Succ of syn 
   | NatElim of { mot : syn; zero : syn; succ : syn; scrut : syn }
-  | FinSet of labelset (* #{ foo, bar } *)
-  | Label of labelset * label (* .foo *)
-  | Cases of syn * syn labeled * syn (* { foo = syn₁, bar = syn₂ } e *)
+  | FinSet of labelset 
+  | Label of labelset * label 
+  | Cases of syn * syn labeled * syn 
   | Univ
   | Poly
   | PolyIntro of Ident.t * syn * syn
