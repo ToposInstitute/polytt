@@ -233,7 +233,7 @@ let do_nat_elim ~mot ~zero ~succ ~scrut =
 let do_hom_elim =
   Internal.do_hom_elim
 
-  let do_frm hd = function
+let do_frm hd = function
   | D.Ap { arg; _ } -> do_ap hd arg
   | D.Fst -> do_fst hd
   | D.Snd -> do_snd hd
