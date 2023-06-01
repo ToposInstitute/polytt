@@ -1,15 +1,15 @@
 opam-version: "2.0"
 name: "polytt"
 version: "~dev"
-synopsis: "A short synopsis"
-description: "A longer description"
+synopsis: "A programming language for Polynomial Functors"
+description: "TODO"
 maintainer: "Maintainer Name"
-authors: "Author Name"
+authors: "Topos Institute"
 license: "LICENSE"
-tags: ["topics" "to describe" "your" "project"]
-homepage: "https://github.com/username/reponame"
-doc: "https://url/to/documentation"
-bug-reports: "https://github.com/username/reponame/issues"
+tags: ["Polynomial Functors" "Programming Language" "Proof Assistant"]
+homepage: "https://github.com/toposInstitute/polytt"
+doc: "https://github.com/ToposInstitute/polytt/blob/main/README.md"
+bug-reports: "https://github.com/toposInstitute/polytt/issues"
 depends: [
   "alcotest" {= "1.7.0"}
   "algaeff" {= "0.2.1"}
@@ -22,41 +22,38 @@ depends: [
   "base-nnp" {= "base"}
   "base-threads" {= "base"}
   "base-unix" {= "base"}
-  "bigarray-compat" {= "1.1.0"}
-  "bigstringaf" {= "0.9.0"}
+  "bigstringaf" {= "0.9.1"}
   "bos" {= "0.2.1"}
   "bwd" {= "2.1.0"}
-  "cmdliner" {= "1.1.1"}
+  "cmdliner" {= "1.2.0"}
   "conf-git" {= "1.1"}
-  "conf-pkg-config" {= "2"}
+  "containers" {= "3.11"}
   "cppo" {= "1.6.9"}
-  "csexp" {= "1.5.1"}
-  "cstruct" {= "6.1.1"}
-  "ctypes" {= "0.20.1"}
+  "csexp" {= "1.5.2"}
+  "cstruct" {= "6.2.0"}
   "curly" {= "0.3.0"}
-  "dune" {= "3.7.0"}
-  "dune-configurator" {= "3.7.0"}
-  "eio" {= "0.8.1"}
-  "eio_linux" {= "0.8.1"}
-  "eio_luv" {= "0.8.1"}
-  "eio_main" {= "0.8.1"}
+  "dune" {= "3.8.0"}
+  "dune-configurator" {= "3.8.0"}
+  "eio" {= "0.9"}
+  "eio_linux" {= "0.9"}
+  "eio_main" {= "0.9"}
+  "eio_posix" {= "0.9"}
+  "either" {= "1.0.0"}
   "ezjsonm" {= "1.3.0"}
   "fmt" {= "0.9.0"}
   "fpath" {= "0.7.3"}
   "hex" {= "1.5.0"}
   "hmap" {= "0.8.1"}
-  "integers" {= "0.7.0"}
-  "json-data-encoding" {= "0.12.1"}
-  "jsonm" {= "1.0.1"}
+  "iomux" {= "0.3"}
+  "json-data-encoding" {= "1.0.0"}
+  "jsonm" {= "1.0.2"}
   "jsonrpc" {= "1.15.1-5.0"}
   "logs" {= "0.7.0"}
   "lsp" {= "1.15.1-5.0"}
-  "luv" {= "0.5.11"}
-  "luv_unix" {= "0.5.0"}
   "lwt-dllist" {= "1.0.1"}
-  "menhir" {= "20220210"}
-  "menhirLib" {= "20220210"}
-  "menhirSdk" {= "20220210"}
+  "menhir" {= "20230415"}
+  "menhirLib" {= "20230415"}
+  "menhirSdk" {= "20230415"}
   "mtime" {= "2.0.0"}
   "notty" {= "0.2.3"}
   "ocaml" {= "5.0.0"}
@@ -65,7 +62,7 @@ depends: [
   "ocaml-options-vanilla" {= "1"}
   "ocaml-syntax-shims" {= "1.0.0"}
   "ocamlbuild" {= "0.14.2"}
-  "ocamlfind" {= "1.9.5"}
+  "ocamlfind" {= "1.9.6"}
   "optint" {= "0.3.0"}
   "ppx_yojson_conv_lib" {= "v0.15.0"}
   "psq" {= "0.2.1"}
@@ -73,15 +70,14 @@ depends: [
   "result" {= "1.5"}
   "rresult" {= "0.7.0"}
   "seq" {= "base"}
-  "sexplib0" {= "v0.15.1"}
+  "sexplib0" {= "v0.16.0"}
   "stdlib-shims" {= "0.3.0"}
   "stringext" {= "1.6.0"}
   "topkg" {= "1.0.7"}
-  "uchar" {= "0.0.2"}
   "uri" {= "4.2.0"}
-  "uring" {= "0.5"}
+  "uring" {= "0.6"}
   "uutf" {= "1.0.3"}
-  "yojson" {= "2.0.2"}
+  "yojson" {= "2.1.0"}
   "yuujinchou" {= "4.0.0"}
 ]
 build: [
@@ -98,10 +94,8 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/username/reponame.git"
+dev-repo: "git+https://github.com/ToposInstitute/polytt.git"
 pin-depends: [
-  ["algaeff.0.2.1" "git+https://github.com/redPRL/algaeff"]
   ["asai.0.1.0~dev" "git+https://github.com/RedPRL/asai"]
   ["bantorra.0.2.0~dev" "git+https://github.com/RedPRL/bantorra"]
-  ["yuujinchou.4.0.0" "git+https://github.com/RedPRL/yuujinchou"]
 ]
