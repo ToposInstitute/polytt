@@ -10,14 +10,9 @@ For examples, see `examples/` directory.
 
 # Building
 
-On Mac you can install `opam` with `homebrew` via:
+Install `opam` using our preferred package manager. On Mac you can install it with `homebrew` via:
 ```bash
 $ brew install opam
-```
-
-A `shell.nix` file is provided to give access to `opam`:
-```bash
-$ nix-shell
 ```
 
 Once you have `opam` you can install all the dev dependencies and then build `polytt`:
@@ -27,6 +22,12 @@ $ opam init
 $ opam switch create . ocaml-base-compiler.5.0.0
 $ opam install --deps-only --locked .
 $ dune build
+```
+
+Alternatively, `flake.nix` file is provided to setup an entire development environment with `nix`:
+
+```
+$ nix develop
 ```
 
 # Running

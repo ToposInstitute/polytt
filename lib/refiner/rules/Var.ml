@@ -26,5 +26,5 @@ let negative (cell : Cell.neg) =
   | Some writer ->
     Debug.print "marking %a@." Ident.pp cell.name;
     (cell.tp, fun v ->
-      Debug.print "writing %a <- %a@." Ident.pp cell.name D.dump v;
-      writer v)
+        Debug.print "writing %a <- %a@." Ident.pp cell.name D.dump v;
+        writer v)

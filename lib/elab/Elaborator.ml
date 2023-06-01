@@ -181,7 +181,7 @@ struct
       Prog.ap (chk pos) (neg_chk neg) (syn phi) ~pos_name ~neg_name (fun _ _ -> prog steps)
     (* TODO *)
     (* | NegUnpack (scrut, a_name, b_name, body) ->
-      NegSigma.elim (neg_syn scrut) ~a_name ~b_name (fun _ _ -> prog body) *)
+       NegSigma.elim (neg_syn scrut) ~a_name ~b_name (fun _ _ -> prog body) *)
     | Let (name, tm, body) ->
       Prog.pos_let ~name (syn tm) (fun _ -> prog body)
     | NegLet (name, tm, body) ->
