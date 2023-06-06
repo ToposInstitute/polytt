@@ -14,6 +14,7 @@
         devPackagesQuery = {
           ocaml-lsp-server = "*";
           ocp-indent = "*";
+          merlin = "*";
         };
         query = devPackagesQuery // {
           ocaml-base-compiler = "*";
