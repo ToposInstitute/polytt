@@ -1,0 +1,7 @@
+import b
+
+#fail foo-not-bound : ℕ := foo
+
+def baz : ℕ := bar
+
+#print baz

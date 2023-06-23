@@ -1,4 +1,4 @@
---------------------[prelude.poly]--------------------
+--------------------[basics.poly]--------------------
 
 Normal Form: 5
 Normal Form: ℕ × ℕ
@@ -16,4 +16,10 @@ Normal Form: λ P Q → λ ~> FIXME λ pf⁺ → (fst (snd pf⁺ (fst pf⁺)) , 
 Normal Form: (12 , λ <7> → (succ (succ <7>) , (3 , <7>)))
 Normal Form: λ P Q → λ ~> FIXME λ pq⁺ → ((fst pq⁺ , λ _ → snd pq⁺) , λ <3> → (fst <3> , snd <3>)) FIXME
 Normal Form: λ S T A B → #{ .get, .set } → { .get = S → A, .set = S → B → T } _
-All Done!
+--------------------[a.poly]--------------------
+
+--------------------[b.poly]--------------------
+
+--------------------[c.poly]--------------------
+
+baz : ℕ

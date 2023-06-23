@@ -33,6 +33,8 @@ struct
     match tm with
     | S.Var ix ->
       var ix
+    | S.Global x ->
+      CodeUnit.get_def_value x
     | S.Borrow lvl ->
       borrow lvl
     | S.Pi (nm, a, b) ->
