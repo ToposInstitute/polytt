@@ -36,7 +36,6 @@ struct
     Effect.perform (Resolve path)
 
   let run ~(resolve : Ident.path -> Global.t option) k =
-    CodeUnit.run @@ fun () ->
     Effect.Deep.try_with k () {
       effc =
         fun (type a) (eff : a Effect.t) ->

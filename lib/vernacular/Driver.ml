@@ -58,7 +58,7 @@ let rec execute_cmd  (cmd : CS.cmd) =
     end
   | CS.Import {shadowing; unitpath} ->
     let cmds = Eff.load (UnitPath.of_list unitpath) in
-    CodeUnit.with_new_unit @@ fun () ->
+    Eff.scoped @@ fun () ->
     List.iter execute_cmd cmds
   | CS.Normalize tm ->
     profile normalize tm
