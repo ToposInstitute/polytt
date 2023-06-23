@@ -13,37 +13,67 @@ type 'a labeled = (string * 'a) list
 type ppenv = { pos : Ident.t bwd; neg_size : int; neg : Ident.t bwd }
 
 type t = Data.syn =
-  | Var of int
-  | Global of Global.t
-  | Borrow of int
-  | Pi of Ident.t * t * t
-  | Lam of Ident.t * t
-  | Let of Ident.t * t * t
-  | Ap of t * t
-  | Sigma of Ident.t * t * t
-  | Pair of t * t
-  | Fst of t
-  | Snd of t
-  | Eq of t * t * t
-  | Refl of t
-  | Nat
-  | Zero
-  | Succ of t
-  | NatElim of { mot : t; zero : t; succ : t; scrut : t }
-  | FinSet of labelset
-  | Label of labelset * label
-  | Cases of t * t labeled * t
-  | Univ
-  | Poly
-  | PolyIntro of Ident.t * t * t
-  | Base of t
-  | Fib of t * t
-  | Hom of t * t
-  | HomLam of t
-  | HomElim of t * t
-  | Hole of t * int
-  | Skolem of t
-
+  | (* t *) 
+    Var of int
+  | (* t *)
+    Global of Global.t
+  | (* borrow t *)
+    Borrow of int
+  | (* Π (a : A), (B a) *)
+    Pi of Ident.t * t * t
+  | (* λ x. e *) 
+    Lam of Ident.t * t 
+  | (* let x = e in t *)
+    Let of Ident.t * t * t 
+  | (* f a *)
+    Ap of t * t
+  | (* Σ (x : A), B x *)
+    Sigma of Ident.t * t * t 
+  | (* (a , b) *)
+    Pair of t * t 
+  | (* fst x *)
+    Fst of t 
+  | (* snd x *) 
+    Snd of t 
+  | (* a = b *)
+    Eq of t * t * t 
+  | (* refl *) 
+    Refl of t 
+  | (* ℕ *)
+    Nat
+  | (* zero *) 
+    Zero
+  | (* succ n *)
+    Succ of t
+  | (* elim mot z s scrut *)
+    NatElim of { mot : t; zero : t; succ : t; scrut : t }
+  | (* #{ foo, bar } *)
+    FinSet of labelset
+  | (* .foo *)
+    Label of labelset * label
+  | (* { foo = syn₁, bar = syn₂ } e *)
+    Cases of t * t labeled * t
+  | (* Type *) 
+    Univ 
+  | (* Poly *) 
+    Poly
+  | (* (p : P) × q *) 
+    PolyIntro of Ident.t * t * t
+  | (* base p *)
+    Base of t
+  | (* fib x y *)
+    Fib of t * t
+  | (* p ⇒ q *)
+    Hom of t * t
+  | (* λ a⁺ a⁻ ⇝ p *) 
+    HomLam of t
+  | (* x y *)
+    HomElim of t * t
+  | (* ? *) 
+    Hole of t * int 
+  | (* skolem *)
+    Skolem of t
+    
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
 
