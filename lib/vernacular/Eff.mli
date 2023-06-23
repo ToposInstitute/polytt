@@ -1,4 +1,4 @@
 open Core
 
-val define : Ident.t -> Refiner.Eff.Globals.resolved -> unit
+val define : Ident.t -> Global.t -> unit
 val run : (unit -> 'a) -> 'a

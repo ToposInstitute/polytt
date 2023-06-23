@@ -1,8 +1,10 @@
+open Core
+
 type empty = |
 
 module Param =
 struct
-  type data = Refiner.Eff.Globals.resolved
+  type data = Global.t
   type tag = unit
   type hook = empty
   type context = empty

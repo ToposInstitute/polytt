@@ -32,12 +32,14 @@ let execute_cmd  (cmd : CS.cmd) =
     Debug.print "> Elaborating %a@." Ident.pp name;
     Debug.print "-------------------------------------------------@.";
     let tp = Sem.eval_top @@ Elaborator.chk tp D.Univ in
-    let tm = Sem.eval_top @@ Elaborator.chk tm tp in
-    Eff.define name (Def { tm; tp })
+    let value = Sem.eval_top @@ Elaborator.chk tm tp in
+    let glbl = CodeUnit.add_def name { tp; value } in
+    Eff.define name glbl
   | CS.Def {name; tp = None; tm} ->
     let (tp, tm) = Elaborator.syn tm in
-    let tm = Sem.eval_top tm in
-    Eff.define name (Def { tm; tp })
+    let value = Sem.eval_top tm in
+    let glbl = CodeUnit.add_def name { tp; value } in
+    Eff.define name glbl
   | CS.Fail {tp = Some tp; tm; _} ->
     begin
       try
@@ -72,5 +74,6 @@ let execute (debug : bool) cmds =
   print_newline ();
   Eff.run @@ fun () ->
   try
+    CodeUnit.with_new_unit @@ fun () ->
     List.iter execute_cmd cmds
   with Quit -> ()

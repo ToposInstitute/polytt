@@ -32,15 +32,13 @@ end
 
 module Globals =
 struct
-  type resolved =
-    | Def of { tm : D.t; tp : D.tp }
-
-  type _ Effect.t += Resolve : Ident.path -> resolved option Effect.t
+  type _ Effect.t += Resolve : Ident.path -> Global.t option Effect.t
 
   let resolve path =
     Effect.perform (Resolve path)
 
-  let run ~(resolve : Ident.path -> resolved option) k =
+  let run ~(resolve : Ident.path -> Global.t option) k =
+    CodeUnit.run @@ fun () ->
     Effect.Deep.try_with k () {
       effc =
         fun (type a) (eff : a Effect.t) ->
