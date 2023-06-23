@@ -29,6 +29,7 @@ let commands =
 let keywords =
   make_table 0 [
     ("def", DEF);
+    ("import", IMPORT);
     ("Type", TYPE);
     ("Poly", POLY);
     ("base", BASE);

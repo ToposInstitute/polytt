@@ -9,6 +9,7 @@ type t =
   | `NotAHom
   | `LinearVariableDoubleUse
   | `LinearVariablesNotUsed
+  | `LoadFailure
   ]
 
 let default_severity _ = Asai.Severity.Error
@@ -25,3 +26,4 @@ let to_string : t -> string =
   | `NotAHom -> "E008"
   | `LinearVariableDoubleUse -> "E009"
   | `LinearVariablesNotUsed -> "E010"
+  | `LoadFailure -> "E011"

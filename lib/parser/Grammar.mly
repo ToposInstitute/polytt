@@ -45,7 +45,7 @@ let rec quantifier quant =
 %token TYPE
 %token REFL
 (* Commands *)
-%token DEF FAIL NORMALIZE PRINT DEBUG QUIT
+%token DEF FAIL IMPORT NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
 %right COLON COMMA
@@ -95,6 +95,8 @@ plain_command:
     { CS.Fail {name; tp = Some tp; tm} }
   | FAIL; name = name; COLON_EQUALS; tm = term
     { CS.Fail {name; tp = None; tm} }
+  | IMPORT; name = path;
+    { CS.Import {shadowing = false; unitpath = name} }
   | NORMALIZE; tm = term
     { CS.Normalize tm }
   | PRINT; tm = term

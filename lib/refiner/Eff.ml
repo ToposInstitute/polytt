@@ -28,8 +28,6 @@ struct
     | Neg {tp; lvl; _} -> D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
 end
 
-
-
 module Globals =
 struct
   type _ Effect.t += Resolve : Ident.path -> Global.t option Effect.t
