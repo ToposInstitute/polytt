@@ -10,6 +10,7 @@ type 'a labeled = (string * 'a) list
 
 type syn =
   | Var of int
+  | Global of Global.t
   | Borrow of int
   (** Negative variables are DeBruijn levels, even in the syntax! *)
   | Pi of Ident.t * syn * syn (* Π (a : A) (B a) *)

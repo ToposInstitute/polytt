@@ -14,6 +14,7 @@ type ppenv = { pos : Ident.t bwd; neg_size : int; neg : Ident.t bwd }
 
 type t = Data.syn =
   | Var of int
+  | Global of Global.t
   | Borrow of int
   | Pi of Ident.t * t * t
   | Lam of Ident.t * t
@@ -51,6 +52,7 @@ let rec dump fmt =
   function
   | Univ -> Format.fprintf fmt "univ"
   | Var i -> Format.fprintf fmt "S.var[%i]" i
+  | Global x -> Format.fprintf fmt "S.global[%a]" Global.dump x
   | Borrow i -> Format.fprintf fmt "S.borrow[%i]" i
   | Pi (nm, a, b) -> Format.fprintf fmt "pi[%a, %a, %a]" Ident.pp nm dump a dump b
   | Sigma (nm, a, b) -> Format.fprintf fmt "sigma[%a, %a, %a]" Ident.pp nm dump a dump b
@@ -120,6 +122,7 @@ let classify_tm =
   | Univ -> atom
   | Poly -> atom
   | Var _ -> atom
+  | Global _ -> atom
   | Borrow _ -> juxtaposition
   | Pi _ -> arrow
   | Sigma (`Anon, _, _) -> star
@@ -182,6 +185,8 @@ let rec pp (env : ppenv) =
       with Failure _ ->
         Format.fprintf fmt "![bad var index %d]!" i
     end
+  | Global x ->
+    Global.pp fmt x
   | Borrow i ->
     begin
       try Format.fprintf fmt "borrow %a" Ident.pp (Bwd.nth env.neg ((env.neg_size - 1) - i))

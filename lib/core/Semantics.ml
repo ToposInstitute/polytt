@@ -33,6 +33,9 @@ struct
     match tm with
     | S.Var ix ->
       var ix
+    | S.Global x ->
+      let def = CodeUnit.get_def x in
+      def.value
     | S.Borrow lvl ->
       borrow lvl
     | S.Pi (nm, a, b) ->
