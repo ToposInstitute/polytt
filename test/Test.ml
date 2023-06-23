@@ -8,18 +8,14 @@ let header fname =
 let rec execute_file cwd fname =
   let abs_fname = Filename.concat cwd fname in
   if String.equal (Filename.extension abs_fname) ".poly" then
-    let _ = Format.eprintf "About to read file: %s@." abs_fname in
     try
-      let _ = print_string (header abs_fname) in
+      let _ = print_string (header fname) in
       ignore @@ Loader.load abs_fname false;
-
-      Format.eprintf "loaded file %s@." fname;
     with
       e ->
       Format.eprintf "Could not load file %s@." fname;
       raise e
   else if Sys.is_directory abs_fname then
-    let _ = Format.eprintf "About to read dir: %s@." abs_fname in
     Array.iter (execute_file abs_fname) (Sys.readdir abs_fname)
 
 let () =
