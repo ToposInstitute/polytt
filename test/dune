@@ -1,3 +1,19 @@
-(test
- (name polytt)
- (libraries polytt.core alcotest))
+(executables
+ (names test)
+ (libraries polytt.core polytt.loader))
+
+(rule
+ (target test.output)
+ (deps
+  (glob_files ./*.poly))
+ (action (with-stdout-to %{target} (run ./test.exe))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff test.expected test.output)))
+
+(rule
+ (alias test-display)
+ (deps (universe))
+ (action (cat test.output)))
