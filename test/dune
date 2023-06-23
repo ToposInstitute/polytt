@@ -5,7 +5,8 @@
 (rule
  (target test.output)
  (deps
-  (glob_files ./*.poly))
+  (glob_files_rec ./*.poly)
+  (glob_files_rec ./polytt-lib))
  (action (with-stdout-to %{target} (run ./test.exe))))
 
 (rule

@@ -23,7 +23,7 @@ let load_file (unitpath : Bantorra.Manager.path) =
   let path = Bantorra.FilePath.to_string fpath in
   parse_file path
 
-let initialize_bantorra path =
+let initialize_bantorra dir =
   let open Bantorra in
   let router = 
     Router.dispatch @@
@@ -34,14 +34,15 @@ let initialize_bantorra path =
   in
   let manager = Manager.init ~version:"1.0.0" ~anchor:"polytt-lib" router in
   (* FIXME: Actually load important stuff! *)
-  let dir = FilePath.parent @@ FilePath.of_string ~relative_to:(File.get_cwd ()) path in
   let lib, _ = Manager.load_library_from_dir manager dir in
   { manager; lib }
 
 let load path debug =
+  let open Bantorra in
   Logger.run ~emit:Terminal.display ~fatal:Terminal.display @@ fun () ->
   Logger.wrap (Asai.Diagnostic.map (fun _ -> `LoadFailure)) Bantorra.Error.run @@ fun () ->
-  let env = initialize_bantorra path in
+  let dir = FilePath.parent @@ FilePath.of_string ~relative_to:(File.get_cwd ()) path in
+  let env = initialize_bantorra dir in
   Eff.run ~env @@ fun () ->
   let cmds = parse_file path in
-  Driver.execute ~load:load_file ~debug cmds;
+  Driver.execute ~load:load_file ~debug cmds
