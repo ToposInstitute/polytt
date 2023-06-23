@@ -6,7 +6,7 @@ let header fname =
   String.make 20 '-' ^ "[" ^ fname ^ "]" ^ String.make 20 '-' ^ "\n"
 
 let execute_file fname =
-  if String.equal (Filename.extension fname) ".cooltt" then
+  if String.equal (Filename.extension fname) ".poly" then
     try
       let _ = print_string (header fname) in
       ignore @@ Loader.load fname false;

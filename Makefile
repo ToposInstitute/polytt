@@ -66,3 +66,8 @@ clean:
 test:
 	dune clean
 	dune test
+
+.PHONY: snapshot
+## snapshot: update golden testing snapshot
+snapshot:
+	dune promote
