@@ -28,6 +28,14 @@ let get_def (glbl : Global.t) =
   let code_unit = CCVector.get env.code_units glbl.code_unit in
   CCVector.get code_unit glbl.lvl
 
+let get_def_value glbl =
+  let def = get_def glbl in
+  def.value
+
+let get_def_tp glbl =
+  let def = get_def glbl in
+  def.tp
+
 let run k =
   let code_units = CCVector.create () in
   Eff.run ~env:{ current = 0; code_units } k

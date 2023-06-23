@@ -34,8 +34,7 @@ struct
     | S.Var ix ->
       var ix
     | S.Global x ->
-      let def = CodeUnit.get_def x in
-      def.value
+      CodeUnit.get_def_value x
     | S.Borrow lvl ->
       borrow lvl
     | S.Pi (nm, a, b) ->
