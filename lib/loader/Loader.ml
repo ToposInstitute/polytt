@@ -42,6 +42,7 @@ let load path debug =
   Logger.run ~emit:Terminal.display ~fatal:Terminal.display @@ fun () ->
   Logger.wrap (Asai.Diagnostic.map (fun _ -> `LoadFailure)) Bantorra.Error.run @@ fun () ->
   let dir = FilePath.parent @@ FilePath.of_string ~relative_to:(File.get_cwd ()) path in
+  Format.eprintf "Entering directory '%s'@." (FilePath.to_string dir);
   let env = initialize_bantorra dir in
   Eff.run ~env @@ fun () ->
   let cmds = parse_file path in
