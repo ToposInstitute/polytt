@@ -16,7 +16,9 @@ let rec execute_file cwd fname =
       Format.eprintf "Could not load file %s@." fname;
       raise e
   else if Sys.is_directory abs_fname then
-    Array.iter (execute_file abs_fname) (Sys.readdir abs_fname)
+    let polytt_files = Sys.readdir abs_fname in
+    Array.sort String.compare polytt_files;
+    Array.iter (execute_file abs_fname) polytt_files
 
 let () =
   let polytt_files = Sys.readdir "." in
