@@ -1,0 +1,9 @@
+def add : ℕ → ℕ → ℕ :=
+  λ m n → elim (λ _ → ℕ) n (λ _ n → succ n) m
+
+def nested-let : ℕ :=
+  let x := 4 in
+  let y := 5 in
+  add x y
+
+#normalize nested-let
