@@ -14,7 +14,10 @@ let let_bind ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
   Chk.rule @@ fun rtp ->
   let (vtp, etm) = Syn.run tm in
   let vtm = Eff.eval etm in
-  let body = Chk.run (Var.concrete ~name vtp vtm f) rtp in
+  let body =
+    Var.concrete ~name vtp vtm @@ fun v ->
+    Chk.run (f v) rtp
+  in
   Let (name, etm, body)
 
 let negative (cell : Cell.neg) =
