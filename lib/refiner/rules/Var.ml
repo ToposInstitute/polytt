@@ -1,5 +1,6 @@
 open Core
 open Tactic
+open Ident
 
 let local (cell : Cell.pos) =
   Syn.rule @@ fun () ->
@@ -11,7 +12,7 @@ let global res =
   | Globals.Def {tp; tm} ->
     tp, quote ~tp:tp tm
 
-let let_bind ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
+let let_bind ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
   Chk.rule @@ fun rtp ->
   let (vtp, etm) = Syn.run tm in
   let vtm = Eff.eval etm in

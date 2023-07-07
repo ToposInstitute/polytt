@@ -2,6 +2,8 @@ open Core
 open Bwd
 include Eff
 
+open Ident
+
 include TermBuilder
 
 module rec Chk : sig
@@ -108,8 +110,19 @@ struct
     tp, tm
 
   let fresh_name : Ident.t -> Ident.t = function
-    | `Anon -> `Machine (Locals.size ())
-    | name -> name
+  | `Anon -> `Machine (Locals.size ())
+  | name -> name
+
+  let rec fresh_names_step : (int * Ident.binder) -> (int * Ident.binder) =
+  function
+  | (i, Var ident) -> (i+1, Var (fresh_name ident))
+  | (i, Tuple (l, r)) ->
+      let (i, l) = fresh_names_step (i, l) in
+      let (i, r) = fresh_names_step (i, r) in
+      (i, Tuple (l, r))
+
+  let fresh_names : Ident.binder -> Ident.binder =
+    fun b -> snd (fresh_names_step (Locals.size (), b))
 
   let abstracts ?(names = [Var `Anon]) tp k =
     (* TODO: fresh_name *)
@@ -121,11 +134,11 @@ struct
     k tacs
 
   let abstract ?(name = Var `Anon) tp k =
-    Locals.abstract ~name:(fresh_name name) tp @@ fun value ->
+    Locals.abstract ~name:(fresh_names name) tp @@ fun value ->
     k {tp; value}
 
   let concrete ?(name = Var `Anon) tp value k =
-    Locals.concrete ~name:(fresh_name name) tp value @@ fun () ->
+    Locals.concrete ~name:(fresh_names name) tp value @@ fun () ->
     k {tp; value}
 end
 
@@ -136,12 +149,11 @@ and NegVar : sig
   val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 end =
 struct
-  type tac = { tp : D.tp; lvl : int }
-  let abstract ?(name = `Anon) tp k =
-    Locals.abstract_neg ~name tp @@ fun lvl ->
-    k { tp; lvl }
+  type tac = D.t
+  let abstract ?(name = Var `Anon) tp k =
+    Locals.abstract_neg ~name tp k
 
-  let borrow { tp; lvl } = D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
+  let borrow x = x
 
   let revert =
     Eff.Locals.revert

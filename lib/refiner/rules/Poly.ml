@@ -1,4 +1,5 @@
 open Tactic
+open Core.Ident
 
 let formation =
   Chk.rule @@
@@ -8,7 +9,7 @@ let formation =
   | _ ->
     Error.error `TypeError "Poly must be in type."
 
-let intro ?(name = `Anon) base_tac fib_tac =
+let intro ?(name = Var `Anon) base_tac fib_tac =
   Chk.rule @@
   function
   | D.Poly ->

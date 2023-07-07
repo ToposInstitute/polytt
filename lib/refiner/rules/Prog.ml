@@ -1,6 +1,7 @@
 open Tactic
+open Core.Ident
 
-let neg_lam ?(name = `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
+let neg_lam ?(name = Var `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
   NegSyn.rule @@ fun () ->
   let tp = eval (Chk.run tp_tac D.Univ) in
   Var.abstract ~name tp @@ fun var ->
@@ -11,14 +12,14 @@ let neg_lam ?(name = `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) :
     tp, fun actual_value ->
       setter actual_value
 
-let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Prog.tac) =
+let pos_let ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Prog.tac) =
   Prog.rule @@ fun () ->
   let tp, tm = Syn.run tm in
   let v = Eff.eval tm in
   Var.concrete ~name tp v @@ fun v ->
   Prog.run (f v) ()
 
-let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Prog.tac) =
+let neg_let ?(name = Var `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Prog.tac) =
   Prog.rule @@ fun () ->
   let tp, tm = NegSyn.run tm in
   NegVar.abstract ~name tp @@ fun v ->
@@ -34,7 +35,7 @@ let set (pos_tac : Chk.tac) (neg_tac : NegSyn.tac) (steps_tac : Prog.tac) : Prog
 
 let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
     (phi_tac : Syn.tac)
-    ?(pos_name = `Anon) ?(neg_name = `Anon)
+    ?(pos_name = Var `Anon) ?(neg_name = Var `Anon)
     (steps_tac : Var.tac -> NegVar.tac -> Prog.tac) =
   Prog.rule @@ fun r ->
   let phi_tp, phi = Syn.run phi_tac in

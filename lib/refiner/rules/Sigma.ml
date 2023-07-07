@@ -1,6 +1,7 @@
 open Tactic
+open Core.Ident
 
-let formation ?(names = [`Anon]) base_tac fam_tac =
+let formation ?(names = [Var `Anon]) base_tac fam_tac =
   Syn.rule @@ fun () ->
   let base = Chk.run base_tac D.Univ in
   let fam = Var.abstracts ~names (eval base) @@ fun xs ->

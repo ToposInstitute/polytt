@@ -38,7 +38,7 @@ module Locals : sig
   val size : unit -> int
   val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 
-  val abstract_neg : ?name:Ident.binder -> D.tp -> (borrowed:D.t -> bound:int Ident.pat -> 'a) -> 'a
+  val abstract_neg : ?name:Ident.binder -> D.tp -> (D.t -> 'a) -> 'a
   val consume_neg : int -> unit -> (D.t -> unit) option
   val all_consumed : unit -> bool
   val head : unit -> D.t

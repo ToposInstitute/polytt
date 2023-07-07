@@ -5,6 +5,9 @@ open Errors
 
 module D = Domain
 module S = Syntax
+module Sem = Semantics
+
+open Ident
 
 module IntSet = Set.Make (Int)
 
@@ -187,23 +190,52 @@ struct
   let bind_vars cells env =
     List.fold_left (fun env cell -> bind_var cell env) env cells
 
-  let concrete ?(name = `Anon) tp tm k =
+  let concrete_ident ?(name = `Anon) tp tm k =
     let cell = Cell.Pos { name; tp; value = tm } in
     Reader.scope (bind_var cell) @@ fun () ->
     k ()
 
-  let abstract ?(name = `Anon) tp k =
+  let abstract_ident ?(name = `Anon) tp k =
     let var = fresh_var tp () in
     let cell = Cell.Pos { name; tp; value = var } in
     Reader.scope (bind_var cell) @@ fun () ->
     k var
 
-  let abstract_neg ?(name = `Anon) tp k =
+  let rec bind_tree ?(name = Var `Anon) tp tm k =
+    begin match name with
+    | Var ident ->
+        concrete_ident ~name:ident tp tm
+          (fun () -> k (Var tm))
+    | Tuple (l, r) ->
+      begin match tp with
+      | D.Sigma (_, a, clo) ->
+        bind_tree ~name:l a (Sem.do_fst tm) @@ fun lvars ->
+          bind_tree ~name:r (Sem.inst_clo clo a) (Sem.do_snd tm) @@ fun rvars ->
+            k (Tuple (lvars, rvars))
+      | _ -> failwith "can only unpack a sigma" (* FIXME *)
+      end
+    end
+
+  let concrete ?(name = Var `Anon) tp tm k =
+    (* No need to bind a single anonymous variable *)
+    begin match name with
+    | Var ident -> concrete_ident ~name:ident tp tm @@ fun _ -> k (Var tm)
+    | _ -> concrete_ident ~name:`Anon tp tm @@ fun _ -> bind_tree ~name tp tm k
+    end
+
+  let abstract ?(name = Var `Anon) tp k =
+    (* No need to bind a single anonymous variable *)
+    begin match name with
+    | Var ident -> abstract_ident ~name:ident tp @@ fun tm -> k (Var tm)
+    | _ -> abstract_ident ~name:`Anon tp @@ fun tm -> bind_tree ~name tp tm k
+    end
+
+  let abstract_neg_ident ?(name = `Anon) tp k =
     let lvl = fresh_neg_var () in
     let neg_cell = { Cell.name; tp; lvl } in
     let cell = Cell.Neg neg_cell in
     Reader.scope (bind_var cell) @@ fun () ->
-    k (compound_consumer)
+    k lvl
 
   let consume_neg lvl () =
     let env = Reader.read () in
@@ -214,6 +246,41 @@ struct
     | false ->
       consumed := true;
       Some (fun value -> value_ref := value)
+
+  let rec bind_neg_tree ?(name = Var `Anon) tp k =
+    begin match name with
+    | Var ident ->
+        abstract_neg_ident ~name:ident tp
+          (fun lvl -> k (Var (lvl, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp }))))
+    | Tuple (l, r) ->
+      begin match tp with
+      | D.Sigma (_, a, clo) ->
+        bind_neg_tree ~name:l a @@ fun lvars ->
+          bind_neg_tree ~name:r (Sem.inst_clo clo a) @@ fun rvars ->
+            k (Tuple (lvars, rvars))
+      | _ -> failwith "can only unpack a sigma" (* FIXME *)
+      end
+    end
+
+  let rec split = function
+  | Var (lvl, v) -> (Var lvl, v)
+  | Tuple (l, r) ->
+      let (ll, lv) = split l in
+      let (rl, rv) = split r in
+      (Tuple (ll, rl), D.Pair (lv, rv))
+
+  let abstract_neg ?(name = Var `Anon) tp k =
+    (* No need to bind a single anonymous variable *)
+    begin match name with
+    | Var ident -> abstract_neg_ident ~name:ident tp @@ fun tm -> k (Var tm)
+    | _ -> abstract_neg_ident ~name:`Anon tp @@ fun lvl ->
+        bind_neg_tree ~name tp @@ fun lvls ->
+          match consume_neg lvl () with
+          | None -> failwith "internal error (abstract_neg -> consume_neg)"
+          | Some setter ->
+            let (r, value) = split lvls in
+            setter value; k r
+    end
 
   let revert i_tp cb =
     Debug.print "i_tp: %a@." D.dump i_tp;

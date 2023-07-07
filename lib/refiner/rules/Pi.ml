@@ -1,7 +1,8 @@
 open Tactic
 open Eff
+open Core.Ident
 
-let formation ?(names = [`Anon]) base_tac fam_tac =
+let formation ?(names = [Var `Anon]) base_tac fam_tac =
   Syn.rule @@ fun () ->
   let base = Chk.run base_tac D.Univ in
   let fam = Var.abstracts ~names (eval base) @@ fun xs ->
@@ -9,7 +10,7 @@ let formation ?(names = [`Anon]) base_tac fam_tac =
   in
   (D.Univ, List.fold_right (fun name tp -> S.Pi (name, base, tp)) names fam)
 
-let intro ?(name = `Anon) tac =
+let intro ?(name = Var `Anon) tac =
   Chk.rule @@ function
   | D.Pi (_, a, clo) ->
     Var.abstract ~name a @@ fun v ->

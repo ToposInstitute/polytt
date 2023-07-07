@@ -1,13 +1,15 @@
 open Core
 open Tactic
 
+open Core.Ident
+
 let formation p_tac q_tac =
   Syn.rule @@ fun () ->
   let p = Chk.run p_tac D.Poly in
   let q = Chk.run q_tac D.Poly in
   D.Univ, S.Hom(p, q)
 
-let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.tac -> Hom.tac) : Chk.tac =
+let intro ?(pos_name = Var `Anon) ?(neg_name = Var `Anon) (bdy_tac : Var.tac -> NegVar.tac -> Hom.tac) : Chk.tac =
   Chk.rule @@
   function
   | D.Hom (p, q) ->
@@ -53,7 +55,7 @@ let elim hom_tac arg_tac =
   | _ ->
     Error.error `TypeError "Tried to eliminate from non-hom."
 
-let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
+let pos_let ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
   Hom.rule @@ fun r ->
   let tp, tm = Syn.run tm in
   let v = Eff.eval tm in
@@ -63,7 +65,7 @@ let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
 
 
 (* let- name = tm; f *)
-let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac Ident.pat -> Hom.tac) =
+let neg_let ?(name = Var `Anon) (tm : NegSyn.tac) (f : NegVar.tac Ident.pat -> Hom.tac) =
   Hom.rule @@ fun r ->
   let tp, tm = NegSyn.run tm in
   NegVar.abstract ~name tp @@ fun { borrowed; consumer_fn } ->
