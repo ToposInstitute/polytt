@@ -50,6 +50,8 @@ struct
       NegSigma.intro (neg_chk a) ~name (fun _ -> neg_chk b)
     | CS.Drop ->
       Hom.drop
+    | CS.NegPairSimple (p, q) ->
+      NegSigma.intro_simple_chk (neg_chk p) (neg_chk q)
     | _ ->
       T.NegChk.syn (neg_syn tm)
 

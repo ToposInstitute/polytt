@@ -27,6 +27,22 @@ let intro_simple x_tac y_tac =
   in
   tp, fun v -> x (do_fst v); y (do_snd v)
 
+let intro_simple_chk x_tac y_tac =
+  NegChk.rule @@
+  function
+  | D.Sigma (_, a, clo) ->
+    begin
+      match inst_const_clo ~tp:a clo with
+      | Some b ->
+        let x = NegChk.run x_tac a in
+        let y = NegChk.run y_tac b in
+        fun v -> x (do_fst v); y (do_snd v)
+      | None ->
+        Error.error `TypeError "negative sigma needs to be non-dependent with this syntax."
+    end
+  | tp ->
+    Error.type_error tp "negative sigma."
+
 let elim scrut_tac ?(a_name = `Anon) ?(b_name = `Anon) case_tac =
   Hom.rule @@ fun q ->
   let scrut_tp, scrut = NegSyn.run scrut_tac in
