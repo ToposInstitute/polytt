@@ -201,3 +201,4 @@ def compose : Π (A B C : Type), (B → C) → (A → B) → A → C :=
   λ _ _ _ f g a → f (g a)
 
 #normalize Lens
+----
