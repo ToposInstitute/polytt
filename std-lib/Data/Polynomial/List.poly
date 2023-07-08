@@ -1,0 +1,35 @@
+import Data::Natural
+import Data::Polynomial
+import Data::Polynomial::Fin
+
+--------------------------------------------------------------------------------
+
+def Listₚ : Poly := Σ (n : ℕ), fin n
+
+def List : Type → Type := ofP Listₚ
+
+def nil : Π (A : Type), List A :=
+  λ A → (0 , {})
+
+def cons : Π (A : Type), A → List A → List A :=
+  λ A a as → (succ (fst as) , fin-case (fst as) (λ _ → A) a (snd as))
+
+def List-rec : Π (A : Type) (mot : Type),
+  mot →
+  (A → mot → mot) →
+  List A → mot :=
+  λ A mot iz is →
+    ×-rec ℕ (λ n → fin n → A) (λ _ → mot)
+      (ℕ-elim (λ n → Π (as : fin n → A), mot)
+        { .zero = λ _ → iz
+        , .succ = λ n ih as →
+          is (as (z n)) (ih (λ i → as (s n i)))
+        }
+      )
+
+--------------------------------------------------------------------------------
+-- Examples
+
+def nat-list : List ℕ := cons ℕ 0 (cons ℕ 1 (nil ℕ))
+
+#normalize nat-list

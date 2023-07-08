@@ -1,0 +1,13 @@
+def add : ℕ → ℕ → ℕ :=
+  λ m n → elim (λ _ → ℕ) n (λ _ n → succ n) m
+
+def mul : ℕ → ℕ → ℕ :=
+  λ m n → elim (λ _ → ℕ) 0 (λ _ x → add n x) m
+
+def ℕ-elim :
+  Π (mot : ℕ → Type),
+  { .zero : mot zero
+  , .succ : Π (n : ℕ), mot n → mot (succ n)
+  } →
+  Π (n : ℕ), mot n :=
+  λ mot r n → elim mot (r .zero) (r .succ) n

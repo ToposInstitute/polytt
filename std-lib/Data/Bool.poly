@@ -1,0 +1,27 @@
+def Bool := #{ .true, .false }
+
+def not : Bool → Bool :=
+  { .true = .false
+  , .false = .true
+  }
+
+def and : Bool → Bool → Bool :=
+  { .true = { .true = .true , .false = .false }
+  , .false = { .false = .true , .true = .false }
+  }
+
+def or : Bool → Bool → Bool :=
+  { .true = { .true = .true , .false = .true }
+  , .false = { .false = .false , .true = .false }
+  }
+
+-- | Dependent Eliminator
+def bool-elim : Π (f : (Bool → Type)), f .true → f .false → Π (p : Bool), (f p) :=
+  λ mot a b →
+    { .true = a
+    , .false = b
+    }
+
+-- | Non-Dependent Eliminator
+def bool : Π (A : Type), Bool → A → A → A :=
+  λ A p X Y → bool-elim (λ _ → A) X Y p
