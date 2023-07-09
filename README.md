@@ -6,7 +6,7 @@
 
 A type theory with native support for [Polynomial Functors](https://topos.site/poly-book.pdf).
 
-For examples, see `examples/` directory.
+For examples, see `std-lib/Tutorial.poly` directory.
 
 # Building
 
@@ -33,7 +33,7 @@ $ nix develop
 # Running
 
 ```bash
-$ dune exec polytt examples/prelude.poly
+$ dune exec polytt std-lib/Tutorial.poly
 ```
 
 
