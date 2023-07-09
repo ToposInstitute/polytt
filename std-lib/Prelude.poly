@@ -1,6 +1,5 @@
 import Data::Either
 import Data::Polynomial
-import Data::Polynomial::Examples
 import Data::Polynomial::Identity
 import Data::Polynomial::Lens
 import Data::Polynomial::List
