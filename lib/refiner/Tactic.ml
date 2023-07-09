@@ -95,16 +95,24 @@ and Var : sig
   type tac
 
   val value : tac -> D.t
+  val name : tac -> Ident.t
+  val tree : tac -> (D.tp * D.t) Ident.pat
   val syn : tac -> Syn.tac
   val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
   val abstracts : ?names:Ident.binder list -> D.tp -> (tac list -> 'a) -> 'a
   val concrete : ?name:Ident.binder -> D.tp -> D.t -> (tac -> 'a) -> 'a
+
+  val choose : Ident.binder -> Ident.t
+  val choose_many : Ident.binder list -> Ident.t list
 end =
 struct
-  type tac = { tp : D.tp; value : D.t }
+  type tac = Ident.t * (D.tp * D.t) * (D.tp * D.t) Ident.pat
 
-  let value tac = tac.value
-  let syn {tp; value} =
+  let value (_, (_, v), _) = v
+  let name (ident, _, _) = ident
+  let tree (_, _, t) = t
+
+  let syn (_, (tp, value), _) =
     Syn.rule @@ fun () ->
     let tm = Eff.quote ~tp value in
     tp, tm
@@ -113,47 +121,63 @@ struct
   | `Anon -> `Machine (Locals.size ())
   | name -> name
 
-  let rec fresh_names_step : (int * Ident.binder) -> (int * Ident.binder) =
-  function
-  | (i, Var ident) -> (i+1, Var (fresh_name ident))
-  | (i, Tuple (l, r)) ->
-      let (i, l) = fresh_names_step (i, l) in
-      let (i, r) = fresh_names_step (i, r) in
-      (i, Tuple (l, r))
+  let fresh_name_at : int -> Ident.t -> Ident.t =
+  fun i -> function
+  | `Anon -> `Machine i
+  | name -> name
+
+  let rec fresh_names_step : int ref -> Ident.binder -> Ident.binder =
+  fun i -> function
+  | Var ident ->
+    let ident = fresh_name_at !i ident in
+    i := !i+1;
+    Var ident
+  | Tuple (l, r) ->
+    let l = fresh_names_step i l in
+    let r = fresh_names_step i r in
+    Tuple (l, r)
 
   let fresh_names : Ident.binder -> Ident.binder =
-    fun b -> snd (fresh_names_step (Locals.size (), b))
+    fun b ->
+      let i = ref (Locals.size ()) in
+      fresh_names_step i b
+
+  let choose = fun name -> fresh_name (Ident.choose name)
+
+  let choose_many =
+    let i = ref 0 in
+    List.map @@ fun name ->
+      Ident.choose (fresh_names_step i name)
 
   let abstracts ?(names = [Var `Anon]) tp k =
     (* TODO: fresh_name *)
-    Locals.abstracts ~names tp @@ fun values ->
-    let tacs =
-      values
-      |> List.map @@ fun value -> { tp; value }
-    in
+    Locals.abstracts ~names tp @@ fun tacs ->
     k tacs
 
   let abstract ?(name = Var `Anon) tp k =
-    Locals.abstract ~name:(fresh_names name) tp @@ fun value ->
-    k {tp; value}
+    Locals.abstract ~name:(fresh_names name) tp k
 
   let concrete ?(name = Var `Anon) tp value k =
-    Locals.concrete ~name:(fresh_names name) tp value @@ fun () ->
-    k {tp; value}
+    Locals.concrete ~name:(fresh_names name) tp value k
 end
 
 and NegVar : sig
   type tac
   val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
   val borrow : tac -> D.t
+  val name : tac -> Ident.t
+  val tree : tac -> int Ident.pat
   val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 end =
 struct
-  type tac = D.t
+  type tac = Ident.t * (D.tp * D.t) * int Ident.pat
+
   let abstract ?(name = Var `Anon) tp k =
     Locals.abstract_neg ~name tp k
 
-  let borrow x = x
+  let borrow (_, (_, v), _) = v
+  let name (ident, _, _) = ident
+  let tree (_, _, t) = t
 
   let revert =
     Eff.Locals.revert

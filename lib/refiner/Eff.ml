@@ -205,7 +205,7 @@ struct
     begin match name with
     | Var ident ->
         concrete_ident ~name:ident tp tm
-          (fun () -> k (Var tm))
+          (fun () -> k (Var (tp, tm)))
     | Tuple (l, r) ->
       begin match tp with
       | D.Sigma (_, a, clo) ->
@@ -219,15 +219,15 @@ struct
   let concrete ?(name = Var `Anon) tp tm k =
     (* No need to bind a single anonymous variable *)
     begin match name with
-    | Var ident -> concrete_ident ~name:ident tp tm @@ fun _ -> k (Var tm)
-    | _ -> concrete_ident ~name:`Anon tp tm @@ fun _ -> bind_tree ~name tp tm k
+    | Var ident -> concrete_ident ~name:ident tp tm @@ fun _ -> k (ident, (tp, tm), Var (tp, tm))
+    | _ -> concrete_ident ~name:`Anon tp tm @@ fun _ -> bind_tree ~name tp tm @@ fun v -> k (`Anon, (tp, tm), v)
     end
 
   let abstract ?(name = Var `Anon) tp k =
     (* No need to bind a single anonymous variable *)
     begin match name with
-    | Var ident -> abstract_ident ~name:ident tp @@ fun tm -> k (Var tm)
-    | _ -> abstract_ident ~name:`Anon tp @@ fun tm -> bind_tree ~name tp tm k
+    | Var ident -> abstract_ident ~name:ident tp @@ fun tm -> k (ident, (tp, tm), Var (tp, tm))
+    | _ -> abstract_ident ~name:`Anon tp @@ fun tm -> bind_tree ~name tp tm @@ fun v -> k (`Anon, (tp, tm), v)
     end
 
   let abstract_neg_ident ?(name = `Anon) tp k =
@@ -250,8 +250,8 @@ struct
   let rec bind_neg_tree ?(name = Var `Anon) tp k =
     begin match name with
     | Var ident ->
-        abstract_neg_ident ~name:ident tp
-          (fun lvl -> k (Var (lvl, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp }))))
+      abstract_neg_ident ~name:ident tp
+        (fun lvl -> k (Var (lvl, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp }))))
     | Tuple (l, r) ->
       begin match tp with
       | D.Sigma (_, a, clo) ->
@@ -265,21 +265,21 @@ struct
   let rec split = function
   | Var (lvl, v) -> (Var lvl, v)
   | Tuple (l, r) ->
-      let (ll, lv) = split l in
-      let (rl, rv) = split r in
-      (Tuple (ll, rl), D.Pair (lv, rv))
+    let (ll, lv) = split l in
+    let (rl, rv) = split r in
+    (Tuple (ll, rl), D.Pair (lv, rv))
 
   let abstract_neg ?(name = Var `Anon) tp k =
     (* No need to bind a single anonymous variable *)
     begin match name with
-    | Var ident -> abstract_neg_ident ~name:ident tp @@ fun tm -> k (Var tm)
+    | Var ident -> abstract_neg_ident ~name:ident tp @@ fun lvl -> k (ident, (tp, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })), Var lvl)
     | _ -> abstract_neg_ident ~name:`Anon tp @@ fun lvl ->
-        bind_neg_tree ~name tp @@ fun lvls ->
-          match consume_neg lvl () with
-          | None -> failwith "internal error (abstract_neg -> consume_neg)"
-          | Some setter ->
-            let (r, value) = split lvls in
-            setter value; k r
+      bind_neg_tree ~name tp @@ fun lvls ->
+        match consume_neg lvl () with
+        | None -> failwith "internal error (abstract_neg -> consume_neg)"
+        | Some setter ->
+          let (r, value) = split lvls in
+          setter value; k (`Anon, (tp, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })), r)
     end
 
   let revert i_tp cb =
@@ -319,16 +319,10 @@ struct
     | true -> Some
                 (fun value -> Bwd.iter (fun f -> f value) reverted)
 
-  let abstracts ?(names = [`Anon]) tp k =
-    let cells =
-      names
-      |> List.mapi @@ fun i name ->
-      (* TODO cleanup *)
-      (Pos { Cell.name; tp; value = D.var tp ((Reader.read ()).size + i) } : Cell.t)
-    in
-    let vars = List.map Cell.value cells in
-    Reader.scope (bind_vars cells) @@ fun () ->
-    k vars
+  let abstracts ?(names = [Var `Anon]) tp k =
+    let step cont name bounds =
+        abstract ~name tp @@ fun bound -> cont (List.cons bound bounds)
+    in List.fold_left step k names []
 end
 
 

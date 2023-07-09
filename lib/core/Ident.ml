@@ -8,6 +8,19 @@ type 'a pat =
   | Var of 'a
   | Tuple of 'a pat * 'a pat
 
+let rec over_pat : ('a -> 'b) -> 'a pat -> 'b pat =
+  fun f -> function
+  | Var a -> Var (f a)
+  | Tuple (l, r) -> Tuple (over_pat f l, over_pat f r)
+
+let choose : t pat -> t = function
+  | Var ident -> ident
+  | _ -> `Anon
+
+let rec pat_size = function
+  | Var _ -> 1
+  | Tuple (l, r) -> pat_size l + pat_size r
+
 (** Patterns with identifiers in them *)
 type binder = t pat
 

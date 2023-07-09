@@ -11,6 +11,10 @@ type 'a pat =
   | Var of 'a
   | Tuple of 'a pat * 'a pat
 
+val over_pat : ('a -> 'b) -> 'a pat -> 'b pat
+
+val choose : t pat -> t
+
 type binder = t pat
 
 (** Construct an anonymous Identifier. This is used for underscores. *)

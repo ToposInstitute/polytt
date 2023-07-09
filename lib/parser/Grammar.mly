@@ -134,7 +134,7 @@ plain_unannotated_term:
   | EXISTS; quantifiers = quantifiers; COMMA; fam = term
     { CS.Sigma (quantifiers, fam) }
   | base = term; TIMES; fam = term
-    { CS.Sigma ([[`Anon], base], fam) }
+    { CS.Sigma ([[Var `Anon], base], fam) }
   | FST; tm = atomic_term
     { CS.Fst tm }
   | tm1 = atomic_term; EQUALS; tm2 = atomic_term
@@ -170,7 +170,7 @@ arrow:
   | FORALL; quantifiers = quantifiers; COMMA; fam = term
     { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term
-    { CS.Pi ([[`Anon], base], fam) }
+    { CS.Pi ([[Var `Anon], base], fam) }
   | LAMBDA; pos = pattern; neg = pattern; RIGHT_SQUIGGLY_ARROW; body = hom_body
     { CS.HomLam(pos, neg, body) }
   | p = term; RIGHT_THICK_ARROW; q = term
@@ -219,7 +219,7 @@ neg_term:
 plain_neg_term:
   | neg = atomic_neg_term; tms = option(neg_spine)
     { neg_ap_or_atomic neg tms }
-  | LAMBDA_MINUS; LPR; nm = name; COLON; tp = term; RPR RIGHT_ARROW; prog = program
+  | LAMBDA_MINUS; LPR; nm = pattern; COLON; tp = term; RPR RIGHT_ARROW; prog = program
     { CS.NegLam (nm, tp, prog) }
 
 atomic_neg_term:
@@ -229,7 +229,7 @@ atomic_neg_term:
 plain_atomic_neg_term:
   | LPR; tm = plain_neg_term; RPR
     { tm }
-  | LPR; a = neg_term; LEFT_ARROW; a_name = name; COMMA; b = neg_term; RPR
+  | LPR; a = neg_term; LEFT_ARROW; a_name = pattern; COMMA; b = neg_term; RPR
     { CS.NegPair (a, a_name, b) }
   | LPR; a = neg_term; COMMA; b = neg_term; RPR
     { CS.NegPairSimple (a, b) }

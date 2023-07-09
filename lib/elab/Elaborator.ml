@@ -59,7 +59,7 @@ struct
     | name :: names ->
       Pi.intro ~name @@ fun _ -> chk_lams names tm
 
-  and chk_sigma ?(names = [`Anon]) a b _ =
+  and chk_sigma ?(names = [Var `Anon]) a b _ =
     T.match_goal @@
     function
     | D.Univ -> T.Chk.syn @@ Sigma.formation ~names (chk a) b

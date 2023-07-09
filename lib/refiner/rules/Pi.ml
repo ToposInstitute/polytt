@@ -8,14 +8,14 @@ let formation ?(names = [Var `Anon]) base_tac fam_tac =
   let fam = Var.abstracts ~names (eval base) @@ fun xs ->
     Chk.run (fam_tac xs) D.Univ
   in
-  (D.Univ, List.fold_right (fun name tp -> S.Pi (name, base, tp)) names fam)
+  (D.Univ, List.fold_right (fun name tp -> S.Pi (name, base, tp)) (Var.choose_many names) fam)
 
 let intro ?(name = Var `Anon) tac =
   Chk.rule @@ function
   | D.Pi (_, a, clo) ->
     Var.abstract ~name a @@ fun v ->
     let fib = inst_clo clo (Var.value v) in
-    S.Lam (name, Chk.run (tac v) fib)
+    S.Lam (Var.choose name, Chk.run (tac v) fib)
   | _ ->
     Error.error `TypeError "Expected element of Π."
 
