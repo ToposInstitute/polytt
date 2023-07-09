@@ -182,14 +182,12 @@ def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A)
 --
 -- For this machine we will need to introduce two concepts:
 --
--- 1. A special syntax element for dropping the fiber-sink from the
---    outer Poly.
+-- 1. A special syntax element for the unique sink--which we call
+--    "drop"--which does nothing with its input. The syntax for drop
+--    is a '!' character.
 --
 --    The linearity obligation for the fiber-sink of the outer Poly is
---    reversed which allows us to ignore it.
---
---    We do this by using a '!' character in the negative position of
---    the return statement.
+--    reversed which allows us to ignore it using drop.
 --
 -- 2. Applying a function to the base of the inner Poly. 
 --
@@ -318,6 +316,8 @@ def composeₚ' : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
     return r⁺ ⇜ r⁻
 
 -- We can prove the equivalence of these two definitions:
+-- NOTE: This proof is not currently computing due to a bug but will
+-- be fixed soon.
 -- def compose-equiv : composeₚ = composeₚ' := refl
 
 -- | Working with tensors
@@ -373,3 +373,62 @@ def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
 def f : (ℕ × ℕ) ⇒ (ℕ × ℕ) :=
   λ n⁺ n⁻ ⇝
     return n⁺ ⇜ λ⁻ (m : ℕ) → n⁻ ← add m n⁺; done 
+
+--------------------------------------------------------------------------------
+-- | Moore Machines
+--
+-- We have been seen a Moore machines in the counterₚ example. Lets
+-- focus on them in a bit more detail now.
+--
+-- We define Moore as a Poly morphism 'Syˢ ⇒ Oyᴵ'
+
+def Moore : Type → Type → Type → Type :=
+  λ S I O → (S × S) ⇒ (O × I)
+
+-- The inner Poly 'S × S' represents the internal state of the machine
+-- and the outer Poly 'O × I' describes the input and output types.
+--
+-- From this perspective we can demonstrate that counterₚ is a Moore
+-- Machine:
+
+def counterₚ-is-a-machine : Moore ℕ #{ .unit } ℕ := counterₚ
+
+-- We can write a helper function for building a Moore Machine from
+-- output and transition functions:
+
+def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
+  λ S I O output transition →
+    λ s⁺ s⁻ ⇝
+      return (output s⁺) ⇜ λ⁻ (i : I) → s⁻ ← transition s⁺ i; done
+
+-- We can also define counterₚ using the 'moore' function.
+
+def counterₘ : Moore ℕ #{ .unit } ℕ :=
+  moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
+
+-- NOTE: This proof is not currently computing due to a bug but will
+-- be fixed soon.
+-- def counterₚ≡counterₘ : counterₚ = counterₘ := refl
+
+-- With a Moore Machine we can build Determinisitic Finite State Automata:
+
+def DFSA : Type → Type → Type :=
+  λ S A → Moore S A Bool
+
+-- S is the DFSA state type and A is the alphabet.
+--
+-- Here we build a 3 State DFSA with a two symbol alphabet:
+
+def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
+  let check : #{ .A, .B, .C } → Bool :=
+    { .A = .false
+    , .B = .true
+    , .C = .false }
+  in
+  let step : #{ .A, .B, .C } → #{ .a₀, .a₁ } → #{ .A, .B, .C } :=
+    { .A = { .a₀ = .B, .a₁ = .C }
+    , .B = { .a₀ = .C, .a₁ = .B }
+    , .C = { .a₀ = .A, .a₁ = .A }
+    }
+  in
+  λ s⁺ s⁻ ⇝ return (check s⁺) ⇜ (s⁻ ∘ (step s⁺))
