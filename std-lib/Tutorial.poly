@@ -142,6 +142,15 @@ def idₚ : Π (P : Poly), P ⇒ P :=
     -- fiber-sink to the fiber-sink.
     return inner⁺ ⇜ inner⁻
 
+-- We can also define a morphism without the special lambda syntax, by providing
+-- the underlying map as a lambda.
+
+def idₚ' : Π (P : Poly), P ⇒ P :=
+  λ P → λ inner⁺ → (inner⁺ , λ inner → inner)
+
+-- We can prove the equivalence of these two definitions:
+def idₚ≡idₚ' : idₚ = idₚ' := refl
+
 -- We can also use _←_ notation for internally connecting
 -- Poly(s). This can be used to connect multiple tensored Polys or
 -- even to create feedback loops around a single Poly.
