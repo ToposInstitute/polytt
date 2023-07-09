@@ -29,42 +29,68 @@
 
 \begin{document}
 \maketitle
+The theory of polynomial functors is a powerful mathematical tool that sees
+use across a broad range of mathematics, ranging from the very applied
+(modelling dynamical systems) to the very abstract (constructing models of type theory).
+However, mechanizing the theory of polynomial functors makes it unwieldy to use; you
+either forgo all the power of abstraction and work at the level of sets,
+or are forced to work in a setting entirely without variables, which is mentally taxing,
+and does not scale well to large expressions. There currently exist some graphical tools
+such as wiring diagrams that do help the situation, but these only cover a fragment of
+the theory, and are difficult to integrate into proof assistants.
 
-\section{Verity's Rules (Working Document)}
+In light of this, we argue that we ought to be working in the \emph{synthetic} theory
+of polynomial functors, where polynomials and their morphisms are defined as part of the
+theory directly. This has several benefits. From a purely ergonomic standpoint, having
+the theory be aware of the existence of maps of polynomials means that working with
+them is much more pleasant; gone are the days of massive chains of composites! Furthermore,
+we are able to exploit the rich structure of polynomials during evaluation.
 
-Blah blah blah Martin-L\"of Type Theory.
+To back up these claims, we present $\PolyTT$, a type-theoretic encoding of the synthetic
+theory of polynomial functors. It combines Martin Lo\"f Type Theory with a fragment of
+linear type theory, used for constructing morphisms of polynomials.
 
+\section{The Type Theory}
+
+We omit the standard rules for Martin L\"of Type Theory with Tarski Universes.
+
+\begin{remark}
 We will write variables as $x^{(\pm)}, y^{(\pm)}, z^{(\pm)}$ when we are referencing explicit bindings, as opposed to general expressions.
 We will use $x^{+}$ for normal variables in the forwards direction of morphisms, $x^{-}$ for sinks (negative variables, which are necessarily in the reverse direction of morphisms), and plain $x$ for binding the positive value being threaded through the reverse direction.
-That is, our convention will be that $x^{-} = (\lambda x \to (x \mapsto x^{-}); \Done)$ (eta-expansion of sinks).
-In terms of polynomial functors, $x^{+}$ will usually have type $\Base{P}$, and $x^{-}$ and $x$ will both have type $\Fib{P}{x^{+}}$ but as negative and positive terms respectively.\\
+That is, our convention will be that $x^{-} = (\lambda^{-}\ x \to (x^{-} \leftarrow x); \Done)$ (eta-expansion of sinks).
+In terms of polynomial functors, $x^{+}$ will usually have type $\Base{P}$, and $x^{-}$ and $x$ will both have type $\Fib{P}{x^{+}}$ but as negative and positive terms respectively.
+\end{remark}
 
-MLTT has three things (``kinds''?):
+MLTT has three kinds of things:
 \begin{enumerate}
   \item Contexts $\IsCtx{\Gamma}$, with variables of specified types, and possibly definitions for those variables (e.g. we allow a concrete variable $(one := 1 : \mathbb{N})$ to be in context, not just an abstract $(n : \mathbb{N})$).
-  \item Types $\IsTp{A}$
-  \item Terms $a : A$
+  \item Types $\IsTp{A}$.
+  \item Terms $a : A$.
 \end{enumerate}
 
-To this we add (... a lot of machinery in my presentation here ...):
+These form the positive fragment of $\PolyTT$.
+The negative fragment is used for writing morphisms of polynomials in convenient syntax, where linear contexts are used to keep track of obligations that correspond to wires requiring input in wiring diagrams.
+
+Thus we add two type formers to the positive fragment, and more concepts for the negative fragment:
 \begin{enumerate}
-  \item A type of polynomial functors $P, Q : \PolyUniv$, and a type of morphisms between them $\phi, \psi : \Hom{P}{Q}$
-  % see it's a nice loop, graphically signifying control flow
-  \item Negative (linear) contexts $\IsNegCtx{\Omega}$, which introduces sinks (negative variables of negative types) and later will fill in their values (this forms compound contexts $\Gamma \mid \Omega$, where the vertical bar is mere syntax)
-  \item Negative types $\IsTp{A^{-}}$ for sinks, which are exactly like MLTT types but may mention negative values via borrowing (note that ${-}^{-}$ is no longer an operation, just notation to distinguish negative types, which represent sinks)
-  \item Programs $\IsProg{\pi}$, which set negative terms (sinks) to values, which then are reflected in the context $\Omega$
-  \item Negative terms $a^{-} : A^{-}$ (i.e. sinks), which can be set to values in programs (that is, they are abstracted programs which take in a positive value)
+  \item A type of polynomial functors $P, Q : \PolyUniv$.
+  \item A type of morphisms between them $\phi, \psi : \Hom{P}{Q}$. The following concepts are used to write terms of these morphisms.
+  % see, Omega is a nice loop, graphically signifying control flow
+  \item Negative (linear) contexts $\IsNegCtx{\Omega}$, which introduce sinks (negative variables of negative types) and record their values when they are written to later. This forms compound contexts $\Gamma \mid \Omega$, where the vertical bar is mere syntax.
+  \item Negative types $\IsTp{A^{-}}$ for sinks, which are exactly like MLTT types but may mention negative values via borrowing. These are conceptually thought of as actions \emph{out of} $A$ (like $A \to R$ for some fixed and arbitrary $R$).
+  \item Programs $\IsProg{\pi}$, which write values to negative terms (sinks), which gets recorded in the context $\Omega$.
+  \item Negative terms $a^{-} : A^{-}$ (i.e. sinks), which can be set to values in programs. That is, they are abstracted programs which take in a positive value and perform actions of writing to other sinks based on that value.
   % \rho for [r]eturn
   \item Morphism bodies $\rho :\Rightarrow Q$, which have a sequence of programs and then conclude in a positive base value and negative fiber sink (this is a technical wart of our presentation: for a poly-morphism of type $P \Rightarrow Q$, after introducing the bits from $P$ we still need to hold onto the right return type $Q$ for the end of the body, so we encode this in a judgment which I cheekily call $- :\Rightarrow Q$ since it is the ``type'' of being a program ``into $Q$'')
 \end{enumerate}
 
 Programs have a few operations:
 \begin{enumerate}
-  \item Writing a positive value to a negative term of the same type. We will write it as $a^{+} \mapsto a^{-}$.
-  \item Done, the program which does nothing, which is necessary for the grammar to be right-associative. We will write it as $\Done$.
+  \item Writing a positive value to a negative term of the same type. We will write it as $a^{-} \leftarrow a^{+}$.
+  \item Done, the program which does nothing. (This is necessary for the grammar to be right-associative.) We will write it as $\Done$.
   %\item Borrow, which abstracts over an opaque value of a sink. We do not need this yet, so we omit it. We may also restrict it to borrowing variables only, as opposed to general negative terms.
-  \item Unpack, which splits a sigma-sink into two sinks (with a type dependency). We will write it as $v^{-} \prec (x^{-}, y^{-})$.
-  \item Pair, which bundles up two sinks into a sink of the corresponding sigma type. This can be implemented in user-land with $ab^{-} := \lambda\ ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-}); \Done$, in place of a builtin combinator like $(a^{-}, b^{-})$, or $(a^{-}, \lambda a \to b^{-})$ for a dependent pair.
+  \item Unpack, which splits a sigma-sink into two sinks (with a type dependency). This is a necessary primitive. We will write it as $\Let{(x^{-}, y^{-})} := v^{-}$.
+  \item Pair, which bundles up two sinks into a sink of the corresponding sigma type. This can be implemented in user-land with $ab^{-} := \lambda^{-}\ ab \to (a^{-} \leftarrow \Fst{ab}); (b^{-} \leftarrow \Snd{ab}); \Done$, in place of a builtin combinator like $(a^{-}, b^{-})$, or $(a^{-} \leftarrow a, b^{-})$ for a dependent pair.
   \item Morphism application $\Let{(q^{+} \leftsquigarrow q^{-})} := \phi(p^{+} \leftsquigarrow p^{-})$ can also be implemented in user-land. (Note: if we make boxes (section \ref{boxes}) first-class, this will just be interpreting $P \Rightarrow Q$ as a function $\BOX{P} \to \BOX{Q}$ and applying it to $(p^{+}, p^{-})$.)
 \end{enumerate}
 
@@ -90,12 +116,12 @@ Linearity is checked by writing a negative variable's written value in context $
 
 Writing a variable only occurs in programs and morphism bodies.
 This introduces additional definitional equalities for $\Borrow a^{-}$ into scope.
-Namely, $a \mapsto x^{-}$ allows for the reduction $\Borrow x^{-} \equiv a$, like so:
+Namely, $x^{-} \leftarrow a$ allows for the reduction $\Borrow x^{-} \equiv a$, like so:
 
 \begin{mathpar}
   \inferrule[\Deriv{Borrow-reduce}] {
   } {
-    \Gamma \mid \Omega_L, (x^{-} : A^{-}), \Omega_M, (a \mapsto x^{-}), \Omega_R \vdash \Borrow x^{-} \equiv a : A
+    \Gamma \mid \Omega_L, (x^{-} : A^{-}), \Omega_M, (x^{-} \leftarrow a), \Omega_R \vdash \Borrow x^{-} \equiv a : A
   }
 \end{mathpar}
 
@@ -103,13 +129,11 @@ We can more succinctly write this like so:
 
 \begin{mathpar}
   \inferrule[\Deriv{Borrow-reduce}] {
-  	(a \mapsto x^{-} : A^{-}) \in \Omega
+  	(x^{-} \leftarrow : A^{-}) \in \Omega
   } {
     \Gamma \mid \Omega \vdash \Borrow x^{-} \equiv a : A
   }
 \end{mathpar}
-
-\textsc{Todo}: what to do about compound negative terms? disallow borrowing them? yes! definitely.
 
 Negative terms in negative types are not consumed.
 In particular, mentioning a negative variable in $\Borrow a^{-}$ does not consume it, so this means that the only difference between types and negative types are that the latter may mention $\Borrow a^{-}$.
@@ -204,9 +228,9 @@ But to write to a variable, we need to know that it is defined in context (with 
     \Gamma \vdash \IsNegCtx{\Omega}\\
     \Gamma \mid \Omega \vdash a : A\\
     (x^{-} : A^{-}) \in \Omega\\
-    (* \mapsto x^{-}) \notin \Omega\\
+    (x^{-} \leftarrow *) \notin \Omega\\
   } {
-    \Gamma \vdash \IsNegCtx{\Omega, (a \mapsto x^{-})}
+    \Gamma \vdash \IsNegCtx{\Omega, (x^{-} \leftarrow a)}
   }
 \end{mathpar}
 
@@ -246,16 +270,15 @@ Programs are exactly the bodies of eta-expanded negative terms:
   \inferrule[\Deriv{Neg-Eta}] {
     \Gamma, a : A \mid \Omega \vdash \IsProg{\pi}
   } {
-    \Gamma \mid \Omega \vdash (\lambda a \to \pi) : A^{-}
+    \Gamma \mid \Omega \vdash (\lambda^{-}\ a \to \pi) : A^{-}
   }
 \end{mathpar}
 
-As an example, there is a negative term $\mathsf{drop}$ that accepts anything and writes nothing: $\mathsf{drop} := (\lambda a \to \Done{}) : A^{-}$.
+As an example, there is a negative term $\mathsf{drop}$ that accepts anything and writes nothing: $\mathsf{drop} := (\lambda^{-}\ a \to \Done{}) : A^{-}$.
 
-We can eta-expand sinks, so a sink $a^{-} : A^{-}$ becomes $(\lambda a \to (a \mapsto a^{-}); \Done{}) : A^{-}$, where we abstract out the value being eventually written to the sink and then have the program that writes it to the original sink.
+We can eta-expand sinks, so a sink $a^{-} : A^{-}$ becomes $(\lambda^{-}\ a \to (a^{-} \leftarrow a); \Done{}) : A^{-}$, where we abstract out the value being eventually written to the sink and then have the program that writes it to the original sink.
 
-We can even apply a non-dependent function $f : A \to B$ to map sinks contravariantly: from $b^{-} : B^{-}$ we get $(b^{-} \circ f) := (\lambda a \to (f(a) \mapsto b^{-}); \Done{}) : A^{-}$.
-(This is what we called \textsc{Neg-Ap} in our previous iteration, but it no longer needs to be built-in)
+We can even apply a non-dependent function $f : A \to B$ to map sinks contravariantly: from $b^{-} : B^{-}$ we get $(b^{-} \circ f) := (\lambda^{-}\ a \to (b^{-} \leftarrow f(a)); \Done{}) : A^{-}$.
 
 
 
@@ -267,16 +290,16 @@ Note that $a$ cannot depend on any negative terms (in particular, cannot borrow)
 That means that $a^{-}$ needs its type $A^{-}$ to reduce to a term that does not mention borrowed values, either by having no dependence on other sinks in the first place or by already being written to a value from previous writes in $\Omega$.
 \item
 Speaking of $\Omega$, $a^{-}$ might not be a variable, so we need to be able to write out the side-effects of writing to it back into $\Omega'$.
-We do this with an operation ${\downarrow (a \mapsto a^{-})}$ that we will write out later in section \ref{running}.
+We do this with an operation ${\downarrow (a^{-} \leftarrow a)}$ that we will write out later in section \ref{running}.
 \end{enumerate}
 
 \begin{mathpar}
   \inferrule[\Deriv{Neg-Write}] {
     \Gamma \vdash a : A\\
     \Gamma \mid \Omega \vdash a^{-} : A^{-}\\
-    \Gamma \mid \Omega, {\downarrow (a \mapsto a^{-})} \vdash \rho :\Rightarrow Q
+    \Gamma \mid \Omega, {\downarrow (a^{-} \leftarrow a)} \vdash \rho :\Rightarrow Q
   } {
-    \Gamma \mid \Omega \vdash ((a \mapsto a^{-}); \rho) :\Rightarrow Q
+    \Gamma \mid \Omega \vdash ((a^{-} \leftarrow a); \rho) :\Rightarrow Q
   }
 \end{mathpar}
 
@@ -287,7 +310,7 @@ This basic mechanism is also used in \Deriv{Morph-Ap}.
 \begin{mathpar}
   \inferrule[\Deriv{Lending}] {
     \Gamma \mid \Omega \vdash a^{-} : A^{-}\\
-    \Gamma \mid \Omega, x^{-} : A^{-}, {\downarrow (\Borrow{x^{-}} \mapsto a^{-})} \vdash \rho :\Rightarrow Q
+    \Gamma \mid \Omega, x^{-} : A^{-}, {\downarrow (a^{-} \leftarrow \Borrow{x^{-}})} \vdash \rho :\Rightarrow Q
   } {
     \Gamma \mid \Omega \vdash (\Let{x^{-}} : A^{-} := a^{-}; \rho) :\Rightarrow Q
   }
@@ -322,12 +345,12 @@ Uhh I am describing its behavior in English for now:
 A program is a series of writes that we want to write into context (and it ends with $\Done{}$).
 \begin{enumerate}
 \item
-Writing to a variable is easy $a \mapsto x^{-}$: we add the appropriate constructor into context, so we produce $\Omega, (a \mapsto x^{-})$.
+Writing to a variable is easy $x^{-} \leftarrow a$: we add the appropriate constructor into context, so we produce $\Omega, (x^{-} \leftarrow a)$.
 \item
-Writing to an eta-expanded negative term is also easy $a \mapsto (\lambda x \to \pi[x])$: we now know the value of $x$, so we substitute it in, and write that program into context, $\Omega, \downarrow \pi[a]$.
+Writing to an eta-expanded negative term is also easy $(\lambda^{-}\ x \to \pi[x]) \leftarrow a$: we now know the value of $x$, so we substitute it in, and write that program into context, $\Omega, \downarrow \pi[a]$.
 (This is recursive.)
 \item
-If we have a let-binding (lending) of the form $\Let{x^{-}} : A^{-} := a^{-}$ we need to represent that by adding this, just as the typing rule \Deriv{Lending} does: $\Omega, x^{-} : A^{-}, {\downarrow (\Borrow{x^{-}} \mapsto a^{-})}$.
+If we have a let-binding (lending) of the form $\Let{x^{-}} : A^{-} := a^{-}$ we need to represent that by adding this, just as the typing rule \Deriv{Lending} does: $\Omega, x^{-} : A^{-}, {\downarrow (a^{-} \leftarrow \Borrow{x^{-}})}$.
 \item
 We similarly deal with \Deriv{Morph-Ap} and \Deriv{Unpack} which are also recursive.
 \end{enumerate}
@@ -353,13 +376,13 @@ The obligation is fulfilled when the body ends, providing a positive value for t
   \inferrule[\Deriv{Body-Done}] {
     \Gamma \vdash q^{+} : \Base{Q}\\
     \Gamma \mid \Omega \vdash q^{-} : (\Fib{Q}{q^{+}})^{-}\\
-    \IsFilled{\Omega, \downarrow (q \mapsto q^{-})}
+    \IsFilled{\Omega, \downarrow (q^{-} \leftarrow q)}
   } {
     \Gamma \mid \Omega \vdash (q^{+} \leftsquigarrow q^{-}) :\Rightarrow Q
   }
 \end{mathpar}
 
-The action on fibers can be recovered as something like $\lambda q \to p[q]$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid \Omega$, where $\Omega := (p^{-} : \Fib{P}{p^{+}}, \downarrow (q \mapsto q^{-})) = (p^{-} : \Fib{P}{p^{+}}, ..., (p[q] \mapsto p^{-}), ...)$ means $p^{-}$ gets set to $p[q]$ in the process of setting $q^{-}$ to $q$.\\
+The action on fibers can be recovered as something like $\lambda q \to p[q]$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid \Omega$, where $\Omega := (p^{-} : \Fib{P}{p^{+}}, \downarrow (q^{-} \leftarrow q)) = (p^{-} : \Fib{P}{p^{+}}, ..., (p^{-} \leftarrow p[q]), ...)$ means $p^{-}$ gets set to $p[q]$ in the process of setting $q^{-}$ to $q$.\\
 
 Apply a morphism.
 This takes a base, fib pair and turns it into a new base, fib pair by applying the forward and backwards components of the morphism.
@@ -371,7 +394,7 @@ It can be implemented via positive and negative let in the obvious way, so it is
   	\Gamma \vdash p^{+} : \Base{P}\\
   	\Gamma \mid \Omega \vdash p^{-} : (\Fib{P}{p^{+}})^{-}\\\\
 	\Gamma' := \Gamma, q^{+} := \Base{\phi}(p^{+}) : \Base{Q}\\\\
-	\Omega' := \Omega, q^{-} : (\Fib{Q}{q^{+}})^{-}, \downarrow (\Fib{\phi}{p^{+}}(\Borrow{q^{-}}) \mapsto p^{-})\\\\
+	\Omega' := \Omega, q^{-} : (\Fib{Q}{q^{+}})^{-}, \downarrow (\Fib{\phi}{p^{+}}(p^{-} \leftarrow \Borrow{q^{-}}))\\\\
     \Gamma' \mid \Omega' \vdash \rho :\Rightarrow Q
   } {
     \Gamma \mid \Omega \vdash (\Let{(q^{+} \leftsquigarrow q^{-})} := \phi(p^{+} \leftsquigarrow p^{-}) ; \rho) :\Rightarrow Q
@@ -391,14 +414,14 @@ Since $\Borrow{x^{-}}$ cannot be mentioned in user-code, due to the typing restr
 \begin{mathpar}
   \inferrule[\Deriv{Unpack}] {
     \Gamma \mid \Omega_1 \vdash ab^{-} : ((a : A) \times B[a])^{-}\\
-    \Omega_2 := \Omega_1, x^{-} : A^{-}, y^{-} : B[\Borrow{x^{-}}]^{-}, {\downarrow ((\Borrow{x^{-}}, \Borrow{y^{-}}) \mapsto ab^{-})} \\
+    \Omega_2 := \Omega_1, x^{-} : A^{-}, y^{-} : B[\Borrow{x^{-}}]^{-}, {\downarrow (ab^{-} \leftarrow (\Borrow{x^{-}}, \Borrow{y^{-}}))} \\
     \Gamma \mid \Omega_2 \vdash \rho :\Rightarrow Q\\
   } {
-    \Gamma \mid \Omega_1 \vdash (ab^{-} \prec (x^{-}, y^{-}); \rho) :\Rightarrow Q
+    \Gamma \mid \Omega_1 \vdash (\Let{(x^{-}, y^{-})} := ab^{-}; \rho) :\Rightarrow Q
   }
 \end{mathpar}
 
-The inverse can be implemented simply in user-land, as $$\Let{ab^{-}} := \lambda\ ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-}); \Done.$$
+The inverse can be implemented simply in user-land, as $$\Let{ab^{-}} := \lambda^{-}\ ab \to (a^{-} \leftarrow \Fst{ab}); (b^{-} \leftarrow \Snd{ab}); \Done.$$
 
 
 
