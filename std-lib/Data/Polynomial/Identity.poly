@@ -1,0 +1,16 @@
+import Data::Polynomial
+import Data::Polynomial::Fin
+
+--------------------------------------------------------------------------------
+  
+def Identityₚ : Poly := Σ (_ : Unit), Unit
+
+def Identity : Type → Type := ofP Identityₚ
+
+def mk-identity : Π (A : Type), A → Identity A :=
+  λ A a → ( .unit , λ _ → a )
+
+--------------------------------------------------------------------------------
+-- Examples
+
+def nat-identity : Identity ℕ := mk-identity ℕ 11

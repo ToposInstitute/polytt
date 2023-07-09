@@ -1,0 +1,10 @@
+def Unit := #{ .unit }
+
+def unit : Unit := .unit
+
+-- | Dependent Eliminator
+def unit-elim : Π (mot : Unit → Type), mot .unit → Π (u : Unit), mot u :=
+  λ mot mot-unit → { .unit = mot-unit }
+
+def unique : Π (u : Unit), u = .unit :=
+  unit-elim (λ u → u = .unit) (refl)

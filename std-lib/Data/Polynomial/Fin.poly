@@ -1,0 +1,41 @@
+import Data::Unit
+import Data::Void
+
+--------------------------------------------------------------------------------
+
+def ×-rec :
+  Π (A : Type) (B : A → Type),
+  Π (R : (Σ (a : A), B a) → Type),
+  (Π (a : A), Π (b : B a), R (a , b)) →
+  Π (ab : Σ (a : A), B a), R ab :=
+  λ A B R fn ab → fn (fst ab) (snd ab)
+
+def fin-step : Type → Type :=
+  λ A → Σ (tag : #{ .zero, .succ }), { .zero = Unit, .succ = A } tag
+
+-- Recursively-defined type of finite natural numbers
+def fin : ℕ → Type :=
+  λ n → elim (λ _ → Type) Void (λ _ → fin-step) n
+
+-- zero as a finite number
+def z : Π (n : ℕ), fin (succ n) :=
+  λ n → (.zero, unit)
+
+-- successor in finite numbers
+def s : Π (n : ℕ), fin n → fin (succ n) :=
+  λ n i → (.succ, i)
+
+-- ex falso quodlibet
+def fin0-elim : Π (mot : fin 0 → Type), Π (i : fin 0), mot i :=
+  λ mot → {}
+
+-- Handle zero and successor, non-recursively
+def fin-case :
+  Π (n : ℕ) (mot : fin (succ n) → Type),
+  mot (z n) → (Π (i : fin n), mot (s n i)) →
+  Π (i : fin (succ n)), mot i :=
+  λ n mot motz mots →
+    ×-rec #{ .zero, .succ } { .zero = Unit, .succ = fin n } mot
+      { .zero = { .unit = motz }
+      , .succ = mots
+      }

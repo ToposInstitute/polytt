@@ -1,0 +1,37 @@
+import Data::Bool
+import Data::Polynomial
+
+--------------------------------------------------------------------------------
+
+def Lens : Π (S T A B : Type), Type :=
+  λ S T A B → (S × T) ⇒ (A × B)
+
+def view : Π (S T A B : Type), Lens S T A B → S → A :=
+  λ S T A B lens s → fst (lens s)
+
+def over : Π (S T A B : Type), Lens S T A B → (A → B) → S → T :=
+  λ S T A B lens f s →
+    -- let g := snd (lens s) in
+    -- let a := fst (lens s) in g (f a)
+    (snd (lens s)) (f (fst (lens s)))
+
+def set : Π (S T A B : Type), Lens S T A B → B → S → T :=
+  λ S T A B lens b s → 
+    let g := snd (lens s) in g b
+
+def lens : Π (S T A B : Type), (S → A) → (S → B → T) → Lens S T A B :=
+  λ S T A B get set →
+    λ s⁺ t⁻ ⇝
+      return (get s⁺) ⇜ λ⁻ (b : B) → t⁻ ← set s⁺ b; done
+
+--------------------------------------------------------------------------------
+-- Examples
+
+def proj₁ : Π (A B : Type), Lens (A × B) (A × B) A A :=
+  λ A B → lens (A × B) (A × B) A A (λ ab → fst ab) (λ ab a → (a , snd ab))
+
+def proj₂ : Π (A B : Type), Lens (A × B) (A × B) B B :=
+  λ A B → lens (A × B) (A × B) B B (λ ab → snd ab) (λ ab b → (fst ab , b))
+
+def example₁ : Bool :=
+  view (Bool × Bool) (Bool × Bool) Bool Bool (proj₁ Bool Bool) (.true , .false)
