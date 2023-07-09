@@ -168,12 +168,12 @@ def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A)
 -- We can also demonstrate a simple feedback loop on the inner Poly by
 -- implementing a counter:
 --
---              ┌────────────┐       
---	       -│  -┌───┐+   │+ 
--- counterₚ : ──┤  ┌┤ ℕ ├┬───┼──
---            ()│  │└───┘│   │ℕ 
---              │  └──*──┘   │
---              └────────────┘     
+--              ┌───────────┐       
+--	       -│  -┌───┐+  │+ 
+-- counterₚ : ──┤  ┌┤ ℕ ├┬──┼──
+--            ()│  │└───┘│  │ℕ 
+--              │  └──*──┘  │
+--              └───────────┘     
 --              Note: At * we apply 'succ'
 --
 -- Here the outer Poly receives a unit value, which we discard, and
@@ -380,13 +380,20 @@ def f : (ℕ × ℕ) ⇒ (ℕ × ℕ) :=
 -- We have been seen a Moore machines in the counterₚ example. Lets
 -- focus on them in a bit more detail now.
 --
--- We define Moore as a Poly morphism 'Syˢ ⇒ Oyᴵ'
+-- We define Moore as a Poly morphism:
+--
+--   'Syˢ ⇒ Oyᴵ'
+--
 
 def Moore : Type → Type → Type → Type :=
   λ S I O → (S × S) ⇒ (O × I)
 
 -- The inner Poly 'S × S' represents the internal state of the machine
 -- and the outer Poly 'O × I' describes the input and output types.
+
+-- As a first Moore machine we can define repeaterₘ which recieves a
+-- unit input and always returns its state.
+
 --
 -- From this perspective we can demonstrate that counterₚ is a Moore
 -- Machine:
@@ -401,7 +408,7 @@ def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
     λ s⁺ s⁻ ⇝
       return (output s⁺) ⇜ λ⁻ (i : I) → s⁻ ← transition s⁺ i; done
 
--- We can also define counterₚ using the 'moore' function.
+-- We can also define counterₚ using the 'moore' function:
 
 def counterₘ : Moore ℕ #{ .unit } ℕ :=
   moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
@@ -410,7 +417,9 @@ def counterₘ : Moore ℕ #{ .unit } ℕ :=
 -- be fixed soon.
 -- def counterₚ≡counterₘ : counterₚ = counterₘ := refl
 
--- With a Moore Machine we can build Determinisitic Finite State Automata:
+-- | Deterministic Finite State Automata
+--
+-- From a Moore Machine we can build DFSAs:
 
 def DFSA : Type → Type → Type :=
   λ S A → Moore S A Bool
@@ -432,3 +441,38 @@ def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
     }
   in
   λ s⁺ s⁻ ⇝ return (check s⁺) ⇜ (s⁻ ∘ (step s⁺))
+
+-- | Memoryless Dynamical System 
+--
+-- We can also define the MDS from the Poly Book, defined as:
+--
+--   Byᴬ ⇒ Byᴬ
+--
+
+def mds : Π (A B : Type), (A → B) → Moore B A B :=
+  λ A B f →
+    λ b⁺ b⁻ ⇝
+      return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← f a; done
+
+-- With 'mds' we can build the delay line and summation examples:
+
+--            ┌───────────┐       
+--           -│  -┌───┐+  │+ 
+-- delayₘ : ──┼───┤ℕ ℕ├───┼──
+--           ℕ│   └───┘   │ℕ 
+--            └───────────┘     
+
+def delayₘ : Moore ℕ ℕ ℕ :=
+  mds ℕ ℕ (λ x → x)
+
+--          ┌───────────┐       
+--         -│  -┌───┐+  │+ 
+-- sumₘ : ──┼─*─┤ℕ ℕ├───┼──
+--       ℕ×ℕ│   └───┘   │ℕ 
+--          └───────────┘     
+--       Note at * we apply the addition operation
+
+def sumₘ : Moore ℕ (ℕ × ℕ) ℕ :=
+  mds (ℕ × ℕ) ℕ (λ xy → add (fst xy) (snd xy))
+
+-- ** More examples can be found in Data::Polynomial::Machines **
