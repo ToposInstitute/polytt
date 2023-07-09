@@ -99,6 +99,16 @@ struct
     | _, D.Hom (p1, q1), D.Hom (p2, q2) ->
       equate D.Poly p1 p2;
       equate D.Poly q1 q2;
+    | D.Hom (p, q), D.HomLam l1, D.HomLam l2 ->
+      let t =
+        Sem.graft_value @@
+        Graft.value p @@ fun p ->
+        Graft.value q @@ fun q ->
+        Graft.build @@
+        TB.pi (TB.base p) @@ fun p_base ->
+        TB.sigma (TB.base q) @@ fun q_base ->
+        TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
+      in equate t l1 l2;
     | _, _, _ ->
       Debug.print "Could not equate %a and %a@."
         D.dump v1
