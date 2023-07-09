@@ -55,7 +55,7 @@ To this we add (... a lot of machinery in my presentation here ...):
   \item Programs $\IsProg{\pi}$, which set negative terms (sinks) to values, which then are reflected in the context $\Omega$
   \item Negative terms $a^{-} : A^{-}$ (i.e. sinks), which can be set to values in programs (that is, they are abstracted programs which take in a positive value)
   % \rho for [r]eturn
-  \item Morphism bodies $\rho :\Rightarrow Q$, which have a sequence of programs and then conclude in a positive return value and negative fibrational component (this is a technical wart of our presentation: for a poly-morphism of type $P \Rightarrow Q$, after introducing the bits from $P$ we still need to hold onto the right return type $Q$ for the end of the body, so we encode this in a judgment which I cheekily call $- :\Rightarrow Q$ since it is the ``type'' of being a program ``into $Q$'')
+  \item Morphism bodies $\rho :\Rightarrow Q$, which have a sequence of programs and then conclude in a positive base value and negative fiber sink (this is a technical wart of our presentation: for a poly-morphism of type $P \Rightarrow Q$, after introducing the bits from $P$ we still need to hold onto the right return type $Q$ for the end of the body, so we encode this in a judgment which I cheekily call $- :\Rightarrow Q$ since it is the ``type'' of being a program ``into $Q$'')
 \end{enumerate}
 
 Programs have a few operations:
@@ -231,8 +231,8 @@ This is clearly necessary for $\PolyUniv$ to be a model, thus we also want it to
 
 The linearity check is ensured by never writing to the same variable twice and by checking that each variable in $\Omega$ is written exactly once by the end of the hom-body.
 
-In particular, this is used for program extraction of the backwards action on fibrations, by seeing what the input sink $p^{-}$ is set to in the environment when the output sink $q^{-}$ is written with an abstract test value $q$.
-That is, the context will ultimately contain a description of $p^{-}$ in terms of $q$, and this is the action on fibrations.
+In particular, this is used for program extraction of the action on fibers, by seeing what the input sink $p^{-}$ is set to in the environment when the output sink $q^{-}$ is written with an abstract test value $q$.
+That is, the context will ultimately contain a description of $p^{-}$ in terms of $q$, and this is the action on fibers.
 
 
 
@@ -347,7 +347,7 @@ This provides the forward component $p^{+}$ and adds a sink $p^{-}$, then checks
   }
 \end{mathpar}
 
-The obligation is fulfilled when the body ends, providing a positive value for the base and a negative sink for the fibration, and every negative variable has been set to a value in $\Omega$ after writing to $q^{-}$ (yes we invent a new variable $q$ to write to $q^{-}$).
+The obligation is fulfilled when the body ends, providing a positive value for the base and a negative sink for the fiber, and every negative variable has been set to a value in $\Omega$ after writing to $q^{-}$ (yes we invent a new variable $q$ to write to $q^{-}$).
 
 \begin{mathpar}
   \inferrule[\Deriv{Body-Done}] {
@@ -359,8 +359,7 @@ The obligation is fulfilled when the body ends, providing a positive value for t
   }
 \end{mathpar}
 
-The action on fibrations can be recovered as something like $\lambda q \to p[q]$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid \Omega$, where $\Omega := (p^{-} : \Fib{P}{p^{+}}, \downarrow (q \mapsto q^{-})) = (p^{-} : \Fib{P}{p^{+}}, ..., (p[q] \mapsto p^{-}), ...)$ means $p^{-}$ gets set to $p[q]$ in the process of setting $q^{-}$ to $q$.\\
-
+The action on fibers can be recovered as something like $\lambda q \to p[q]$ where $\Gamma, p^{+} : \Base{P}, q^{+} : \Base{Q} \mid \Omega$, where $\Omega := (p^{-} : \Fib{P}{p^{+}}, \downarrow (q \mapsto q^{-})) = (p^{-} : \Fib{P}{p^{+}}, ..., (p[q] \mapsto p^{-}), ...)$ means $p^{-}$ gets set to $p[q]$ in the process of setting $q^{-}$ to $q$.\\
 
 Apply a morphism.
 This takes a base, fib pair and turns it into a new base, fib pair by applying the forward and backwards components of the morphism.
