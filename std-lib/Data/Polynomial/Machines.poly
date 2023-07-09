@@ -27,7 +27,6 @@ def Mealy : Type → Type → Type → Type :=
   λ S I O → ((S × I) × S) ⇒ (O × Unit)
 
 --------------------------------------------------------------------------------
--- Examples
 
 -- | Determinisitic Finite State Automata. The output 'Bool'
 -- determines the accept states.
@@ -100,6 +99,5 @@ def sum : Moore ℕ (ℕ × ℕ) ℕ :=
 -- ℕy^ℕ ⇒ ℕy
 --
 -- ℕ × ℕ ⇒ ℕ × (Fin 1)
-def counter : Moore ℕ #{ .only } ℕ :=
-  λ n⁺ n⁻ ⇝
-    return n⁺ ⇜ λ⁻ (_ : #{ .only }) → n⁻ ← succ n⁺; done
+def counter : Moore ℕ #{ .unit } ℕ :=
+  moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
