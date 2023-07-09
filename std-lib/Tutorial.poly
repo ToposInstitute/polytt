@@ -18,7 +18,7 @@ def one : ℕ := 1
 def two : ℕ := succ one
 
 -- | Equality
-def one-≡-one : 1 = 1 := refl
+def one≡one : one = 1 := refl
 
 -- | Pi Types:
 def id : Π (A : Type), A → A := λ A a -> a
@@ -55,6 +55,35 @@ def Q : Π (Y : Type), Poly :=
       .zero = Y × Y × Y
     , .one = Y × Y
     } i
+
+-- R y ≡ y³ + y² + y + 1
+-- 
+-- R y ≡ Σ [ i ∈ Fin 4 ] y^aᵢ 
+--   where
+--     a : Fin 4 → Set
+-- 
+def R : Π (Y: Type), Poly :=
+  λ Y → Σ (i : #{ .zero, .one, .two, .three}), {
+      .zero = Y × Y × Y
+    , .one = Y × Y
+    , .two = Y
+    , .three = Unit
+  } i
+
+def Listₚ : Poly :=
+  Σ (n : ℕ), fin n
+
+-- | ℕy^ℕ
+def nyan : Poly :=
+  Σ(_ : ℕ), ℕ
+
+-- | We can also define a non-dependent Poly using product shorthand
+-- in place of Sigma:
+def nyan' : Poly :=
+  (ℕ × ℕ)
+
+-- | We can then prove their equivalence:
+def sigma≡pair : nyan = nyan' := refl
    
 --------------------------------------------------------------------------------
 -- | Morphisms in Poly
@@ -86,7 +115,7 @@ def poly-map : Π(P Q : Poly), Type :=
 -- | Poly-Lambda Syntax
 --
 -- We provide a special form of lambda syntax for defining morphisms
--- in Poly. This allows you to bind the base and fiber of polynomials
+-- in Poly. This allows you to bind the base and fiber-sink of polynomials
 -- and connect them in a typesafe manner.
 --
 -- Lets implement 'idₚ : P ⇒ P' as our first Poly-Lambda. As a wiring
@@ -98,48 +127,83 @@ def poly-map : Π(P Q : Poly), Type :=
 --         │  └───┘  │ 
 --         └─────────┘ 
 --
--- Where + denotes the base and - denotes the fiber. Being the
--- identity morphism, 'idₚ' map' from 'base P' to 'base P' and 'fib P'
+-- Where + denotes the base and - denotes the fiber-sink. Being the
+-- identity morphism, 'idₚ' maps from 'base P' to 'base P' and 'fib P'
 -- to 'fib P'.
 
 def idₚ : Π (P : Poly), P ⇒ P :=
   λ P →
-    -- Here we bind the base and fiber sink of the inner Poly:
+    -- Here we bind the base and fiber-sink of the inner Poly:
     -- inner⁺ : base P
     -- inner⁻ : fib P inner⁺
     λ inner⁺ inner⁻ ⇝
-    -- And here we define the base and fiber sink of the outer
-    -- Poly. In this case we map the base to the base and the fiber to
-    -- the fiber.
+    -- And here we define the base and fiber-sink of the outer
+    -- Poly. In this case we map the base to the base and the
+    -- fiber-sink to the fiber-sink.
     return inner⁺ ⇜ inner⁻
 
 -- We can also use _←_ notation for internally connecting
 -- Poly(s). This can be used to connect multiple tensored Polys or
 -- even to create feedback loops around a single Poly.
 --
--- For example, we can define a simple counter as follows:
+-- For a first example we can implement an n-chain from Diagrammatics
+-- in Categorification and Compositionality (Vagner, 2019):
 --
---             ┌────────────┐       
---	      -│  -┌───┐+   │+ 
--- counter : ──┤  ┌┤ ℕ ├┬───┼──
---           ()│  │└───┘│   │ℕ 
---             │  └──*──┘   │
---             └────────────┘     
+--                ┌─────────────────┐       
+--	         -│ -┌───┐+ -┌───┐+ │+ 
+-- two-chainₚ : ──┼──┤ P ├───┤ Q ├──┼──
+--               A│ A└───┘B B└───┘C │C 
+--                └─────────────────┘     
+
+def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
+  λ A B C →
+   λ pq⁺ pq⁻ ⇝
+     let- (p⁻ , q⁻) := pq⁻; 
+     q⁻ ← fst pq⁺; 
+     return (snd pq⁺) ⇜ p⁻
+
+-- Here we use _←_ to connect the 'fst' projection of the base of P to
+-- the fiber-sink of Q.
+--
+-- We can also demonstrate a simple feedback loop on the inner Poly by
+-- implementing a counter:
+--
+--              ┌────────────┐       
+--	       -│  -┌───┐+   │+ 
+-- counterₚ : ──┤  ┌┤ ℕ ├┬───┼──
+--            ()│  │└───┘│   │ℕ 
+--              │  └──*──┘   │
+--              └────────────┘     
 --              Note: At * we apply 'succ'
 --
 -- Here the outer Poly receives a unit value, which we discard, and
--- the inner Poly emits a ℕ which is fanned out to both the fiber of
--- the outer Poly and back to the fiber of the inner Poly.
+-- the inner Poly emits a ℕ which is fanned out to both the base of
+-- the outer Poly and back to the fiber-sink of the inner Poly.
 --
--- Whenver we are in a positive position (the base) we can have a
--- value and can apply a function to it. In this case we apply 'succ'
--- to the base in the feedback loop to increment the counter.
+-- For this machine we will need to introduce two concepts:
 --
--- Note: This is actually our first example of a Moore Machine. We
--- will see a lot more of these later on.
+-- 1. A special syntax element for dropping the fiber-sink from the
+--    outer Poly.
+--
+--    The linearity obligation for the fiber-sink of the outer Poly is
+--    reversed which allows us to ignore it.
+--
+--    We do this by using a '!' character in the negative position of
+--    the return statement.
+--
+-- 2. Applying a function to the base of the inner Poly. 
+--
+--    Whenever we are in a positive position (the base) we have a
+--    value and can apply a function to it. In this case we apply
+--    'succ' to the base in the feedback loop to increment the
+--    counter.
+--
+--    NOTE: We actually did this in the last example but we want to
+--    reinforce that you can apply any pure function in a positive
+--    fragment.
 
-def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
-  -- Bind the base and fiber of the inner Poly:
+def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
+  -- Bind the base and fiber-sink of the inner Poly:
   -- n⁺ : base (ℕ × ℕ)
   -- n⁻ : fib (ℕ × ℕ) n⁺
   λ n⁺ n⁻ ⇝
@@ -148,10 +212,8 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
     -- feedback loop:
     n⁻ ← succ n⁺;
 
-    -- Drop the fiber from the outer Poly and connect n⁺ to its
-    -- base. The '!' operator is called "drop".
-    -- NOTE: The linearity obligation is reversed in the outer Poly as
-    -- there we are providing the sink rather then receiving it.
+    -- Drop the fiber-sink from the outer Poly and connect n⁺ to its
+    -- base.
     return n⁺ ⇜ !
 
 -- | Let Bindings
@@ -160,7 +222,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 -- Poly-Lambda and bind their result components.
 -- 
 -- Let comes in positive and negative forms which allow you to apply
--- the base and fiber operations of Poly morphisms respectively.
+-- the base and fiber-sink operations of Poly morphisms respectively.
 --
 -- Eg., Given 'p⁺ : base P' and 'p⁻ : fib P p⁺':
 --
@@ -186,7 +248,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 --
 -- Composition of Poly morphisms serves as a good example of let bindings:
 --
---   composeₚ : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R
+--   composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R)
 --
 -- First lets build an intuition for composition in Poly using wiring
 -- diagrams:
@@ -222,7 +284,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 -- Poly morphisms and build up to a 'base R' and obligation 'fib R
 -- (base R)':
 
-def composeₚ : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
+def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
   λ P Q R f g →
     λ p⁺ p⁻ ⇝
       let q⁺ := fst (g p⁺);
@@ -249,7 +311,7 @@ def composeₚ : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
 --
 -- We can simplify composeₚ as such:
 
-def composeₚ' : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
+def composeₚ' : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
   λ P Q R f g → λ p⁺ p⁻ ⇝
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
@@ -268,25 +330,25 @@ def composeₚ' : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
 --   let (p⁺ , q⁺) := pq⁺;
 --   let⁻ (p⁻ , q⁻) := pq⁻;
 --
--- NOTE: the positive form of tensor splitting is not yet supported.
+-- NOTE: The positive form of tensor splitting is not yet supported.
 --
 -- This comes in handy when defining 'swapₚ':
 --
---              ┌──────────────┐+      
---             -│   -┌───┐+  ┌─┼──
---            ──┼────┤  p├──┐│ │
+--              ┌──────────────┐      
+--             -│   -┌───┐+    │+
+--            ──┼────┤  p├──┐┌─┼── 
 --   swapₚ :    │    └───┘  ││ │
---             -│   -┌───┐+ ││ │
---            ──┼────┤  q├───┘ │+
---              │    └───┘  └──┼──
+--             -│   -┌───┐+ └│┐│+
+--            ──┼────┤  q├───┘└┼── 
+--              │    └───┘     │
 --              └──────────────┘     
 
-def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ tensor-⊗ Q P :=
+def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
   λ P Q →
     λ pq⁺ pq⁻ ⇝
-      -- Case on the tensored fibers. Note that because fibers are
-      -- linear obligations we can no longer reference pq⁻ after this
-      -- point.
+      -- Case on the tensored fiber-sinks. Note that because
+      -- fiber-sinks are linear obligations we can no longer reference
+      -- pq⁻ after this point.
       let⁻ (p⁻ , q⁻) := pq⁻;
 
       -- Reverse the positions of P and Q when connecting them to the
@@ -296,8 +358,8 @@ def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ tensor-⊗ Q P :=
 
 -- | λ⁻ or Negative-lamda
 --
--- Negative-lambda allows you to bind the fiber sink of a Poly.  This
--- is useful to build the input side of morphism.
+-- Negative-lambda allows you to bind the fiber-sink of a Poly.  This
+-- is useful to build the input side of a morphism.
 --
 --         ┌────────────┐       
 --        -│  -┌───┐+   │+ 
