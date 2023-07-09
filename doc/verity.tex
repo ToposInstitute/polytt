@@ -65,7 +65,7 @@ Programs have a few operations:
   %\item Borrow, which abstracts over an opaque value of a sink. We do not need this yet, so we omit it. We may also restrict it to borrowing variables only, as opposed to general negative terms.
   \item Unpack, which splits a sigma-sink into two sinks (with a type dependency). We will write it as $v^{-} \prec (x^{-}, y^{-})$.
   \item Pair, which bundles up two sinks into a sink of the corresponding sigma type. This can be implemented in user-land with $ab^{-} := \lambda\ ab \to (\Fst{ab} \mapsto a^{-}); (\Snd{ab} \mapsto b^{-}); \Done$, in place of a builtin combinator like $(a^{-}, b^{-})$, or $(a^{-}, \lambda a \to b^{-})$ for a dependent pair.
-  \item Morphism application $(p^{+}, p^{-}) \xrightarrow{\phi} (q^{+}, q^{-})$ can also be implemented in user-land. (Note: if we make boxes (section \ref{boxes}) first-class, this will just be interpreting $P \Rightarrow Q$ as a function $\BOX{P} \to \BOX{Q}$ and applying it to $(p^{+}, p^{-})$.)
+  \item Morphism application $\Let{(q^{+} \leftsquigarrow q^{-})} := \phi(p^{+} \leftsquigarrow p^{-})$ can also be implemented in user-land. (Note: if we make boxes (section \ref{boxes}) first-class, this will just be interpreting $P \Rightarrow Q$ as a function $\BOX{P} \to \BOX{Q}$ and applying it to $(p^{+}, p^{-})$.)
 \end{enumerate}
 
 All of these operations are allowed in both programs and morphism bodies.
@@ -266,7 +266,7 @@ Two things:
 Note that $a$ cannot depend on any negative terms (in particular, cannot borrow).
 That means that $a^{-}$ needs its type $A^{-}$ to reduce to a term that does not mention borrowed values, either by having no dependence on other sinks in the first place or by already being written to a value from previous writes in $\Omega$.
 \item
-Speaking of $\Omega$, $a^{-}$ may not be a variable, so we need to be able to write out the side-effects of writing to it back into $\Omega'$.
+Speaking of $\Omega$, $a^{-}$ might not be a variable, so we need to be able to write out the side-effects of writing to it back into $\Omega'$.
 We do this with an operation ${\downarrow (a \mapsto a^{-})}$ that we will write out later in section \ref{running}.
 \end{enumerate}
 
@@ -374,7 +374,7 @@ It can be implemented via positive and negative let in the obvious way, so it is
 	\Omega' := \Omega, q^{-} : (\Fib{Q}{q^{+}})^{-}, \downarrow (\Fib{\phi}{p^{+}}(\Borrow{q^{-}}) \mapsto p^{-})\\\\
     \Gamma' \mid \Omega' \vdash \rho :\Rightarrow Q
   } {
-    \Gamma \mid \Omega \vdash ((p^{+} \leftsquigarrow p^{-}) \xrightarrow{\phi} (q^{+} \leftsquigarrow q^{-}); \rho) :\Rightarrow Q
+    \Gamma \mid \Omega \vdash (\Let{(q^{+} \leftsquigarrow q^{-})} := \phi(p^{+} \leftsquigarrow p^{-}) ; \rho) :\Rightarrow Q
   }
 \end{mathpar}
 
