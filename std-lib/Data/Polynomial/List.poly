@@ -31,5 +31,3 @@ def List-rec : Π (A : Type) (mot : Type),
 -- Examples
 
 def nat-list : List ℕ := cons ℕ 0 (cons ℕ 1 (nil ℕ))
-
-#normalize nat-list

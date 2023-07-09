@@ -14,5 +14,3 @@ def mk-identity : Π (A : Type), A → Identity A :=
 -- Examples
 
 def nat-identity : Identity ℕ := mk-identity ℕ 11
-
-#normalize nat-identity
