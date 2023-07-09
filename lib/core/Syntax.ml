@@ -13,7 +13,7 @@ type 'a labeled = (string * 'a) list
 type ppenv = { pos : Ident.t bwd; neg_size : int; neg : Ident.t bwd }
 
 type t = Data.syn =
-  | (* t *) 
+  | (* t *)
     Var of int
   | (* t *)
     Global of Global.t
@@ -21,27 +21,27 @@ type t = Data.syn =
     Borrow of int
   | (* Π (a : A), (B a) *)
     Pi of Ident.t * t * t
-  | (* λ x. e *) 
-    Lam of Ident.t * t 
+  | (* λ x. e *)
+    Lam of Ident.t * t
   | (* let x = e in t *)
-    Let of Ident.t * t * t 
+    Let of Ident.t * t * t
   | (* f a *)
     Ap of t * t
   | (* Σ (x : A), B x *)
-    Sigma of Ident.t * t * t 
+    Sigma of Ident.t * t * t
   | (* (a , b) *)
-    Pair of t * t 
+    Pair of t * t
   | (* fst x *)
-    Fst of t 
-  | (* snd x *) 
-    Snd of t 
+    Fst of t
+  | (* snd x *)
+    Snd of t
   | (* a = b *)
-    Eq of t * t * t 
-  | (* refl *) 
-    Refl of t 
+    Eq of t * t * t
+  | (* refl *)
+    Refl of t
   | (* ℕ *)
     Nat
-  | (* zero *) 
+  | (* zero *)
     Zero
   | (* succ n *)
     Succ of t
@@ -53,11 +53,11 @@ type t = Data.syn =
     Label of labelset * label
   | (* { foo = syn₁, bar = syn₂ } e *)
     Cases of t * t labeled * t
-  | (* Type *) 
-    Univ 
-  | (* Poly *) 
+  | (* Type *)
+    Univ
+  | (* Poly *)
     Poly
-  | (* (p : P) × q *) 
+  | (* (p : P) × q *)
     PolyIntro of Ident.t * t * t
   | (* base p *)
     Base of t
@@ -65,15 +65,15 @@ type t = Data.syn =
     Fib of t * t
   | (* p ⇒ q *)
     Hom of t * t
-  | (* λ a⁺ a⁻ ⇝ p *) 
+  | (* λ a⁺ a⁻ ⇝ p *)
     HomLam of t
   | (* x y *)
     HomElim of t * t
-  | (* ? *) 
-    Hole of t * int 
+  | (* ? *)
+    Hole of t * int
   | (* skolem *)
     Skolem of t
-    
+
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
 
@@ -324,7 +324,7 @@ let rec pp (env : ppenv) =
       (pp env (P.left_of arrow)) p
       (pp env (P.right_of arrow)) q
   | HomLam wrapped ->
-    Format.fprintf fmt "λ ~> FIXME %a FIXME" (pp env P.isolated) wrapped
+    Format.fprintf fmt "%a" (pp env P.isolated) wrapped
   (* (pp_hom (abs_pos env p_name #< q_name) (P.right_of arrow)) bdy *)
   | HomElim (hom, i) ->
     Format.fprintf fmt "%a %a"
