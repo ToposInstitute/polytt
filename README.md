@@ -6,7 +6,7 @@
 
 A type theory with native support for [Polynomial Functors](https://topos.site/poly-book.pdf).
 
-For examples, see `std-lib/Tutorial.poly` directory.
+For examples, see `std-lib/Tutorial.poly`.
 
 # Building
 
