@@ -57,11 +57,11 @@ def Q : Π (Y : Type), Poly :=
     } i
 
 -- R y ≡ y³ + y² + y + 1
--- 
--- R y ≡ Σ [ i ∈ Fin 4 ] y^aᵢ 
+--
+-- R y ≡ Σ [ i ∈ Fin 4 ] y^aᵢ
 --   where
 --     a : Fin 4 → Set
--- 
+--
 def R : Π (Y: Type), Poly :=
   λ Y → Σ (i : #{ .zero, .one, .two, .three}), {
       .zero = Y × Y × Y
@@ -84,7 +84,7 @@ def nyan' : Poly :=
 
 -- | We can then prove their equivalence:
 def sigma≡pair : nyan = nyan' := refl
-   
+
 --------------------------------------------------------------------------------
 -- | Morphisms in Poly
 --
@@ -120,12 +120,12 @@ def poly-map : Π(P Q : Poly), Type :=
 --
 -- Lets implement 'idₚ : P ⇒ P' as our first Poly-Lambda. As a wiring
 -- diagram, idₚ looks like:
--- 
---         ┌─────────┐ 
+--
+--         ┌─────────┐
 --        -│ -┌───┐+ │+
 -- idₚ : ──┼──┤  p├──┼──
---         │  └───┘  │ 
---         └─────────┘ 
+--         │  └───┘  │
+--         └─────────┘
 --
 -- Where + denotes the base and - denotes the fiber-sink. Being the
 -- identity morphism, 'idₚ' maps from 'base P' to 'base P' and 'fib P'
@@ -149,17 +149,17 @@ def idₚ : Π (P : Poly), P ⇒ P :=
 -- For a first example we can implement an n-chain from Diagrammatics
 -- in Categorification and Compositionality (Vagner, 2019):
 --
---                ┌─────────────────┐       
---	         -│ -┌───┐+ -┌───┐+ │+ 
+--                ┌─────────────────┐
+--	         -│ -┌───┐+ -┌───┐+ │+
 -- two-chainₚ : ──┼──┤ P ├───┤ Q ├──┼──
---               A│ A└───┘B B└───┘C │C 
---                └─────────────────┘     
+--               A│ A└───┘B B└───┘C │C
+--                └─────────────────┘
 
 def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
   λ A B C →
    λ pq⁺ pq⁻ ⇝
-     let- (p⁻ , q⁻) := pq⁻; 
-     q⁻ ← fst pq⁺; 
+     let- (p⁻ , q⁻) := pq⁻;
+     q⁻ ← fst pq⁺;
      return (snd pq⁺) ⇜ p⁻
 
 -- Here we use _←_ to connect the 'fst' projection of the base of P to
@@ -168,12 +168,12 @@ def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A)
 -- We can also demonstrate a simple feedback loop on the inner Poly by
 -- implementing a counter:
 --
---              ┌───────────┐       
---	       -│  -┌───┐+  │+ 
+--              ┌───────────┐
+--	       -│  -┌───┐+  │+
 -- counterₚ : ──┤  ┌┤ ℕ ├┬──┼──
---            ()│  │└───┘│  │ℕ 
+--            ()│  │└───┘│  │ℕ
 --              │  └──*──┘  │
---              └───────────┘     
+--              └───────────┘
 --              Note: At * we apply 'succ'
 --
 -- Here the outer Poly receives a unit value, which we discard, and
@@ -189,7 +189,7 @@ def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A)
 --    The linearity obligation for the fiber-sink of the outer Poly is
 --    reversed which allows us to ignore it using drop.
 --
--- 2. Applying a function to the base of the inner Poly. 
+-- 2. Applying a function to the base of the inner Poly.
 --
 --    Whenever we are in a positive position (the base) we have a
 --    value and can apply a function to it. In this case we apply
@@ -218,7 +218,7 @@ def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 --
 -- Let bindings allow you to apply Poly morphisms inside a
 -- Poly-Lambda and bind their result components.
--- 
+--
 -- Let comes in positive and negative forms which allow you to apply
 -- the base and fiber-sink operations of Poly morphisms respectively.
 --
@@ -236,7 +236,7 @@ def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 --    -- with sinks which expect values rather then produce them. Thus
 --    -- we need to think about 'p⁻' as an obligation to produce a
 --    -- 'fib P p⁺'.
---    -- 
+--    --
 --    -- In a negative fragment _∘_ is special syntax for
 --    -- precomposition with sinks. p⁻ is an obligation to provide a
 --    -- 'fib P p⁺' and it is precomposed with 'g_fib' which is a
@@ -257,23 +257,23 @@ def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 --         -│ -┌───┐+ │+
 --   g :  ──┼──┤  p├──┼───
 --          │  └───┘ q│
---          └─────────┘ 
+--          └─────────┘
 --
 --          ┌─────────┐
 --         -│ -┌───┐+ │+
 --   f :  ──┼──┤  q├──┼───
 --          │  └───┘ r│
---          └─────────┘ 
+--          └─────────┘
 --
 -- We define composeₚ as:
 --
---                ┌───────────────┐ 
---                │  ┌─────────┐  │ 
+--                ┌───────────────┐
+--                │  ┌─────────┐  │
 --               -│ -│ -┌───┐+ │+ │+
 --   composeₚ : ──┼──┼──┤  p├──┼──┼──
---                │  │  └───┘ q│  │ 
---                │  └─────────┘ r│ 
---                └───────────────┘ 
+--                │  │  └───┘ q│  │
+--                │  └─────────┘ r│
+--                └───────────────┘
 --
 -- You can think of composeₚ as building a Matryoshka doll of
 -- polynomials.
@@ -302,7 +302,7 @@ def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
 -- These two fragments are thus equivalent:
 --
 --    let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
---    
+--
 --    let q⁺ := fst (g p⁺);
 --    let g⁻ := snd (g p⁺);
 --    let- q⁻ := p⁻ ∘ g⁻;
@@ -316,9 +316,7 @@ def composeₚ' : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
     return r⁺ ⇜ r⁻
 
 -- We can prove the equivalence of these two definitions:
--- NOTE: This proof is not currently computing due to a bug but will
--- be fixed soon.
--- def compose-equiv : composeₚ = composeₚ' := refl
+def compose-equiv : composeₚ = composeₚ' := refl
 
 -- | Working with tensors
 --
@@ -334,14 +332,14 @@ def composeₚ' : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
 --
 -- This comes in handy when defining 'swapₚ':
 --
---              ┌──────────────┐      
+--              ┌──────────────┐
 --             -│   -┌───┐+    │+
---            ──┼────┤  p├──┐┌─┼── 
+--            ──┼────┤  p├──┐┌─┼──
 --   swapₚ :    │    └───┘  ││ │
 --             -│   -┌───┐+ └│┐│+
---            ──┼────┤  q├───┘└┼── 
+--            ──┼────┤  q├───┘└┼──
 --              │    └───┘     │
---              └──────────────┘     
+--              └──────────────┘
 
 def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
   λ P Q →
@@ -361,18 +359,18 @@ def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
 -- Negative-lambda allows you to bind the fiber-sink of a Poly.  This
 -- is useful to build the input side of a morphism.
 --
---         ┌────────────┐       
---        -│  -┌───┐+   │+ 
+--         ┌────────────┐
+--        -│  -┌───┐+   │+
 --   f : ──┼──*┤ℕ ℕ├──┬─┼──
---        ℕ│  │└───┘  │ │ℕ 
+--        ℕ│  │└───┘  │ │ℕ
 --         │  └───────┘ │
---         └────────────┘     
---      Note at * we apply 'add : ℕ → ℕ → ℕ' 
+--         └────────────┘
+--      Note at * we apply 'add : ℕ → ℕ → ℕ'
 --
 
 def f : (ℕ × ℕ) ⇒ (ℕ × ℕ) :=
   λ n⁺ n⁻ ⇝
-    return n⁺ ⇜ λ⁻ (m : ℕ) → n⁻ ← add m n⁺; done 
+    return n⁺ ⇜ λ⁻ (m : ℕ) → n⁻ ← add m n⁺; done
 
 --------------------------------------------------------------------------------
 -- | Moore Machines
@@ -413,9 +411,8 @@ def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
 def counterₘ : Moore ℕ #{ .unit } ℕ :=
   moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
 
--- NOTE: This proof is not currently computing due to a bug but will
--- be fixed soon.
--- def counterₚ≡counterₘ : counterₚ = counterₘ := refl
+-- We can prove the equivalence of these two definitions:
+def counterₚ≡counterₘ : counterₚ = counterₘ := refl
 
 -- | Deterministic Finite State Automata
 --
@@ -442,7 +439,7 @@ def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
   in
   λ s⁺ s⁻ ⇝ return (check s⁺) ⇜ (s⁻ ∘ (step s⁺))
 
--- | Memoryless Dynamical System 
+-- | Memoryless Dynamical System
 --
 -- We can also define the MDS from the Poly Book, defined as:
 --
@@ -456,20 +453,20 @@ def mds : Π (A B : Type), (A → B) → Moore B A B :=
 
 -- With 'mds' we can build the delay line and summation examples:
 
---            ┌───────────┐       
---           -│  -┌───┐+  │+ 
+--            ┌───────────┐
+--           -│  -┌───┐+  │+
 -- delayₘ : ──┼───┤ℕ ℕ├───┼──
---           ℕ│   └───┘   │ℕ 
---            └───────────┘     
+--           ℕ│   └───┘   │ℕ
+--            └───────────┘
 
 def delayₘ : Moore ℕ ℕ ℕ :=
   mds ℕ ℕ (λ x → x)
 
---          ┌───────────┐       
---         -│  -┌───┐+  │+ 
+--          ┌───────────┐
+--         -│  -┌───┐+  │+
 -- sumₘ : ──┼─*─┤ℕ ℕ├───┼──
---       ℕ×ℕ│   └───┘   │ℕ 
---          └───────────┘     
+--       ℕ×ℕ│   └───┘   │ℕ
+--          └───────────┘
 --       Note at * we apply the addition operation
 
 def sumₘ : Moore ℕ (ℕ × ℕ) ℕ :=
