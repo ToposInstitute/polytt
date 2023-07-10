@@ -81,7 +81,7 @@ let type =
 
 (* Whitespace/comments *)
 rule line_comment kont = parse
-  | line_ending
+  | line_ending | eof
     { new_line lexbuf; kont lexbuf }
   | _
     { line_comment kont lexbuf }
