@@ -29,9 +29,9 @@ let rec quantifier quant =
 
 %token <int> NUMERAL
 %token <bool> FLAG
-%token <string> ATOM
+%token <string list> PATH
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW LEFT_ARROW UNDERSCORE EQUALS QUESTION BANG
+%token COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW LEFT_ARROW UNDERSCORE EQUALS QUESTION BANG
 (* Symbols *)
 %token FORALL EXISTS LAMBDA LET IN LET_MINUS LAMBDA_MINUS RETURN DONE
 %token TIMES FST SND
@@ -67,7 +67,7 @@ located(X):
     { locate $loc e }
 
 path:
-  | path = separated_nonempty_list(COLON_COLON, ATOM)
+  | path = PATH
     { path }
 
 name:
