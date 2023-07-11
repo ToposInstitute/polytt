@@ -4,10 +4,50 @@ def add : ℕ → ℕ → ℕ :=
 def mul : ℕ → ℕ → ℕ :=
   λ m n → elim (λ _ → ℕ) 0 (λ _ x → add n x) m
 
+def pred : ℕ → ℕ :=
+  λ n → elim (λ _ → ℕ) 0 (λ m _ → m) n
+
 def ℕ-elim :
   Π (mot : ℕ → Type),
   { .zero : mot zero
   , .succ : Π (n : ℕ), mot n → mot (succ n)
   } →
   Π (n : ℕ), mot n :=
-  λ mot r n → elim mot (r .zero) (r .succ) n
+  λ mot cases n → elim mot (cases .zero) (cases .succ) n
+
+def ℕ-rec :
+  Π (mot : Type),
+  { .zero : mot
+  , .succ : mot → mot
+  } → ℕ → mot :=
+  λ mot cases → ℕ-elim (λ _ → mot)
+    { .zero = cases .zero
+    , .succ = λ _ → cases .succ
+    }
+
+def ℕ-switch :
+  Π (mot : Type),
+  { .zero : mot
+  , .succ : mot
+  } → ℕ → mot :=
+  λ mot cases →
+    ℕ-rec mot
+      { .zero = cases .zero
+      , .succ = λ _ → cases .succ
+      }
+
+def ℕ-name : ℕ → #{ .zero, .succ } :=
+  -- FIXME(Verity)
+  -- ℕ-switch #{ .zero, .succ } (λ name → name)
+  ℕ-switch #{ .zero, .succ } { .zero = .zero, .succ = .succ }
+
+def ℕ-cases :
+  Π (mot : ℕ → Type),
+  { .zero : mot 0
+  , .succ : Π (n : ℕ), mot (succ n)
+  } → Π (n : ℕ), mot n :=
+  λ mot cases →
+    ℕ-elim mot
+      { .zero = cases .zero
+      , .succ = λ n _ → cases .succ n
+      }

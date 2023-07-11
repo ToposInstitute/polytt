@@ -27,6 +27,15 @@ def List-rec : Π (A : Type) (mot : Type),
         }
       )
 
+def tail : Π (A : Type), List A → List A :=
+  λ A →
+    ×-rec ℕ (λ n → fin n → A) (λ _ → List A)
+      (ℕ-cases (λ n → (fin n → A) → List A)
+        { .zero = λ _ → nil A
+        , .succ = λ n as → (n , λ i → as (s n i))
+        }
+      )
+
 --------------------------------------------------------------------------------
 -- Examples
 
