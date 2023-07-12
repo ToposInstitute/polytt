@@ -187,12 +187,27 @@ struct
         ppenv_neg = env.ppenv_neg #< name
       }
 
+  let bind_transparent cell env =
+    let local_names =
+      match Cell.name cell with
+      | `User path ->
+        Yuujinchou.Trie.update_singleton path (fun _ -> Some (cell, ())) env.local_names
+      | _ -> env.local_names
+    in {
+      env with local_names
+    }
+
   let bind_vars cells env =
     List.fold_left (fun env cell -> bind_var cell env) env cells
 
   let concrete_ident ?(name = `Anon) tp tm k =
     let cell = Cell.Pos { name; tp; value = tm } in
     Reader.scope (bind_var cell) @@ fun () ->
+    k ()
+
+  let transparent_ident ?(name = `Anon) tp tm k =
+    let cell = Cell.Pos { name; tp; value = tm } in
+    Reader.scope (bind_transparent cell) @@ fun () ->
     k ()
 
   let abstract_ident ?(name = `Anon) tp k =
@@ -204,13 +219,18 @@ struct
   let rec bind_tree ?(name = Var `Anon) tp tm k =
     begin match name with
     | Var ident ->
-        concrete_ident ~name:ident tp tm
+        transparent_ident ~name:ident tp tm
           (fun () -> k (Var (tp, tm)))
     | Tuple (l, r) ->
       begin match tp with
       | D.Sigma (_, a, clo) ->
+        Debug.print "a: %a@." D.dump a;
+        Debug.print "tm: %a@." D.dump tm;
+        Debug.print "tm.1: %a@." D.dump (Sem.do_fst tm);
+        Debug.print "tm.2: %a@." D.dump (Sem.do_snd tm);
         bind_tree ~name:l a (Sem.do_fst tm) @@ fun lvars ->
           bind_tree ~name:r (Sem.inst_clo clo a) (Sem.do_snd tm) @@ fun rvars ->
+            Debug.print "bound@.";
             k (Tuple (lvars, rvars))
       | _ -> failwith "can only unpack a sigma" (* FIXME *)
       end
@@ -250,8 +270,8 @@ struct
   let rec bind_neg_tree ?(name = Var `Anon) tp k =
     begin match name with
     | Var ident ->
-      abstract_neg_ident ~name:ident tp
-        (fun lvl -> k (Var (lvl, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp }))))
+      abstract_neg_ident ~name:ident tp @@
+        fun lvl -> k (Var (lvl, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })))
     | Tuple (l, r) ->
       begin match tp with
       | D.Sigma (_, a, clo) ->
@@ -272,14 +292,26 @@ struct
   let abstract_neg ?(name = Var `Anon) tp k =
     (* No need to bind a single anonymous variable *)
     begin match name with
-    | Var ident -> abstract_neg_ident ~name:ident tp @@ fun lvl -> k (ident, (tp, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })), Var lvl)
-    | _ -> abstract_neg_ident ~name:`Anon tp @@ fun lvl ->
-      bind_neg_tree ~name tp @@ fun lvls ->
-        match consume_neg lvl () with
-        | None -> failwith "internal error (abstract_neg -> consume_neg)"
-        | Some setter ->
-          let (r, value) = split lvls in
-          setter value; k (`Anon, (tp, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })), r)
+    | Var ident ->
+      abstract_neg_ident ~name:ident tp @@ fun lvl ->
+        k (ident, (tp, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })), Var lvl)
+    | _ ->
+      (* allocate 1 *)
+      (* important for Eff.Locals.head, used in Hom.intro *)
+      abstract_neg_ident ~name:`Anon tp @@ fun lvl ->
+        (* allocate n *)
+        bind_neg_tree ~name tp @@ fun lvls ->
+          (* e.g. binding (p , q) *)
+          match consume_neg lvl () with
+          | None -> failwith "internal error (abstract_neg -> consume_neg)"
+          | Some setter ->
+            let (r, value) = split lvls in
+            (* write 1 *)
+            (* value = Sigma.intro (borrow p) (borrow q) *)
+            setter value;
+            (* allocated n+1 cells *)
+            (* but net only n obligations *)
+            k (`Anon, (tp, value), r)
     end
 
   let revert i_tp cb =

@@ -51,6 +51,7 @@ def nyan : Poly :=
 def tensor : Poly → Poly → Poly :=
   λ P Q → Σ ((p , q) : base P × base Q), fib P p × fib Q q
 
+#print tensor
 #normalize base (tensor nyan nyan)
 #normalize fib (tensor nyan nyan) (1 , 2)
 
@@ -135,27 +136,29 @@ def internal-hom : Poly → Poly → Poly :=
 -- fib Q q⁺ *-|-----------------------------( fib Q (fst (f⁺ (borrow pb⁻))) )-[ f : P=>Q ]            -|- q⁺ : base Q
 --            |----------------------------------------------------------------------------------------|
 
+-- Π Σ Π Σ
+
+-- λ a⁺ a⁻ ⇝
+--   p⁻ ← p⁺;
+--   return (base f) a⁺ ⇜ λ r →
+--     p⁻ ← p⁺;
+--     a⁻ ← (fib b a⁺) r;
+--     done
+
 def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
   λ P Q → λ pf⁺ pf⁻ ⇝
     let p⁺ := fst pf⁺;
     let f⁺ := snd pf⁺;
-    -- pf⁻ : ((fib P p⁺) × (fib (internal-hom P Q) f⁺))⁻
     let⁻ (p⁻ , f⁻) := pf⁻;
-    -- borrow pf⁻ = (borrow p⁻ , borrow f⁻)
     let qf⁺ := f⁺ p⁺;
     let q⁺ := fst qf⁺;
     let⁻ q₁⁻ := p⁻ ∘ (snd qf⁺);
-    -- f⁻ : ((p : base P) × fib Q (fst (f⁺ p)))⁻
     let⁻ (pb⁻ , q⁻) := f⁻;
-    -- pb⁻ : (base P)⁻
-    -- q⁻ : (fib Q (fst (f⁺ (borrow pb⁻))))⁻
     pb⁻ ← p⁺;
-    -- q⁻ : (fib Q (fst (f⁺ p⁺)))⁻
-    -- q⁻ : (fib Q q⁺)⁻
     return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
       (q⁻ , q₁⁻) ← (v , v);
-      p⁻ ← (snd qf⁺) v;
       done
+
 
 -- Ideal syntax:
 --def eval (P Q : Poly) : tensor P (internal-hom P Q) ⇒ Q :=
@@ -185,7 +188,7 @@ def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
 
 #normalize eval
 
-#normalize eval nyan nyan (3 , nyan-hom 12)
+#normalize eval (3 , nyan-hom 12)
 
 def compose : Poly → Poly → Poly :=
   λ P Q → Σ (pf : Σ (p : base P), fib P p → base Q), Σ (i : fib P (fst pf)), fib Q ((snd pf) i)

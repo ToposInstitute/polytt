@@ -22,7 +22,7 @@ let intro ?(pos_name = Var `Anon) ?(neg_name = Var `Anon) (bdy_tac : Var.tac -> 
       NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
       let tail () =
         begin
-        let thingy = Eff.Locals.head () in
+        let thingy = NegVar.borrow neg_var in
         let q = quote ~tp:p_fib thingy in
         Debug.print "tail %a@.             %a@." D.dump thingy S.dump q;
         q
@@ -133,9 +133,14 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   let pos = Chk.run pos_tac (do_base r) in
   let fib = (do_fib r (eval pos)) in
   let name = Var (`Machine (Eff.Locals.size ())) in
+  (* generate a fake binding for the reverse direction *)
   Var.abstract ~name fib @@ fun v ->
     let neg = NegChk.run neg_tac fib in
+    (* write it to the sink that is provided to `return` *)
     neg (Var.value v);
+    (* get the *new* value of the initial sink that was provided to the
+       hom lambda thingy *)
+    (* see tail() in intro *)
     let fib_act = i () in
     match Eff.Locals.all_consumed () with
     | true ->
