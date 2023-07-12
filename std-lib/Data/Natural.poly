@@ -7,6 +7,12 @@ def mul : ℕ → ℕ → ℕ :=
 def pred : ℕ → ℕ :=
   λ n → elim (λ _ → ℕ) 0 (λ m _ → m) n
 
+
+def foo : ℕ :=
+  add 1 (add 2 Type)
+
+#quit
+
 def ℕ-elim :
   Π (mot : ℕ → Type),
   { .zero : mot zero
