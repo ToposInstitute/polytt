@@ -11,6 +11,7 @@ module rec Chk : sig
   val rule : (D.tp -> S.t) -> tac
   val run : tac -> D.tp -> S.t
   val syn : Syn.tac -> Chk.tac
+  val locate : Asai.Span.t -> tac -> tac
 end =
 struct
   type tac = D.tp -> S.t
@@ -21,6 +22,9 @@ struct
     let (actual, tm) = Syn.run tac in
     equate ~tp:D.Univ goal actual;
     tm
+  let locate loc k tp =
+    Error.locate loc @@ fun () ->
+    k tp
 end
 
 and Syn : sig
@@ -28,6 +32,7 @@ and Syn : sig
   val rule : (unit -> D.tp * S.t) -> tac
   val run : tac -> D.tp * S.t
   val ann : Chk.tac -> Chk.tac -> tac
+  val locate : Asai.Span.t -> tac -> tac
 end =
 struct
   type tac = unit -> D.tp * S.t
@@ -38,17 +43,24 @@ struct
     let tp = Chk.run tp_tac D.Univ in
     let tp = eval tp in
     tp, Chk.run chk tp
+  let locate loc k () =
+    Error.locate loc @@ fun () ->
+    k ()
 end
 
 and Hom : sig
   type tac
   val rule : (D.tp * (unit -> S.t) -> S.t) -> tac
   val run : tac -> D.tp * (unit -> S.t) -> S.t
+  val locate : Asai.Span.t -> tac -> tac
 end =
 struct
   type tac = D.tp * (unit -> S.t) -> S.t
   let rule k = k
   let run k tp = k tp
+  let locate loc k (tp, set) =
+    Error.locate loc @@ fun () ->
+    k (tp, set)
 end
 
 (* TODO: need a better model for this, see Prog.neg_lam *)
@@ -56,11 +68,15 @@ and Prog : sig
   type tac
   val rule : (unit -> unit) -> tac
   val run : tac -> unit -> unit
+  val locate : Asai.Span.t -> tac -> tac
 end =
 struct
   type tac = unit -> unit
   let rule k = k
   let run k tp = k tp
+  let locate loc k () =
+    Error.locate loc @@ fun () ->
+    k ()
 end
 
 and NegChk : sig
@@ -68,6 +84,7 @@ and NegChk : sig
   val rule : (D.t -> (D.t -> unit)) -> tac
   val run : tac -> D.t -> (D.t -> unit)
   val syn : NegSyn.tac -> tac
+  val locate : Asai.Span.t -> tac -> tac
 end =
 struct
   type tac = D.t -> (D.t -> unit)
@@ -78,17 +95,24 @@ struct
     let (actual, tm) = NegSyn.run tac in
     equate ~tp:D.Univ expected actual;
     tm
+  let locate loc k tp =
+    Error.locate loc @@ fun () ->
+    k tp
 end
 
 and NegSyn : sig
   type tac
   val rule : (unit -> D.t * (D.t -> unit)) -> tac
   val run : tac -> D.t * (D.t -> unit)
+  val locate : Asai.Span.t -> tac -> tac
 end =
 struct
   type tac = unit -> D.t * (D.t -> unit)
   let rule k = k
   let run k = k ()
+  let locate loc k () =
+    Error.locate loc @@ fun () ->
+    k ()
 end
 
 and Var : sig
