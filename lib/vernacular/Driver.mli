@@ -1,3 +1,3 @@
-module CS := Syntax
+module Cmd := Syntax
 
-val execute : bool -> CS.cmd list -> unit
+val execute : load:(Bantorra.Manager.path -> Cmd.cmd list) -> ?debug:bool -> Cmd.cmd list -> unit

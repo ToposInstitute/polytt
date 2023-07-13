@@ -109,7 +109,7 @@ def Gate : Type → Type → Type :=
 def test-pair : nyan ⇒ tensor nyan nyan :=
   λ n⁺ n⁻ ⇝
     let (b⁺ ⇜ b⁻) := (nyan-hom 12) (n⁺ ⇜ n⁻);
-    return (n⁺ , b⁺) ⇜ ( ! ← _ , b⁻ ∘ succ )
+    return (n⁺ , b⁺) ⇜ (! , b⁻ ∘ succ)
 
 #normalize (test-pair 1)
 

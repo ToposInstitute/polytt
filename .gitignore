@@ -138,3 +138,5 @@ result/
 *.synctex.gz
 *.out
 
+/.direnv/
+/result

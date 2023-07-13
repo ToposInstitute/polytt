@@ -29,9 +29,9 @@ let rec quantifier quant =
 
 %token <int> NUMERAL
 %token <bool> FLAG
-%token <string> ATOM
+%token <string list> PATH
 %token <string> LABEL
-%token COLON COLON_COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW LEFT_ARROW UNDERSCORE EQUALS QUESTION BANG
+%token COLON COLON_EQUALS COMMA SEMICOLON RIGHT_ARROW LEFT_ARROW UNDERSCORE EQUALS QUESTION BANG
 (* Symbols *)
 %token FORALL EXISTS LAMBDA LET IN LET_MINUS LAMBDA_MINUS RETURN DONE
 %token TIMES FST SND
@@ -45,7 +45,7 @@ let rec quantifier quant =
 %token TYPE
 %token REFL
 (* Commands *)
-%token DEF FAIL NORMALIZE PRINT DEBUG QUIT
+%token DEF FAIL IMPORT NORMALIZE PRINT DEBUG QUIT
 %token EOF
 
 %right COLON COMMA
@@ -67,7 +67,7 @@ located(X):
     { locate $loc e }
 
 path:
-  | path = separated_nonempty_list(COLON_COLON, ATOM)
+  | path = PATH
     { path }
 
 name:
@@ -101,6 +101,8 @@ plain_command:
     { CS.Fail {name; tp = Some tp; tm} }
   | FAIL; name = name; COLON_EQUALS; tm = term
     { CS.Fail {name; tp = None; tm} }
+  | IMPORT; name = path;
+    { CS.Import {shadowing = false; unitpath = name} }
   | NORMALIZE; tm = term
     { CS.Normalize tm }
   | PRINT; tm = term

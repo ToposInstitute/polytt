@@ -29,6 +29,7 @@ let commands =
 let keywords =
   make_table 0 [
     ("def", DEF);
+    ("import", IMPORT);
     ("Type", TYPE);
     ("Poly", POLY);
     ("base", BASE);
@@ -71,6 +72,7 @@ let atom_initial =
 let atom_subsequent =
   [^                         '(' ')' '[' ']' '{' '}' '<' '>' '.' '#' '\\' '@' '*' '^' ':' ',' ';' '|' '=' '"'     ' ' '\t' '\n' '\r']
 let atom = atom_initial atom_subsequent*
+let path = atom ("::" atom)*
 
 let number =
   ['0'-'9']+
@@ -80,7 +82,7 @@ let type =
 
 (* Whitespace/comments *)
 rule line_comment kont = parse
-  | line_ending
+  | line_ending | eof
     { new_line lexbuf; kont lexbuf }
   | _
     { line_comment kont lexbuf }
@@ -131,8 +133,6 @@ and real_token = parse
      { COLON }
   | ';'
      { SEMICOLON }
-  | "::"
-    { COLON_COLON }
   | '_'
     { UNDERSCORE }
   | '!'
@@ -175,12 +175,12 @@ and real_token = parse
     }
   | "." (atom as label)
     { LABEL label }
-  | atom
+  | path
     {
       let input = lexeme lexbuf in
       match Hashtbl.find keywords input with
       | tok -> tok
-      | exception Not_found -> Grammar.ATOM input
+      | exception Not_found -> Grammar.PATH (String.split_on_char ':' input |> List.filter (fun v -> v <> ""))
     }
   | eof
     { EOF }

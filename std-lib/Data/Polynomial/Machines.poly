@@ -1,0 +1,106 @@
+import Data::Bool
+import Data::Either
+import Data::Natural
+import Data::Unit
+import Data::Polynomial
+
+--------------------------------------------------------------------------------
+
+def Moore : Type → Type → Type → Type :=
+  λ S I O → (S × S) ⇒ (O × I)
+
+def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
+  λ S I O output transition →
+    λ s⁺ s⁻ ⇝
+      return (output s⁺) ⇜ s⁻ ∘ (transition s⁺)
+
+def disassemble-moore : Π (S I O : Type), Moore S I O → (S → O) × (S → I → S) :=
+  λ S I O moore → (λ s → fst (moore s) , λ s → snd (moore s) )
+
+def Mealy : Type → Type → Type → Type :=
+  λ S I O → ((S × I) × S) ⇒ (O × Unit)
+
+--------------------------------------------------------------------------------
+
+-- | Determinisitic Finite State Automata. The output 'Bool'
+-- determines the accept states.
+--
+-- Syˢ ⇒ 2yᵃ
+--
+--  S × S ⇒ Bool × A
+def DFSA : Type → Type → Type :=
+  λ S A → Moore S A Bool
+
+-- | A "memoryless dynamical system"
+--
+-- Byᴬ ⇒ Byᴬ
+--
+-- B × B ⇒ B × A
+def mds : Π (A B : Type), (A → B) → Moore B A B :=
+  λ A B f →
+    λ b⁺ b⁻ ⇝
+      return b⁺ ⇜ b⁻ ∘ f 
+
+-- | An MDS given a partial function.
+--
+-- (B ⊎ Fin 1) × (B ⊎ Fin 1) ⇒ (B × A + (Fin 1) × (Fin 1))
+def mds-partial : Π (A B : Type),
+  (A → Either Unit B) →
+  Moore (Either Unit B) A (Either Unit B) :=
+  λ A B f →
+    λ b⁺ b⁻ ⇝
+      return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← (bind-either Unit B B (λ _ → f a) b⁺); done 
+
+-- | Delay receives a ℕ as input, sets the state to it, and outputs
+--   the prior state ℕ.
+-- 
+--     ┌───────────┐       
+--    -│  -┌───┐+  │+ 
+--   ──┼───┤ℕ ℕ├───┼──
+--    ℕ│   └───┘   │ℕ 
+--     └───────────┘     
+--
+-- ℕ × ℕ ⇒ ℕ × ℕ
+def delay : Moore ℕ ℕ ℕ :=
+  mds ℕ ℕ (λ x → x)
+
+-- | Sum receives a pair of ℕ as input and outputs their sum.
+--
+--     ┌───────────┐       
+--    -│  -┌───┐+  │+ 
+--   ──┼─*─┤ℕ ℕ├───┼──
+--  ℕ×ℕ│   └───┘   │ℕ 
+--     └───────────┘     
+--  Note at * we apply the addition operation
+--
+-- ℕ × ℕ ⇒ ℕ × (ℕ × ℕ)
+def sum : Moore ℕ (ℕ × ℕ) ℕ :=
+  mds (ℕ × ℕ) ℕ (λ xy → add (fst xy) (snd xy))
+
+-- | Counter receives a unit input and outputs the sequence of natural
+-- numbers 0, 1, 2, 3, ... .
+--
+--     ┌────────────┐       
+--    -│  -┌───┐+   │+ 
+--   ──┤  ┌┤ ℕ ├┬───┼──
+--   ()│  │└───┘│   │ℕ 
+--     │  └──*──┘   │
+--     └────────────┘     
+--     Note: At * we apply 'succ'
+--
+--  ℕ × ℕ ⇒ ℕ × #{ .unit }
+def counter : Moore ℕ #{ .unit } ℕ :=
+  moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
+
+-- | Repeater receives a unit input and outputs its state.
+--
+--     ┌───────────┐       
+--    -│  -┌───┐+  │+ 
+--   ──┤   │ ℕ ├───┼──
+--   ()│   └───┘   │ℕ 
+--     └───────────┘     
+--     Note: At * we apply 'succ'
+--
+--  ℕ × ℕ ⇒ ℕ × #{ .unit }
+def repeater : Moore ℕ #{ .unit } ℕ :=
+  moore ℕ #{ .unit } ℕ (λ x → x) (λ n _ → n)

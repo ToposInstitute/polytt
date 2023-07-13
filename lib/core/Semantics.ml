@@ -33,6 +33,8 @@ struct
     match tm with
     | S.Var ix ->
       var ix
+    | S.Global x ->
+      CodeUnit.get_def_value x
     | S.Borrow lvl ->
       borrow lvl
     | S.Pi (nm, a, b) ->
@@ -233,7 +235,7 @@ let do_nat_elim ~mot ~zero ~succ ~scrut =
 let do_hom_elim =
   Internal.do_hom_elim
 
-  let do_frm hd = function
+let do_frm hd = function
   | D.Ap { arg; _ } -> do_ap hd arg
   | D.Fst -> do_fst hd
   | D.Snd -> do_snd hd

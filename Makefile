@@ -7,6 +7,12 @@ NIX_FMT = nixpkgs-fmt
 # Run Shellcheck with access to any file that's sourced, relative to the script's own directory
 SHELLCHECK = shellcheck --external-sources --source-path=SCRIPTDIR
 
+.PHONY: format-ml
+## format-ml: auto-format Ocaml source code using `ocp-indent`
+format-ml:
+	@echo "running ocp-indent"
+	@fd --glob '*.ml' --exec ocp-indent --inplace {}
+
 .PHONY: format-nix
 ## format-nix: auto-format Nix source code using `nixpkgs-fmt`
 format-nix:
@@ -16,6 +22,10 @@ format-nix:
 	else \
 		echo "$(NIX_FMT) is not installed; skipping"; \
 	fi
+
+.PHONY: format
+## format: apply all auto-formatting commands
+format: format-ml format-nix
 
 .PHONY: check-format-nix
 ## check-format-nix: check Nix source code using `nixpkgs-fmt`
@@ -56,3 +66,8 @@ clean:
 test:
 	dune clean
 	dune test
+
+.PHONY: snapshot
+## snapshot: update golden testing snapshot
+snapshot:
+	dune promote

@@ -18,10 +18,8 @@ module Cell : sig
 end
 
 module Globals : sig
-  type resolved =
-    | Def of { tm : D.t; tp : D.tp }
-  val resolve : Ident.path -> resolved option
-  val run : resolve:(Yuujinchou.Trie.path -> resolved option) -> (unit -> 'a) -> 'a
+  val resolve : Ident.path -> Global.t option
+  val run : resolve:(Yuujinchou.Trie.path -> Global.t option) -> (unit -> 'a) -> 'a
 end
 
 module Locals : sig

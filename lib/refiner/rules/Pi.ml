@@ -10,12 +10,21 @@ let formation ?(names = [Var `Anon]) base_tac fam_tac =
   in
   (D.Univ, List.fold_right (fun name tp -> S.Pi (name, base, tp)) (Var.choose_many names) fam)
 
-let intro ?(name = Var `Anon) tac =
+let rec intro ?(name = Var `Anon) tac =
   Chk.rule @@ function
   | D.Pi (_, a, clo) ->
     Var.abstract ~name a @@ fun v ->
     let fib = inst_clo clo (Var.value v) in
     S.Lam (Var.choose name, Chk.run (tac v) fib)
+  | D.Hom (p, q) ->
+    let t = graft_value @@
+      Graft.value p @@ fun p ->
+      Graft.value q @@ fun q ->
+      Graft.build @@
+      TB.pi (TB.base p) @@ fun p_base ->
+      TB.sigma (TB.base q) @@ fun q_base ->
+      TB.pi (TB.fib q q_base) @@ fun _ -> TB.fib p p_base
+    in S.HomLam (Chk.run (intro ~name tac) t)
   | _ ->
     Error.error `TypeError "Expected element of Π."
 

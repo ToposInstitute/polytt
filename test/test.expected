@@ -1,0 +1,28 @@
+--------------------[basics.poly]--------------------
+
+Normal Form: 5
+Normal Form: ℕ × ℕ
+Normal Form: ℕ × ℕ
+(λ P → (_ : base P) × fib P _) : Poly → Poly
+(λ P → λ a⁺ → (a⁺ , λ <2> → <2>)) : (P : Poly) → (_ : base P) × fib P _ ⇒ (_ : base P) × fib P _
+Normal Form: (42 , λ <3> → succ (succ <3>))
+Normal Form: (12 , λ <2> → succ (succ <2>))
+Normal Form: (12 , λ <8> → succ (succ (succ (succ <8>))))
+Normal Form: λ x _ → x
+Normal Form: λ n⁺ → (n⁺ , λ <1> → succ n⁺)
+Normal Form: ((1 , 12) , λ <2> → succ (succ (succ (snd <2>))))
+Normal Form: ((2 , 1) , λ <3> → (snd <3> , fst <3>))
+Normal Form: λ P Q → λ pf⁺ → (fst (snd pf⁺ (fst pf⁺)) , λ <7> → (snd (snd pf⁺ (fst pf⁺)) <7> , (fst pf⁺ , <7>)))
+Normal Form: (12 , λ <7> → (succ (succ <7>) , (3 , <7>)))
+Normal Form: λ P Q → λ pq⁺ → ((fst pq⁺ , λ _ → snd pq⁺) , λ <3> → (fst <3> , snd <3>))
+Normal Form: λ S T A B → #{ .get, .set } → { .get = S → A, .set = S → B → T } _
+--------------------[test-let.poly]--------------------
+
+Normal Form: 9
+--------------------[a.poly]--------------------
+
+--------------------[b.poly]--------------------
+
+--------------------[c.poly]--------------------
+
+baz : ℕ

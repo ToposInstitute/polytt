@@ -1,0 +1,484 @@
+import Data::Polynomial
+import Data::Natural
+
+--------------------------------------------------------------------------------
+-- *** WORK IN PROGRESS ***
+--
+-- This is an introductory tutorial assuming an understanding of MLTT
+-- and some degree of exposure to Poly.
+
+--------------------------------------------------------------------------------
+-- | MLTT Syntax
+
+-- PolyTT is a full Martin-Lof Type Theory with special primitives for
+-- Polynomials.
+
+-- | Naturals:
+def one : ℕ := 1
+def two : ℕ := succ one
+
+-- | Equality
+def one≡one : one = 1 := refl
+
+-- | Pi Types:
+def id : Π (A : Type), A → A := λ A a -> a
+
+-- | Sigma Types:
+def Either : Type → Type → Type :=
+  λ A B → Σ (tag : Bool), bool Type tag A B
+
+-- | Finite Sets:
+def RGB : Type := #{ .Red, .Green, .Blue }
+
+-- | Finite Set case elimination:
+def rgb-func : RGB → ℕ :=
+  { .Red = 0
+  , .Green = 1
+  , .Blue = 2
+  }
+
+-- | Typeholes are defined with a question mark. Uncomment to test:
+--
+-- NOTE: In Poly-Lambdas typeholes are limited to positive positions.
+-- def type-hole : ℕ := ?
+
+--------------------------------------------------------------------------------
+-- | Polynomials
+
+-- | P y ≡ y²
+def P : Π (Y : Type), Poly :=
+  λ Y → Σ (_ : #{ .only }), Y × Y
+
+-- | Q y ≡ y³ + y²
+def Q : Π (Y : Type), Poly :=
+  λ Y → Σ (i : #{ .zero, .one }), {
+      .zero = Y × Y × Y
+    , .one = Y × Y
+    } i
+
+-- R y ≡ y³ + y² + y + 1
+--
+-- R y ≡ Σ [ i ∈ Fin 4 ] y^aᵢ
+--   where
+--     a : Fin 4 → Set
+--
+def R : Π (Y: Type), Poly :=
+  λ Y → Σ (i : #{ .zero, .one, .two, .three}), {
+      .zero = Y × Y × Y
+    , .one = Y × Y
+    , .two = Y
+    , .three = Unit
+  } i
+
+def Listₚ : Poly :=
+  Σ (n : ℕ), fin n
+
+-- | ℕy^ℕ
+def nyan : Poly :=
+  Σ(_ : ℕ), ℕ
+
+-- | We can also define a non-dependent Poly using product shorthand
+-- in place of Sigma:
+def nyan' : Poly :=
+  (ℕ × ℕ)
+
+-- | We can then prove their equivalence:
+def sigma≡pair : nyan = nyan' := refl
+
+--------------------------------------------------------------------------------
+-- | Morphisms in Poly
+--
+-- The type of morphisms in Poly is denoted with the _⇒_ arrow:
+
+def poly-map : Π(P Q : Poly), Type :=
+  λ P Q → P ⇒ Q
+
+-- A Poly morphisms 'P ⇒ Q' consist of:
+--
+--   1. mapᵇ : base P → base Q
+--   2. mapᶠ : Π(p : base P), fib Q (mapᵇ p) → fib P p
+--
+-- These are bundled in a Sigma type:
+--
+--   Σ(mapᵇ : base P → Base Q), (Π(p : base p), fib Q (mapᵇ p) → fib P p)
+--
+-- Notice how both projections of the Sigma receive a 'base P'. In the
+-- PolyTT implementation, we factor out this 'base P' and rewrite our
+-- Poly morphism as:
+--
+--   Π(p : base P), Σ(q : base Q), (fib Q q → fib P p)
+--
+-- This reshuffing is equivalent to the isomorphism between 'A → (B,
+-- C)' and '(A → B, A → C)'. This variation on the typical Poly
+-- morphism encoding becomes important with Poly-Lambda syntax.
+
+-- | Poly-Lambda Syntax
+--
+-- We provide a special form of lambda syntax for defining morphisms
+-- in Poly. This allows you to bind the base and fiber-sink of polynomials
+-- and connect them in a typesafe manner.
+--
+-- Lets implement 'idₚ : P ⇒ P' as our first Poly-Lambda. As a wiring
+-- diagram, idₚ looks like:
+--
+--         ┌─────────┐
+--        -│ -┌───┐+ │+
+-- idₚ : ──┼──┤  p├──┼──
+--         │  └───┘  │
+--         └─────────┘
+--
+-- Where + denotes the base and - denotes the fiber-sink. Being the
+-- identity morphism, 'idₚ' maps from 'base P' to 'base P' and 'fib P'
+-- to 'fib P'.
+
+def idₚ : Π (P : Poly), P ⇒ P :=
+  λ P →
+    -- Here we bind the base and fiber-sink of the inner Poly:
+    -- inner⁺ : base P
+    -- inner⁻ : fib P inner⁺
+    λ inner⁺ inner⁻ ⇝
+    -- And here we define the base and fiber-sink of the outer
+    -- Poly. In this case we map the base to the base and the
+    -- fiber-sink to the fiber-sink.
+    return inner⁺ ⇜ inner⁻
+
+-- We can also define a morphism without the special lambda syntax, by providing
+-- the underlying map as a lambda.
+
+def idₚ' : Π (P : Poly), P ⇒ P :=
+  λ P → λ inner⁺ → (inner⁺ , λ inner → inner)
+
+-- We can prove the equivalence of these two definitions:
+def idₚ≡idₚ' : idₚ = idₚ' := refl
+
+-- We can also use _←_ notation for internally connecting
+-- Poly(s). This can be used to connect multiple tensored Polys or
+-- even to create feedback loops around a single Poly.
+--
+-- For a first example we can implement an n-chain from Diagrammatics
+-- in Categorification and Compositionality (Vagner, 2019):
+--
+--                ┌─────────────────┐
+--	         -│ -┌───┐+ -┌───┐+ │+
+-- two-chainₚ : ──┼──┤ P ├───┤ Q ├──┼──
+--               A│ A└───┘B B└───┘C │C
+--                └─────────────────┘
+
+def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
+  λ A B C →
+   λ pq⁺ pq⁻ ⇝
+     let- (p⁻ , q⁻) := pq⁻;
+     q⁻ ← fst pq⁺;
+     return (snd pq⁺) ⇜ p⁻
+
+-- Here we use _←_ to connect the 'fst' projection of the base of P to
+-- the fiber-sink of Q.
+--
+-- We can also demonstrate a simple feedback loop on the inner Poly by
+-- implementing a counter:
+--
+--              ┌───────────┐
+--	       -│  -┌───┐+  │+
+-- counterₚ : ──┤  ┌┤ ℕ ├┬──┼──
+--            ()│  │└───┘│  │ℕ
+--              │  └──*──┘  │
+--              └───────────┘
+--              Note: At * we apply 'succ'
+--
+-- Here the outer Poly receives a unit value, which we discard, and
+-- the inner Poly emits a ℕ which is fanned out to both the base of
+-- the outer Poly and back to the fiber-sink of the inner Poly.
+--
+-- For this machine we will need to introduce two concepts:
+--
+-- 1. A special syntax element for the unique sink--which we call
+--    "drop"--which does nothing with its input. The syntax for drop
+--    is a '!' character.
+--
+--    The linearity obligation for the fiber-sink of the outer Poly is
+--    reversed which allows us to ignore it using drop.
+--
+-- 2. Applying a function to the base of the inner Poly.
+--
+--    Whenever we are in a positive position (the base) we have a
+--    value and can apply a function to it. In this case we apply
+--    'succ' to the base in the feedback loop to increment the
+--    counter.
+--
+--    NOTE: We actually did this in the last example but we want to
+--    reinforce that you can apply any pure function in a positive
+--    fragment.
+
+def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
+  -- Bind the base and fiber-sink of the inner Poly:
+  -- n⁺ : base (ℕ × ℕ)
+  -- n⁻ : fib (ℕ × ℕ) n⁺
+  λ n⁺ n⁻ ⇝
+
+    -- Apply 'succ' to n⁺ and connect it back to n⁻ to create the
+    -- feedback loop:
+    n⁻ ← succ n⁺;
+
+    -- Drop the fiber-sink from the outer Poly and connect n⁺ to its
+    -- base.
+    return n⁺ ⇜ !
+
+-- | Let Bindings
+--
+-- Let bindings allow you to apply Poly morphisms inside a
+-- Poly-Lambda and bind their result components.
+--
+-- Let comes in positive and negative forms which allow you to apply
+-- the base and fiber-sink operations of Poly morphisms respectively.
+--
+-- Eg., Given 'p⁺ : base P' and 'p⁻ : fib P p⁺':
+--
+--    -- Apply our 'p⁺ : base P' to the morphism 'P ⇒ Q' and project
+--    -- out the fst component 'q⁺ : base Q'
+--    let q⁺ := fst (g p⁺);
+--
+--    -- Apply our 'p⁺ : base P' to the morphism 'P ⇒ Q' and project
+--    -- out the snd component 'g_fib : fib Q q⁺ → fib P p⁺'
+--    let g_fib := snd (g p⁺);
+--
+--    -- Remember here that when in a negative position we are dealing
+--    -- with sinks which expect values rather then produce them. Thus
+--    -- we need to think about 'p⁻' as an obligation to produce a
+--    -- 'fib P p⁺'.
+--    --
+--    -- In a negative fragment _∘_ is special syntax for
+--    -- precomposition with sinks. p⁻ is an obligation to provide a
+--    -- 'fib P p⁺' and it is precomposed with 'g_fib' which is a
+--    -- function which maps a 'fib Q q⁺' to a 'fib P p⁺'.
+--    -- 'q⁻' is thus an obligation to provide a 'fib Q q⁺.
+--    let- q⁻ := p⁻ ∘ g_fib;
+--
+-- Composition of Poly morphisms serves as a good example of let bindings:
+--
+--   composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R)
+--
+-- First lets build an intuition for composition in Poly using wiring
+-- diagrams:
+--
+-- Given 'g : P ⇒ Q' and 'f : Q ⇒ R':
+--
+--          ┌─────────┐
+--         -│ -┌───┐+ │+
+--   g :  ──┼──┤  p├──┼───
+--          │  └───┘ q│
+--          └─────────┘
+--
+--          ┌─────────┐
+--         -│ -┌───┐+ │+
+--   f :  ──┼──┤  q├──┼───
+--          │  └───┘ r│
+--          └─────────┘
+--
+-- We define composeₚ as:
+--
+--                ┌───────────────┐
+--                │  ┌─────────┐  │
+--               -│ -│ -┌───┐+ │+ │+
+--   composeₚ : ──┼──┼──┤  p├──┼──┼──
+--                │  │  └───┘ q│  │
+--                │  └─────────┘ r│
+--                └───────────────┘
+--
+-- You can think of composeₚ as building a Matryoshka doll of
+-- polynomials.
+--
+-- Starting from our inner 'P : Poly' we use let and let- to apply our
+-- Poly morphisms and build up to a 'base R' and obligation 'fib R
+-- (base R)':
+
+def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
+  λ P Q R f g →
+    λ p⁺ p⁻ ⇝
+      let q⁺ := fst (g p⁺);
+      let g⁻ := snd (g p⁺);
+      let- q⁻ := p⁻ ∘ g⁻;
+
+      let r⁺ := fst (f q⁺);
+      let f⁻ := snd (f q⁺);
+      let- r⁻ := q⁻ ∘ f⁻;
+
+      return r⁺ ⇜ r⁻
+
+-- We provide a special _←_ syntax to streamline this use of let
+-- bindings. It allows you to apply an entire Poly to a morphism and
+-- bind both projections of the resulting Poly.
+--
+-- These two fragments are thus equivalent:
+--
+--    let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
+--
+--    let q⁺ := fst (g p⁺);
+--    let g⁻ := snd (g p⁺);
+--    let- q⁻ := p⁻ ∘ g⁻;
+--
+-- We can simplify composeₚ as such:
+
+def composeₚ' : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
+  λ P Q R f g → λ p⁺ p⁻ ⇝
+    let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
+    let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
+    return r⁺ ⇜ r⁻
+
+-- We can prove the equivalence of these two definitions:
+def compose-equiv : composeₚ = composeₚ' := refl
+
+-- | Working with tensors
+--
+-- In the case of tensor products, we provide a special syntax for
+-- splitting apart the inlets of tensored polynomials.
+--
+-- Given a 'P ⊗ Q':
+--
+--   let (p⁺ , q⁺) := pq⁺;
+--   let⁻ (p⁻ , q⁻) := pq⁻;
+--
+-- NOTE: The positive form of tensor splitting is not yet supported.
+--
+-- This comes in handy when defining 'swapₚ':
+--
+--              ┌──────────────┐
+--             -│   -┌───┐+    │+
+--            ──┼────┤  p├──┐┌─┼──
+--   swapₚ :    │    └───┘  ││ │
+--             -│   -┌───┐+ └│┐│+
+--            ──┼────┤  q├───┘└┼──
+--              │    └───┘     │
+--              └──────────────┘
+
+def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
+  λ P Q →
+    λ pq⁺ pq⁻ ⇝
+      -- Case on the tensored fiber-sinks. Note that because
+      -- fiber-sinks are linear obligations we can no longer reference
+      -- pq⁻ after this point.
+      let⁻ (p⁻ , q⁻) := pq⁻;
+
+      -- Reverse the positions of P and Q when connecting them to the
+      -- outer Poly. Note that we can use fst and snd on pq⁺ because
+      -- it is not linear.
+      return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
+
+-- | λ⁻ or Negative-lamda
+--
+-- Negative-lambda allows you to bind the fiber-sink of a Poly.  This
+-- is useful to build the input side of a morphism.
+--
+--         ┌────────────┐
+--        -│  -┌───┐+   │+
+--   f : ──┼──*┤ℕ ℕ├──┬─┼──
+--        ℕ│  │└───┘  │ │ℕ
+--         │  └───────┘ │
+--         └────────────┘
+--      Note at * we apply 'add : ℕ → ℕ → ℕ'
+--
+
+def f : (ℕ × ℕ) ⇒ (ℕ × ℕ) :=
+  λ n⁺ n⁻ ⇝
+    return n⁺ ⇜ λ⁻ (m : ℕ) → n⁻ ← add m n⁺; done
+
+--------------------------------------------------------------------------------
+-- | Moore Machines
+--
+-- We have been seen a Moore machines in the counterₚ example. Lets
+-- focus on them in a bit more detail now.
+--
+-- We define Moore as a Poly morphism:
+--
+--   'Syˢ ⇒ Oyᴵ'
+--
+
+def Moore : Type → Type → Type → Type :=
+  λ S I O → (S × S) ⇒ (O × I)
+
+-- The inner Poly 'S × S' represents the internal state of the machine
+-- and the outer Poly 'O × I' describes the input and output types.
+
+-- As a first Moore machine we can define repeaterₘ which recieves a
+-- unit input and always returns its state.
+
+--
+-- From this perspective we can demonstrate that counterₚ is a Moore
+-- Machine:
+
+def counterₚ-is-a-machine : Moore ℕ #{ .unit } ℕ := counterₚ
+
+-- We can write a helper function for building a Moore Machine from
+-- output and transition functions:
+
+def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
+  λ S I O output transition →
+    λ s⁺ s⁻ ⇝
+      return (output s⁺) ⇜ λ⁻ (i : I) → s⁻ ← transition s⁺ i; done
+
+-- We can also define counterₚ using the 'moore' function:
+
+def counterₘ : Moore ℕ #{ .unit } ℕ :=
+  moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
+
+-- We can prove the equivalence of these two definitions:
+def counterₚ≡counterₘ : counterₚ = counterₘ := refl
+
+-- | Deterministic Finite State Automata
+--
+-- From a Moore Machine we can build DFSAs:
+
+def DFSA : Type → Type → Type :=
+  λ S A → Moore S A Bool
+
+-- S is the DFSA state type and A is the alphabet.
+--
+-- Here we build a 3 State DFSA with a two symbol alphabet:
+
+def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
+  let check : #{ .A, .B, .C } → Bool :=
+    { .A = .false
+    , .B = .true
+    , .C = .false }
+  in
+  let step : #{ .A, .B, .C } → #{ .a₀, .a₁ } → #{ .A, .B, .C } :=
+    { .A = { .a₀ = .B, .a₁ = .C }
+    , .B = { .a₀ = .C, .a₁ = .B }
+    , .C = { .a₀ = .A, .a₁ = .A }
+    }
+  in
+  λ s⁺ s⁻ ⇝ return (check s⁺) ⇜ (s⁻ ∘ (step s⁺))
+
+-- | Memoryless Dynamical System
+--
+-- We can also define the MDS from the Poly Book, defined as:
+--
+--   Byᴬ ⇒ Byᴬ
+--
+
+def mds : Π (A B : Type), (A → B) → Moore B A B :=
+  λ A B f →
+    λ b⁺ b⁻ ⇝
+      return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← f a; done
+
+-- With 'mds' we can build the delay line and summation examples:
+
+--            ┌───────────┐
+--           -│  -┌───┐+  │+
+-- delayₘ : ──┼───┤ℕ ℕ├───┼──
+--           ℕ│   └───┘   │ℕ
+--            └───────────┘
+
+def delayₘ : Moore ℕ ℕ ℕ :=
+  mds ℕ ℕ (λ x → x)
+
+--          ┌───────────┐
+--         -│  -┌───┐+  │+
+-- sumₘ : ──┼─*─┤ℕ ℕ├───┼──
+--       ℕ×ℕ│   └───┘   │ℕ
+--          └───────────┘
+--       Note at * we apply the addition operation
+
+def sumₘ : Moore ℕ (ℕ × ℕ) ℕ :=
+  mds (ℕ × ℕ) ℕ (λ xy → add (fst xy) (snd xy))
+
+-- ** More examples can be found in Data::Polynomial::Machines **

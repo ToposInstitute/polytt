@@ -1,0 +1,4 @@
+def Void := #{}
+
+def absurd : Π (R : Type), Void → R :=
+  λ R → {}

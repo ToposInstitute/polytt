@@ -3,6 +3,8 @@ module D = Core.Domain
 module S = Core.Syntax
 module Sem = Core.Semantics
 
+open Bantorra
+
 open Core
 
 open Elab
@@ -25,19 +27,21 @@ let normalize tm =
   Format.printf "Normal Form: %a@."
     S.pp_toplevel ntm
 
-let execute_cmd  (cmd : CS.cmd) =
+let rec execute_cmd  (cmd : CS.cmd) =
   match cmd.node with
   | CS.Def {name; tp = Some tp; tm} ->
     Debug.print "-------------------------------------------------@.";
     Debug.print "> Elaborating %a@." Ident.pp name;
     Debug.print "-------------------------------------------------@.";
     let tp = Sem.eval_top @@ Elaborator.chk tp D.Univ in
-    let tm = Sem.eval_top @@ Elaborator.chk tm tp in
-    Eff.define name (Def { tm; tp })
+    let value = Sem.eval_top @@ Elaborator.chk tm tp in
+    let glbl = CodeUnit.add_def name { tp; value } in
+    Eff.define name glbl
   | CS.Def {name; tp = None; tm} ->
     let (tp, tm) = Elaborator.syn tm in
-    let tm = Sem.eval_top tm in
-    Eff.define name (Def { tm; tp })
+    let value = Sem.eval_top tm in
+    let glbl = CodeUnit.add_def name { tp; value } in
+    Eff.define name glbl
   | CS.Fail {tp = Some tp; tm; _} ->
     begin
       try
@@ -52,6 +56,10 @@ let execute_cmd  (cmd : CS.cmd) =
       let _ = Elaborator.syn tm in
       failwith "FIXME: better error"
     end
+  | CS.Import {shadowing; unitpath} ->
+    let cmds = Eff.load (UnitPath.of_list unitpath) in
+    Eff.scoped @@ fun () ->
+    List.iter execute_cmd cmds
   | CS.Normalize tm ->
     profile normalize tm
   | CS.Print tm ->
@@ -67,10 +75,10 @@ let execute_cmd  (cmd : CS.cmd) =
   | CS.Quit ->
     raise Quit
 
-let execute (debug : bool) cmds =
-  Debug.debug_mode debug;
+let execute ~load ?(debug = false) cmds =
   print_newline ();
-  Eff.run @@ fun () ->
+  Eff.run { debug; load } @@ fun () ->
   try
+    CodeUnit.with_new_unit @@ fun () ->
     List.iter execute_cmd cmds
   with Quit -> ()

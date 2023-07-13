@@ -1,0 +1,34 @@
+import Data::Natural
+import Data::Unit
+import Data::Void
+import Data::Polynomial
+import Data::Polynomial::Fin
+
+--------------------------------------------------------------------------------
+
+def Maybeₚ : Poly :=
+  Σ (tag : #{ .nothing, .just }), { .nothing = Void, .just = Unit} tag
+
+def Maybe : Type → Type := ofP Maybeₚ
+
+def Just : Π (A : Type), A → Maybe A :=
+  λ A a → ( .just , λ _ → a )
+
+def Nothing : Π (A : Type), Maybe A :=
+  λ A → ( .nothing , {} )
+
+-- | Dependent Eliminator
+def maybe-elim : Π (A : Type) (f : Maybe A → Type),
+  (Π(x : A), f (Just A x)) → f (Nothing A) → Π (x : Maybe A), (f x) :=
+    λ A mot j n m → ×-rec #{ .nothing, .just} (λ p → { .nothing = #{}, .just = #{ .unit } } p → A) mot { .nothing = λ _ → n , .just = λ v → j (v .unit) } m
+
+-- | Non-dependent Eliminator
+def maybe : Π (A B : Type), B → (A → B) → Maybe A → B :=
+  λ A B b f m → maybe-elim A (λ _ → B) f b m
+
+--------------------------------------------------------------------------------
+-- Examples
+
+def just-one : Maybe ℕ := Just ℕ 1
+
+def nothing : Maybe ℕ := Nothing ℕ

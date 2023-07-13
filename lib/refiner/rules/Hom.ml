@@ -157,12 +157,12 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
       (Bwd.Bwd.iter2
         (fun tp v ->
           Debug.print "  - %a@." S.dump (quote ~tp v))
-        (Eff.Locals.qenv ()).neg
-        (Eff.Locals.denv ()).neg
-      );
-      Debug.print " ---- @.";
-      (Bwd.Bwd.iter2
-        (fun tp v ->
+       (Eff.Locals.qenv ()).neg
+       (Eff.Locals.denv ()).neg
+    );
+    Debug.print " ---- @.";
+    (Bwd.Bwd.iter2
+       (fun tp v ->
           Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
         (Eff.Locals.denv ()).neg
         (Eff.Locals.qenv ()).neg

@@ -6,11 +6,10 @@ let local (cell : Cell.pos) =
   Syn.rule @@ fun () ->
   (cell.tp, quote ~tp:cell.tp cell.value)
 
-let global res =
+let global glbl =
   Syn.rule @@ fun () ->
-  match res with
-  | Globals.Def {tp; tm} ->
-    tp, quote ~tp:tp tm
+  let tp = CodeUnit.get_def_tp glbl in
+  tp, S.Global glbl
 
 let let_bind ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
   Chk.rule @@ fun rtp ->
@@ -27,5 +26,5 @@ let negative (cell : Cell.neg) =
   | Some writer ->
     Debug.print "marking %a@." Ident.pp cell.name;
     (cell.tp, fun v ->
-      Debug.print "writing %a <- %a@." Ident.pp cell.name D.dump v;
-      writer v)
+        Debug.print "writing %a <- %a@." Ident.pp cell.name D.dump v;
+        writer v)

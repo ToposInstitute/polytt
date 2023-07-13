@@ -1,0 +1,169 @@
+import Data::Either
+import Data::Void
+
+--------------------------------------------------------------------------------
+
+-- Interpretation of a Poly as a functor Type → Type
+def ofP : Poly → Type → Type :=
+  λ P A → Σ (p : base P), fib P p → A
+
+def mapₚ : Π (P : Poly), Π (A B : Type), (A → B) → (ofP P) A → (ofP P) B :=
+  λ P A B f pa → ( fst pa , λ x → f ((snd pa) x) )
+
+-- S × Y^aₛ
+def monomialₚ : Type → Type → Poly :=
+  λ S T → S × T
+
+def constantₚ : Type → Poly :=
+  λ S → S × Void
+
+-- | The identity morphism in Poly
+--
+--   ┌─────────┐
+--  -│ -┌───┐+ │+
+-- ──┼──┤  p├──┼──
+--   │  └───┘  │
+--   └─────────┘
+--
+def idₚ : Π (P : Poly), P ⇒ P :=
+  λ P →
+    λ p⁺ p⁻ ⇝
+    return p⁺ ⇜ p⁻
+
+-- | Composition of polynomials
+--
+--   ┌───────────────┐
+--   │  ┌─────────┐  │
+--  -│ -│ -┌───┐+ │+ │+
+-- ──┼──┼──┤  p├──┼──┼──
+--   │  │  └───┘ q│  │
+--   │  └─────────┘ r│
+--   └───────────────┘
+--
+def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
+  λ P Q R f g → λ p⁺ p⁻ ⇝
+    let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
+    let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
+    return r⁺ ⇜ r⁻
+
+-- Prefix notation for _⨟_
+def then : Π (P Q R : Poly), P ⇒ Q → Q ⇒ R → P ⇒ R :=
+  λ P Q R g f → compose P Q R f g
+
+def hom-base : Π (P Q : Poly), P ⇒ Q → base P → base Q :=
+  λ P Q f p → fst (f p)
+
+--------------------------------------------------------------------------------
+
+def internal-hom : Poly → Poly → Poly :=
+  λ P Q → Σ (f : P ⇒ Q), (Σ (p : base P), fib Q (fst (f p)))
+
+--------------------------------------------------------------------------------
+
+-- | P ◁ Q
+-- Composition of Polyonomial Functors
+--
+-- ⟦ P ◁ Q ⟧ ≡ ⟦ P ⟧ ∘ ⟦ Q ⟧
+-- Σ ? Π ?   ≡ Σ Π (Σ Π)
+-- def tensor-◁ : Poly → Poly → Poly := ?
+
+--------------------------------------------------------------------------------
+
+-- | P + Q
+-- The Categorical Co-Product of two Polyonomials
+--
+-- P + Q ≔ ∑[ i ∈ I ] x^aᵢ + ∑[ j ∈ J ] y^bⱼ
+-- def tensor-+ : Poly → Poly → Poly :=
+--   λ P Q → Σ (pq : Either (base P) (base Q)), Either (fib P ?) (fib Q ?)
+
+--------------------------------------------------------------------------------
+
+-- | P ⊗ Q
+-- The Parallel Product of two Polynomials
+def tensor-⊗ : Poly → Poly → Poly :=
+  λ P Q → Σ (pq : base P × base Q), fib P (fst pq) × fib Q (snd pq)
+
+def swap-⊗ : Π (P Q : Poly), tensor-⊗ P Q ⇒ tensor-⊗ Q P :=
+  λ P Q → λ
+    pq⁺ pq⁻ ⇝
+      let⁻ (p⁻ , q⁻) := pq⁻;
+      return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
+
+def dupe-⊗ : Π (P : Poly), P ⇒ tensor-⊗  P P :=
+  λ P → λ p⁺ p⁻ ⇝
+    return (p⁺ , p⁺) ⇜ ( p⁻ , ! )
+
+--------------------------------------------------------------------------------
+
+-- | P × Q
+-- The Binary Categorical Product
+--
+def tensor-× : Poly → Poly → Poly :=
+  λ P Q → Σ (ij : base P × base Q), Either (fib P (fst ij)) (fib Q (snd ij))
+
+-- def fst-× : Π (P Q : Poly), tensor-× P Q ⇒ P :=
+--   λ P Q →
+--     λ pq⁺ pq⁻ ⇝
+--       let⁻ (p⁻ , q⁻) := pq⁻;
+--       let (p⁺ , q⁺) := pq⁺;
+--       return (fst pq⁺) ⇜ p⁻
+
+-- def snd-× : Π (P Q : Poly), tensor-× P Q ⇒ Q :=
+--   λ P Q →
+--     λ pq⁺ pq⁻ ⇝
+--       let⁻ (p⁻ , q⁻) := pq⁻;
+--       let (p⁺ , q⁺) := pq⁺;
+--       return q⁺ ⇜ q⁻
+
+-- def dupe-× : Π (P : Poly), P ⇒ tensor-× P P :=
+--   λ P →
+--     λ p⁺ p⁻ ⇝
+--       return (p⁺ , p⁺) ⇜ (p⁻ , ! )
+
+--------------------------------------------------------------------------------
+
+-- | P Ⓥ Q
+--
+def tensor-Ⓥ : Poly → Poly → Poly :=
+  λ P Q → Σ (ij : base P × base Q),
+    Either (fib P (fst ij)) (Either ((fib P (fst ij)) × (fib Q (snd ij))) (fib Q (snd ij)))
+
+--------------------------------------------------------------------------------
+
+-- | P ∨ Q
+--
+-- P ∨ Q ≔ P + (P ⊗ Q) + Q
+-- def tensor-v : Poly → Poly → Poly :=
+--   λ P Q → (tensor-+ (tensor-+ P (tensor-⊗ P Q)) Q)
+
+-- | _∨_ This Inclusion
+-- def This : Π(P Q : Poly), P ⇒ (P ∨ Q) :=
+--   λ P Q → ?
+
+-- | _∨_ That Inclusion
+-- def That : Π(P Q : Poly), Q ⇒ (P ∨ Q) :=
+--   λ P Q → ?
+
+-- | _∨_ These Inclusion
+-- def These : Π(P Q : Poly), tensor-⊗ P Q ⇒ (P ∨ Q) :=
+--   λ P Q → ?
+
+-- | _∨_ Eliminator
+-- def theseₚ : Π(P Q R : Poly), P ⇒ R → Q ⇒ R → (P ⊗ Q) ⇒ R → (P ∨ Q) ⇒ R :=
+--   λ P Q R p⇒r q⇒r p⊗q⇒r → ?
+
+--------------------------------------------------------------------------------
+
+-- | P ⊘ Q
+--
+-- P ⊘ Q ≔ P + (P ×ₚ Q) + Q
+-- def tensor-⊘ : Poly → Poly → Poly :=
+--   λ P Q → (tensor-+ P (tensor-+ (P × Q) Q))
+
+--------------------------------------------------------------------------------
+
+-- | P ⊛ Q
+--
+-- P ⊛ Q ≔  P + (P Ⓥ Q) + Q
+-- def tensor-⊛ : Poly → Poly → Poly :=
+--   λ P Q → (tensor-+ P (tensor-+ (P Ⓥ  Q) Q))
