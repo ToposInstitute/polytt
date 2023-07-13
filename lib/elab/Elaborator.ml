@@ -10,7 +10,7 @@ module T = Tactic
 module Internal =
 struct
   let rec chk (tm : CS.t) =
-    T.Chk.locate tm.loc @@
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.Lam (names, tm) ->
       chk_lams names tm
@@ -44,7 +44,7 @@ struct
       T.Chk.syn (syn tm)
 
   and neg_chk (tm : CS.t) =
-    T.NegChk.locate tm.loc @@
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.NegPair (a, name, b) ->
       NegSigma.intro (neg_chk a) ~name (fun _ -> neg_chk b)
@@ -75,7 +75,7 @@ struct
     T.Syn.ann (chk b) (T.Chk.syn Univ.formation)
 
   and syn (tm : CS.t) =
-    T.Syn.locate tm.loc @@
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.Var path ->
       syn_var path
@@ -133,7 +133,7 @@ struct
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 
   and neg_syn (tm : CS.t) =
-    T.NegSyn.locate tm.loc @@
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | CS.Var path ->
       begin
@@ -155,7 +155,7 @@ struct
       T.Error.error `TypeError "Cannot synthesize (negative) type."
 
   and hom (tm : CS.t) =
-    T.Hom.locate tm.loc @@
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | Set (pos, neg, steps) ->
       Hom.set (chk pos) (neg_syn neg) (hom steps)
@@ -173,7 +173,7 @@ struct
       T.Error.error `NotAHom "Cannot be used to build a hom."
 
   and prog (tm : CS.t) =
-    T.Prog.locate tm.loc @@
+    T.Error.locate tm.loc @@ fun () ->
     match tm.node with
     | Set (pos, neg, steps) ->
       Prog.set (chk pos) (neg_syn neg) (prog steps)
