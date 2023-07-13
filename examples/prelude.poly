@@ -172,11 +172,20 @@ def internal-hom : Poly → Poly → Poly :=
 #normalize (λ P Q → base (tensor P (internal-hom P Q))) : Poly → Poly → Type
 
 def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
-  λ P Q → λ (p⁺ , f⁺) (qf⁻ , (p⁻ , q⁻)) ⇝
-    let (q⁺ , qf⁺) := f⁺ p⁺;
-    p⁻ ← p⁺;
+  -- p⁺ : base P
+  -- f⁺ : P ⇒ Q
+  -- p⁻ : fib P p⁺
+  -- p_base⁻ : base P
+  -- fq⁻ : fib Q (fst (f⁺ (borrow p_base⁻)))
+  λ P Q → λ (p⁺ , f⁺) (p⁻ , (p_base⁻ , fq⁻)) ⇝
+    p_base⁻ ← p⁺;
+    -- q⁺ : base Q
+    -- f_fib_p⁺ : fib Q q⁺ → fib P p⁺
+    let (q⁺ , f_fib_p⁺) := f⁺ p⁺;
+    -- p⁻ : fib P p⁺
+    -- fq⁻ : fib Q q⁺
     return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
-      (qf⁻ , q⁻) ← (qf⁺ v , v);
+      (p⁻ , fq⁻) ← (f_fib_p⁺ v , v);
       done
 
 def compose : Poly → Poly → Poly :=
