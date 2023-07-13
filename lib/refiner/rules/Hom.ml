@@ -16,9 +16,11 @@ let intro ?(pos_name = Var `Anon) ?(neg_name = Var `Anon) (bdy_tac : Var.tac -> 
     let p_base = do_base p in
     let ok =
       Eff.Locals.run_linear @@ fun () ->
+      Debug.print "Introducing negated domain %a@." D.dump p;
       Var.abstract ~name:pos_name p_base @@ fun pos_var ->
+      Debug.print "Introducing negated base %a@." D.dump p_base;
       let p_fib = do_fib p (Var.value pos_var) in
-      Core.Debug.print "Introducing negated %a@." D.dump p_fib;
+      Debug.print "Introducing negated fib %a@." D.dump p_fib;
       NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
       let tail () =
         begin

@@ -232,6 +232,26 @@ let pp_sequent_ctx ppenv fmt (ctx, k) =
   go ppenv 0 fmt ctx
 
 let pp_sequent_goal goal ppenv fmt =
+  Debug.print " GOAL %a@." S.dump goal;
+  Debug.print " ---- @.";
+  ((Eff.Locals.qenv ()).neg |>
+    Bwd.iter @@ fun v ->
+      Debug.print "  - %a@." D.dump v);
+  Debug.print " ---- @.";
+  (Bwd.iter2
+    (fun tp v ->
+      Debug.print "  - %a@." S.dump (quote ~tp v))
+    (Eff.Locals.qenv ()).neg
+    (Eff.Locals.denv ()).neg
+  );
+  Debug.print " ---- @.";
+  (Bwd.iter2
+    (fun tp v ->
+      Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
+    (Eff.Locals.denv ()).neg
+    (Eff.Locals.qenv ()).neg
+  );
+  Debug.print " ---- @.";
   Format.fprintf fmt "──────────────@.  ⊢ %a@."
     (S.pp ppenv Precedence.isolated) goal
 
@@ -241,4 +261,4 @@ let pp_sequent_nogoal _ppenv fmt =
 let print_ctx fmt k =
   let ppenv = Locals.ppenv () in
   let ctx = Locals.local_types () in
-  pp_sequent_ctx { pos = Emp; neg_size = 0; neg = Emp } fmt (List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx), k)
+  pp_sequent_ctx { pos = Emp; neg_size = ppenv.neg_size; neg = ppenv.neg } fmt (List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx), k)

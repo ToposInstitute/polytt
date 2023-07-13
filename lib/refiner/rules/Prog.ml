@@ -1,6 +1,8 @@
 open Tactic
 open Core.Ident
 
+module Debug = Core.Debug
+
 let neg_lam ?(name = Var `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
   NegSyn.rule @@ fun () ->
   let tp = eval (Chk.run tp_tac D.Univ) in

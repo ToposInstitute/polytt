@@ -267,6 +267,13 @@ struct
       consumed := true;
       Some (fun value -> value_ref := value)
 
+  let rec split = function
+  | Var (lvl, v) -> (Var lvl, v)
+  | Tuple (l, r) ->
+    let (ll, lv) = split l in
+    let (rl, rv) = split r in
+    (Tuple (ll, rl), D.Pair (lv, rv))
+
   let rec bind_neg_tree ?(name = Var `Anon) tp k =
     begin match name with
     | Var ident ->
@@ -276,18 +283,12 @@ struct
       begin match tp with
       | D.Sigma (_, a, clo) ->
         bind_neg_tree ~name:l a @@ fun lvars ->
-          bind_neg_tree ~name:r (Sem.inst_clo clo a) @@ fun rvars ->
+          Debug.print "ASDFASDFASFDSAFAS %a@." D.dump (snd (split lvars));
+          bind_neg_tree ~name:r (Sem.inst_clo clo (snd (split lvars))) @@ fun rvars ->
             k (Tuple (lvars, rvars))
       | _ -> failwith "can only unpack a sigma" (* FIXME *)
       end
     end
-
-  let rec split = function
-  | Var (lvl, v) -> (Var lvl, v)
-  | Tuple (l, r) ->
-    let (ll, lv) = split l in
-    let (rl, rv) = split r in
-    (Tuple (ll, rl), D.Pair (lv, rv))
 
   let abstract_neg ?(name = Var `Anon) tp k =
     (* No need to bind a single anonymous variable *)
@@ -352,9 +353,9 @@ struct
                 (fun value -> Bwd.iter (fun f -> f value) reverted)
 
   let abstracts ?(names = [Var `Anon]) tp k =
-    let step cont name bounds =
+    let step name cont bounds =
         abstract ~name tp @@ fun bound -> cont (List.cons bound bounds)
-    in List.fold_left step k names []
+    in List.fold_right step names k []
 end
 
 
