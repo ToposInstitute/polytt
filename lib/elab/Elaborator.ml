@@ -205,6 +205,7 @@ struct
         | Some res ->
           Refiner.Var.global res
         | None ->
+          Core.Debug.print "%a@." Ident.pp_path path;
           T.Error.error `UnboundVariable "Variable is not bound (or is negative, idk)."
       end
 

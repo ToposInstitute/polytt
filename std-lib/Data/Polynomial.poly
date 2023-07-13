@@ -8,7 +8,7 @@ def ofP : Poly → Type → Type :=
   λ P A → Σ (p : base P), fib P p → A
 
 def mapₚ : Π (P : Poly), Π (A B : Type), (A → B) → (ofP P) A → (ofP P) B :=
-  λ P A B f pa → ( fst pa , λ x → f ((snd pa) x) )
+  λ P A B f (p , a) → ( p , λ x → f (a x) )
 
 -- S × Y^aₛ
 def monomialₚ : Type → Type → Poly :=
@@ -81,13 +81,13 @@ def internal-hom : Poly → Poly → Poly :=
 -- | P ⊗ Q
 -- The Parallel Product of two Polynomials
 def tensor-⊗ : Poly → Poly → Poly :=
-  λ P Q → Σ (pq : base P × base Q), fib P (fst pq) × fib Q (snd pq)
+  λ P Q → Σ ((p , q) : base P × base Q), fib P p × fib Q q
 
 def swap-⊗ : Π (P Q : Poly), tensor-⊗ P Q ⇒ tensor-⊗ Q P :=
   λ P Q → λ
-    pq⁺ pq⁻ ⇝
+    (p⁺ , q⁺) pq⁻ ⇝
       let⁻ (p⁻ , q⁻) := pq⁻;
-      return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
+      return (q⁺ , p⁺) ⇜ (q⁻ , p⁻)
 
 def dupe-⊗ : Π (P : Poly), P ⇒ tensor-⊗  P P :=
   λ P → λ p⁺ p⁻ ⇝
@@ -99,7 +99,7 @@ def dupe-⊗ : Π (P : Poly), P ⇒ tensor-⊗  P P :=
 -- The Binary Categorical Product
 --
 def tensor-× : Poly → Poly → Poly :=
-  λ P Q → Σ (ij : base P × base Q), Either (fib P (fst ij)) (fib Q (snd ij))
+  λ P Q → Σ ((i , j) : base P × base Q), Either (fib P i) (fib Q j)
 
 -- def fst-× : Π (P Q : Poly), tensor-× P Q ⇒ P :=
 --   λ P Q →
@@ -125,8 +125,8 @@ def tensor-× : Poly → Poly → Poly :=
 -- | P Ⓥ Q
 --
 def tensor-Ⓥ : Poly → Poly → Poly :=
-  λ P Q → Σ (ij : base P × base Q),
-    Either (fib P (fst ij)) (Either ((fib P (fst ij)) × (fib Q (snd ij))) (fib Q (snd ij)))
+  λ P Q → Σ ((i , j) : base P × base Q),
+    Either (fib P i) (Either ((fib P i) × (fib Q j)) (fib Q j))
 
 --------------------------------------------------------------------------------
 

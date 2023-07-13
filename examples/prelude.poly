@@ -172,32 +172,19 @@ def internal-hom : Poly → Poly → Poly :=
 #normalize (λ P Q → base (tensor P (internal-hom P Q))) : Poly → Poly → Type
 
 def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
-  λ P Q → λ pf⁺ pf⁻ ⇝
-    let p⁺ := fst pf⁺;
-    let f⁺ := snd pf⁺;
-    -- pf⁻ : ((fib P p⁺) × (fib (internal-hom P Q) f⁺))⁻
-    let⁻ (p⁻ , f⁻) := pf⁻;
-    -- borrow pf⁻ = (borrow p⁻ , borrow f⁻)
-    let qf⁺ := f⁺ p⁺;
-    let q⁺ := fst qf⁺;
-    let⁻ q₁⁻ := p⁻ ∘ (snd qf⁺);
-    -- f⁻ : ((p : base P) × fib Q (fst (f⁺ p)))⁻
-    let⁻ (pb⁻ , q⁻) := f⁻;
-    -- pb⁻ : (base P)⁻
-    -- q⁻ : (fib Q (fst (f⁺ (borrow pb⁻))))⁻
-    pb⁻ ← p⁺;
-    -- q⁻ : (fib Q (fst (f⁺ p⁺)))⁻
-    -- q⁻ : (fib Q q⁺)⁻
+  λ P Q → λ (p⁺ , f⁺) (qf⁻ , (p⁻ , q⁻)) ⇝
+    let (q⁺ , qf⁺) := f⁺ p⁺;
+    p⁻ ← p⁺;
     return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
-      (q₁⁻ , q⁻) ← (v , v);
+      (qf⁻ , q⁻) ← (qf⁺ v , v);
       done
 
 def compose : Poly → Poly → Poly :=
-  λ P Q → Σ (pf : Σ (p : base P), fib P p → base Q), Σ (i : fib P (fst pf)), fib Q ((snd pf) i)
+  λ P Q → Σ ((p , f) : Σ (p : base P), fib P p → base Q), Σ (i : fib P p), fib Q (f i)
 
 def tensor-to-compose : Π (P Q : Poly), tensor P Q ⇒ compose P Q :=
-  λ P Q → λ pq⁺ pq⁻ ⇝
-    return (fst pq⁺ , λ _ → snd pq⁺) ⇜ pq⁻
+  λ P Q → λ (p⁺ , q⁺) pq⁻ ⇝
+    return (p⁺ , λ _ → q⁺) ⇜ pq⁻
 
 #normalize tensor-to-compose
 

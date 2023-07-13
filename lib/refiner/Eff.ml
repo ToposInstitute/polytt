@@ -211,6 +211,13 @@ struct
     Reader.scope (bind_var cell) @@ fun () ->
     k var
 
+  let rec coalesce = function
+  | Var (_, v) -> v
+  | Tuple (l, r) ->
+    let (lv) = coalesce l in
+    let (rv) = coalesce r in
+    D.Pair (lv, rv)
+
   let rec bind_tree ?(name = Var `Anon) tp tm k =
     begin match name with
     | Var ident ->
@@ -224,7 +231,7 @@ struct
         Debug.print "tm.1: %a@." D.dump (Sem.do_fst tm);
         Debug.print "tm.2: %a@." D.dump (Sem.do_snd tm);
         bind_tree ~name:l a (Sem.do_fst tm) @@ fun lvars ->
-          bind_tree ~name:r (Sem.inst_clo clo a) (Sem.do_snd tm) @@ fun rvars ->
+          bind_tree ~name:r (Sem.inst_clo clo (coalesce lvars)) (Sem.do_snd tm) @@ fun rvars ->
             Debug.print "bound@.";
             k (Tuple (lvars, rvars))
       | _ -> failwith "can only unpack a sigma" (* FIXME *)

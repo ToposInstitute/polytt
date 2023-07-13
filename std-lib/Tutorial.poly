@@ -166,10 +166,10 @@ def idₚ≡idₚ' : idₚ = idₚ' := refl
 
 def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
   λ A B C →
-   λ pq⁺ pq⁻ ⇝
+   λ (p⁺ , q⁺) pq⁻ ⇝
      let- (p⁻ , q⁻) := pq⁻;
-     q⁻ ← fst pq⁺;
-     return (snd pq⁺) ⇜ p⁻
+     q⁻ ← p⁺;
+     return q⁺ ⇜ p⁻
 
 -- Here we use _←_ to connect the 'fst' projection of the base of P to
 -- the fiber-sink of Q.
@@ -294,12 +294,10 @@ def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
   λ P Q R f g →
     λ p⁺ p⁻ ⇝
-      let q⁺ := fst (g p⁺);
-      let g⁻ := snd (g p⁺);
+      let (q⁺ , g⁻) := g p⁺;
       let- q⁻ := p⁻ ∘ g⁻;
 
-      let r⁺ := fst (f q⁺);
-      let f⁻ := snd (f q⁺);
+      let (r⁺ , f⁻) := f q⁺;
       let- r⁻ := q⁻ ∘ f⁻;
 
       return r⁺ ⇜ r⁻
@@ -312,8 +310,7 @@ def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
 --
 --    let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
 --
---    let q⁺ := fst (g p⁺);
---    let g⁻ := snd (g p⁺);
+--    let (q⁺ , g⁻) := g p⁺;
 --    let- q⁻ := p⁻ ∘ g⁻;
 --
 -- We can simplify composeₚ as such:
@@ -479,6 +476,6 @@ def delayₘ : Moore ℕ ℕ ℕ :=
 --       Note at * we apply the addition operation
 
 def sumₘ : Moore ℕ (ℕ × ℕ) ℕ :=
-  mds (ℕ × ℕ) ℕ (λ xy → add (fst xy) (snd xy))
+  mds (ℕ × ℕ) ℕ (λ (x , y) → add x y)
 
 -- ** More examples can be found in Data::Polynomial::Machines **
