@@ -22,7 +22,7 @@ def ×-rec :
   Π (R : (Σ (a : A), B a) → Type),
   (Π (a : A), Π (b : B a), R (a , b)) →
   Π (ab : Σ (a : A), B a), R ab :=
-  λ A B R fn (a , b) → fn a ?
+  λ A B R fn (a , b) → fn a b
 
 -- Maybe monad: one layer of a fin
 def fin-step : Type → Type :=

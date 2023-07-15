@@ -24,8 +24,8 @@ def dup : Π (A : Type), A → (A × A) :=
 def pair : ℕ → ℕ → ℕ × ℕ :=
   λ n m → (n , m : ℕ)
 
-def projl : Π (T : Type), (ℕ × T) → T :=
-  λ T (_ , x) → x
+def projl : (ℕ × ℕ) → ℕ :=
+  λ (x , _) → x
 
 def Bool := #{ .true, .false }
 
