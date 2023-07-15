@@ -3,16 +3,25 @@ open Core.Ident
 
 module Debug = Core.Debug
 
-let neg_lam ?(name = Var `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
+let neg_lam_syn ?(name = Var `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
   NegSyn.rule @@ fun () ->
   let tp = eval (Chk.run tp_tac D.Univ) in
   Var.abstract ~name tp @@ fun var ->
   match NegVar.revert tp @@ Prog.run (bdy_tac var) with
   | None ->
-    Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in prorgam."
+    Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in program."
   | Some setter ->
     tp, fun actual_value ->
       setter actual_value
+
+let neg_lam ?(name = Var `Anon) (bdy_tac : Var.tac -> Prog.tac) : NegChk.tac =
+  NegChk.rule @@ fun tp ->
+  Var.abstract ~name tp @@ fun var ->
+  match NegVar.revert tp @@ Prog.run (bdy_tac var) with
+  | None ->
+    Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in program."
+  | Some setter ->
+    setter
 
 let pos_let ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Prog.tac) =
   Prog.rule @@ fun () ->

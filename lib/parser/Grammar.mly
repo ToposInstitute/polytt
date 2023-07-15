@@ -195,7 +195,9 @@ labeled_field(sep):
 
 arrow:
   | LAMBDA; nms = nonempty_list(pattern); RIGHT_ARROW; tm = term
-    { CS.Lam(nms, tm) }
+    { CS.Lam (nms, tm) }
+  | LAMBDA; nmtps = nonempty_list(LPR; nm = pattern; COLON; tp = term; RPR { (nm, tp) }); RIGHT_ARROW; tm = term
+    { CS.LamSyn (nmtps, tm) }
   | FORALL; quantifiers = quantifiers; COMMA; fam = term
     { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term
@@ -252,8 +254,10 @@ neg_term:
 plain_neg_term:
   | neg = atomic_neg_term; tms = option(neg_spine)
     { neg_ap_or_atomic neg tms }
-  | LAMBDA_MINUS; LPR; nm = pattern; COLON; tp = term; RPR RIGHT_ARROW; prog = program
-    { CS.NegLam (nm, tp, prog) }
+  | LAMBDA_MINUS; LPR; nm = pattern; COLON; tp = term; RPR; RIGHT_ARROW; prog = program
+    { CS.NegLamSyn (nm, tp, prog) }
+  | LAMBDA_MINUS; nm = pattern; RIGHT_ARROW; prog = program
+    { CS.NegLam (nm, prog) }
 
 atomic_neg_term:
   | t = located(plain_atomic_neg_term)

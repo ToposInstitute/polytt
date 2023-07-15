@@ -28,6 +28,18 @@ let rec intro ?(name = Var `Anon) tac =
   | _ ->
     Error.error `TypeError "Expected element of Π."
 
+let intro_syn ?(name = Var `Anon) tp_tac tac =
+  Syn.rule @@ fun () ->
+  let tp = eval @@ Chk.run tp_tac D.Univ in
+  let (rtp, r) = Var.abstract ~name tp @@ fun v -> Syn.run (tac v) in
+  let fntp = graft_value @@
+    Graft.value tp @@ fun tp ->
+    Graft.value rtp @@ fun rtp ->
+    Graft.build @@
+    TB.pi ~name:(Var.choose name) tp @@ fun _ -> rtp
+  in
+  (fntp, S.Lam (Var.choose name, r))
+
 let ap f_tac arg_tac =
   Syn.rule @@ fun () ->
   let (f_tp, f) = Syn.run f_tac in

@@ -99,12 +99,10 @@ def dupe-⊗ : Π (P : Poly), P ⇒ tensor-⊗  P P :=
 def tensor-× : Poly → Poly → Poly :=
   λ P Q → Σ ((i , j) : base P × base Q), Either (fib P i) (fib Q j)
 
--- def fst-× : Π (P Q : Poly), tensor-× P Q ⇒ P :=
---   λ P Q →
---     λ pq⁺ ⇜ pq⁻ ⇝
---       let⁻ (p⁻ , q⁻) := pq⁻;
---       let (p⁺ , q⁺) := pq⁺;
---       return (fst pq⁺) ⇜ p⁻
+def fst-× : Π (P Q : Poly), tensor-× P Q ⇒ P :=
+  λ P Q →
+    λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
+      return p⁺ ⇜ λ⁻ p → pq⁻ ← Left (fib P p⁺) (fib Q q⁺) p; done
 
 -- def snd-× : Π (P Q : Poly), tensor-× P Q ⇒ Q :=
 --   λ P Q →

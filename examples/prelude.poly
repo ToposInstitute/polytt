@@ -90,7 +90,8 @@ def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
 
 def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
   λ n⁺ ⇜ n⁻ ⇝
-    return n⁺ ⇜ λ⁻ (x : #{ .single }) → n⁻ ← succ n⁺; done
+    n⁻ ← succ n⁺;
+    return n⁺ ⇜ λ⁻ _ → done
 
 #normalize (const ℕ) ℕ
 
@@ -182,7 +183,7 @@ def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
     let (q⁺ , f_fib_p⁺) := f⁺ p⁺;
     -- p⁻ : fib P p⁺
     -- fq⁻ : fib Q q⁺
-    return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
+    return q⁺ ⇜ λ⁻ v →
       (p⁻ , fq⁻) ← (f_fib_p⁺ v , v);
       done
 

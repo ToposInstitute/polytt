@@ -12,6 +12,7 @@ and t_ =
   | Var of Yuujinchou.Trie.path
   | Pi of (Ident.binder list * t) list * t
   | Lam of Ident.binder list * t
+  | LamSyn of (Ident.binder * t) list * t
   | Let of Ident.binder * t * t
   | Ap of t * t list
   | Sigma of (Ident.binder list * t) list * t
@@ -41,7 +42,8 @@ and t_ =
   | Set of t * t * t
   | NegAnno of t * t
   | NegLet of Ident.binder * t * t
-  | NegLam of Ident.binder * t * t
+  | NegLam of Ident.binder * t
+  | NegLamSyn of Ident.binder * t * t
   | NegAp of t * t list
   | Drop
   | Done
