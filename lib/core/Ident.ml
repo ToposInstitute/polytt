@@ -21,6 +21,10 @@ let rec pat_size = function
   | Var _ -> 1
   | Tuple (l, r) -> pat_size l + pat_size r
 
+let rec join = function
+  | Var r -> r
+  | Tuple (l, r) -> Tuple (join l, join r)
+
 (** Patterns with identifiers in them *)
 type binder = t pat
 

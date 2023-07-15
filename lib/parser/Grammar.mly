@@ -2,12 +2,19 @@
 open Asai
 
 module CS = Vernacular.Syntax
+module Ident = Core.Ident
 
 let locate (start, stop) node =
   {CS.node; loc = Span.make (Span.of_lex_position start) (Span.of_lex_position stop)}
 
 let unlocate {CS.node; loc = _} = node
 let get_loc {CS.loc; node = _} = loc
+let duolocate (starter, stopper) node =
+  { CS.node;
+    loc = Span.make
+      (fst @@ Span.to_positions @@ get_loc starter)
+      (snd @@ Span.to_positions @@ get_loc stopper)
+  }
 
 
 let ap_or_atomic =
@@ -25,6 +32,17 @@ let rec quantifier quant =
   function
   | [] -> fun t -> unlocate t
   | (name, ty) :: more -> fun t -> quant (name, ty, quantifier quant more t)
+
+let rec tupleitup : ('a Ident.pat) list -> 'a Ident.pat =
+  function
+  | [] -> failwith "Impossible Internal Error"
+  | [x] -> x
+  | x :: xs -> Tuple (x, tupleitup xs)
+
+let rec fold_pat = fun t ->
+  function
+  | Ident.Var r -> r
+  | Ident.Tuple (l, r) -> t (fold_pat t l) (fold_pat t r)
 %}
 
 %token <int> NUMERAL
@@ -81,6 +99,15 @@ pattern:
     { Var name }
   | LPR; l = pattern; COMMA; r = pattern; RPR
     { Tuple (l, r) }
+
+%inline
+boxes(X, Y):
+  | l = X; LEFT_SQUIGGLY_ARROW; r = Y
+    { (Ident.Var l, Ident.Var r) }
+  | bs = nonempty_list(LPR; b = boxes(X, Y); RPR { b })
+    { let (ls, rs) = (List.map fst bs, List.map snd bs) in
+      (tupleitup ls, tupleitup rs)
+    }
 
 commands:
   | EOF
@@ -173,8 +200,8 @@ arrow:
     { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi ([[Var `Anon], base], fam) }
-  | LAMBDA; pos = pattern; neg = pattern; RIGHT_SQUIGGLY_ARROW; body = hom_body
-    { CS.HomLam(pos, neg, body) }
+  | LAMBDA; binders = boxes(pattern, pattern); RIGHT_SQUIGGLY_ARROW; body = hom_body
+    { CS.HomLam(Ident.join (fst binders), Ident.join (snd binders), body) }
   | p = term; RIGHT_THICK_ARROW; q = term
     { CS.Hom (p, q) }
 
@@ -191,8 +218,12 @@ plain_hom_body:
     { CS.Let (nm, tm, hom) }
   | LET_MINUS; nm = pattern; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
     { CS.NegLet (nm, tm, hom) }
-  | RETURN; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term
-    { CS.Return (pos, neg) }
+  | RETURN; boxes = boxes(term, neg_term)
+    { CS.Return
+      ( fold_pat (fun l r -> duolocate (l, r) @@ CS.Pair (l, r)) (fst boxes)
+      , fold_pat (fun l r -> duolocate (l, r) @@ CS.NegPairSimple (l, r)) (snd boxes)
+      )
+    }
 
 program:
   | t = located(plain_program)

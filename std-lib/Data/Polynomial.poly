@@ -27,7 +27,7 @@ def constantₚ : Type → Poly :=
 --
 def idₚ : Π (P : Poly), P ⇒ P :=
   λ P →
-    λ p⁺ p⁻ ⇝
+    λ p⁺ ⇜ p⁻ ⇝
     return p⁺ ⇜ p⁻
 
 -- | Composition of polynomials
@@ -41,7 +41,7 @@ def idₚ : Π (P : Poly), P ⇒ P :=
 --   └───────────────┘
 --
 def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
-  λ P Q R f g → λ p⁺ p⁻ ⇝
+  λ P Q R f g → λ p⁺ ⇜ p⁻ ⇝
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
     return r⁺ ⇜ r⁻
@@ -84,13 +84,11 @@ def tensor-⊗ : Poly → Poly → Poly :=
   λ P Q → Σ ((p , q) : base P × base Q), fib P p × fib Q q
 
 def swap-⊗ : Π (P Q : Poly), tensor-⊗ P Q ⇒ tensor-⊗ Q P :=
-  λ P Q → λ
-    (p⁺ , q⁺) pq⁻ ⇝
-      let⁻ (p⁻ , q⁻) := pq⁻;
-      return (q⁺ , p⁺) ⇜ (q⁻ , p⁻)
+  λ P Q → λ (p⁺ , q⁺) ⇜ (p⁻ , q⁻) ⇝
+    return (q⁺ , p⁺) ⇜ (q⁻ , p⁻)
 
 def dupe-⊗ : Π (P : Poly), P ⇒ tensor-⊗  P P :=
-  λ P → λ p⁺ p⁻ ⇝
+  λ P → λ p⁺ ⇜ p⁻ ⇝
     return (p⁺ , p⁺) ⇜ ( p⁻ , ! )
 
 --------------------------------------------------------------------------------
@@ -103,21 +101,21 @@ def tensor-× : Poly → Poly → Poly :=
 
 -- def fst-× : Π (P Q : Poly), tensor-× P Q ⇒ P :=
 --   λ P Q →
---     λ pq⁺ pq⁻ ⇝
+--     λ pq⁺ ⇜ pq⁻ ⇝
 --       let⁻ (p⁻ , q⁻) := pq⁻;
 --       let (p⁺ , q⁺) := pq⁺;
 --       return (fst pq⁺) ⇜ p⁻
 
 -- def snd-× : Π (P Q : Poly), tensor-× P Q ⇒ Q :=
 --   λ P Q →
---     λ pq⁺ pq⁻ ⇝
+--     λ pq⁺ ⇜ pq⁻ ⇝
 --       let⁻ (p⁻ , q⁻) := pq⁻;
 --       let (p⁺ , q⁺) := pq⁺;
 --       return q⁺ ⇜ q⁻
 
 -- def dupe-× : Π (P : Poly), P ⇒ tensor-× P P :=
 --   λ P →
---     λ p⁺ p⁻ ⇝
+--     λ p⁺ ⇜ p⁻ ⇝
 --       return (p⁺ , p⁺) ⇜ (p⁻ , ! )
 
 --------------------------------------------------------------------------------
