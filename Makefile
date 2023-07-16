@@ -70,4 +70,4 @@ test:
 .PHONY: snapshot
 ## snapshot: update golden testing snapshot
 snapshot:
-	dune promote
+	dune runtest; dune promote

@@ -9,7 +9,7 @@ let rec execute_file cwd fname =
   let abs_fname = Filename.concat cwd fname in
   if String.equal (Filename.extension abs_fname) ".poly" then
     try
-      let _ = print_string (header fname) in
+      let _ = print_string (header abs_fname) in
       ignore @@ Loader.load abs_fname false;
     with
       e ->
@@ -23,4 +23,4 @@ let rec execute_file cwd fname =
 let () =
   let polytt_files = Sys.readdir "." in
   Array.sort String.compare polytt_files;
-  Array.iter (execute_file (Sys.getcwd ())) polytt_files
+  Array.iter (execute_file ".") polytt_files
