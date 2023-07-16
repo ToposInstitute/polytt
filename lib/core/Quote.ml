@@ -124,7 +124,7 @@ struct
       S.FinSet ls
     | _, D.Label (ls, l) ->
       S.Label (ls, l)
-    | tp, (D.Neu (_, neu) as stuck) ->
+    | tp, (D.Neu _ as stuck) ->
       begin
         match unstick stuck with
         (* still stuck on something *)
@@ -132,7 +132,7 @@ struct
           quote_neu neu
         (* no longer stuck at the top-level at least *)
         | e ->
-          quote tp (Sem.do_spine e neu.spine)
+          quote tp e
       end
     | tp, tm ->
       Debug.print "Bad quote: %a@." D.dump tm;

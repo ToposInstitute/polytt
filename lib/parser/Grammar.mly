@@ -196,8 +196,8 @@ labeled_field(sep):
 arrow:
   | LAMBDA; nms = nonempty_list(pattern); RIGHT_ARROW; tm = term
     { CS.Lam (nms, tm) }
-  | LAMBDA; nmtps = nonempty_list(LPR; nm = pattern; COLON; tp = term; RPR { (nm, tp) }); RIGHT_ARROW; tm = term
-    { CS.LamSyn (nmtps, tm) }
+  | LAMBDA; quantifiers = quantifiers; RIGHT_ARROW; tm = term
+    { CS.LamSyn (quantifiers, tm) }
   | FORALL; quantifiers = quantifiers; COMMA; fam = term
     { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term

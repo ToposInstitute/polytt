@@ -136,8 +136,8 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   let fib = (do_fib r (eval pos)) in
   let name = Var (`Machine (Eff.Locals.size ())) in
   (* generate a fake binding for the reverse direction *)
+  let neg = NegChk.run neg_tac fib in
   Var.abstract ~name fib @@ fun v ->
-    let neg = NegChk.run neg_tac fib in
     (* write it to the sink that is provided to `return` *)
     neg (Var.value v);
     (* get the *new* value of the initial sink that was provided to the
