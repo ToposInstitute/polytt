@@ -22,5 +22,8 @@ def either-elim : Π(A B : Type) (f : Either A B → Type),
 def either : Π (A B C : Type), (A → C) → (B → C) → Either A B → C :=
   λ A B C f g either → either-elim A B (λ _ → C) f g either
 
+def from-either : Π (A : Type), Either A A → A :=
+  λ A → either A A A (λ a → a) (λ a → a)
+
 def bind-either : Π (E A B : Type), (A → Either E B) → Either E A → Either E B :=
   λ E A B f → either E A (Either E B) (Left E B) f

@@ -104,17 +104,15 @@ def fst-× : Π (P Q : Poly), tensor-× P Q ⇒ P :=
     λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
       return p⁺ ⇜ λ⁻ p → pq⁻ ← Left (fib P p⁺) (fib Q q⁺) p; done
 
--- def snd-× : Π (P Q : Poly), tensor-× P Q ⇒ Q :=
---   λ P Q →
---     λ pq⁺ ⇜ pq⁻ ⇝
---       let⁻ (p⁻ , q⁻) := pq⁻;
---       let (p⁺ , q⁺) := pq⁺;
---       return q⁺ ⇜ q⁻
+def snd-× : Π (P Q : Poly), tensor-× P Q ⇒ Q :=
+  λ P Q →
+    λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
+      return q⁺ ⇜ λ⁻ q → pq⁻ ← Right (fib P p⁺) (fib Q q⁺) q; done
 
--- def dupe-× : Π (P : Poly), P ⇒ tensor-× P P :=
---   λ P →
---     λ p⁺ ⇜ p⁻ ⇝
---       return (p⁺ , p⁺) ⇜ (p⁻ , ! )
+def dupe-× : Π (P : Poly), P ⇒ tensor-× P P :=
+  λ P →
+    λ p⁺ ⇜ p⁻ ⇝
+      return (p⁺ , p⁺) ⇜ p⁻ ∘ (from-either (fib P p⁺))
 
 --------------------------------------------------------------------------------
 
