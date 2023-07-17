@@ -102,11 +102,6 @@ struct
     let env = Reader.read () in
     Bwd.for_all (fun (c, _) -> !c) env.neg_values
 
-  let head () =
-    let env = Reader.read () in
-    if (env.neg_size == 0) then invalid_arg (Format.asprintf "Eff.Locals.head on empty context");
-    ! (snd (Bwd.nth env.neg_values (env.neg_size - 1)))
-
   let run_linear k =
     Reader.scope drop_linear @@ fun () ->
     k ()
@@ -300,7 +295,6 @@ struct
         k (ident, (tp, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })), Var lvl)
     | _ ->
       (* allocate 1 *)
-      (* important for Eff.Locals.head, used in Hom.intro *)
       abstract_neg_ident ~name:`Anon tp @@ fun lvl ->
         (* allocate n *)
         bind_neg_tree ~name tp @@ fun lvls ->
@@ -317,14 +311,23 @@ struct
             k (`Anon, (tp, value), r)
     end
 
-  let revert i_tp cb =
-    Debug.print "i_tp: %a@." D.dump i_tp;
+  (* Used in Prog.neg_lam/Prog.neg_lam_syn *)
+  (* Calling convention: the most recently bound variable is abstract, of type i_tp *)
+  (* Pass it a program to run, whose changes to context are recorded and
+     replayed by writing a new value in place of the most recently bound
+     variable which this is called *)
+  (* If successful, this returns a sink, to replay the cb() with a new value *)
+  let revert (_i_tp : D.tp) cb =
+    (* save the environment before and after *)
     let env0 = Reader.read () in
     let already_used = Bwd.map2 (fun (used, _) tp -> !used, tp) env0.neg_values env0.neg_types in
     cb ();
     let env1 = Reader.read () in
     assert (env1.neg_size >= env0.neg_size);
+    (* we quote the updated values in the current environment *)
     let q = qenv () in
+    (* then we save the environment into the closure but with the most recent
+       bound variable dropped *)
     let d = denv () in
     let ok = ref true in
     let reverted =
@@ -333,9 +336,15 @@ struct
       let used_now = !used in
       match Bwd.nth_opt already_used i with
       | None ->
+        (* a sink that was allocated but not written to
+           (and is now unable to be written to) *)
         if not used_now then ok := false;
         None
+      (* a sink that was written to by cb() *)
       | Some (false, o_tp) when used_now ->
+        (* we are going to quote the value and plop it into a closure, where
+           the most recent bound variable gets dropped so that it will be
+           overwritten when instantiating the closure *)
         Debug.print "o_tp: %a@.              %a@." D.dump o_tp S.dump (Quote.quote ~env:q ~tp:D.Univ o_tp);
         Debug.print "value: %a@." D.dump !value;
         let quoted = Quote.quote ~env:q ~tp:o_tp !value in
@@ -347,12 +356,13 @@ struct
         in
         let abstracted : D.tm_clo = Clo { env = dropped; body = quoted } in
         Some (fun v -> value := Semantics.inst_clo abstracted v)
+      (* an old sink (already existed), not newly written to *)
       | Some _ -> None
     in
     match !ok with
     | false -> None
-    | true -> Some
-                (fun value -> Bwd.iter (fun f -> f value) reverted)
+    (* return a callback that applies all changes, but to the new value *)
+    | true -> Some (fun value -> Bwd.iter (fun f -> f value) reverted)
 
   let abstracts ?(names = [Var `Anon]) tp k =
     let step name cont bounds =

@@ -34,12 +34,11 @@ module Locals : sig
   val qenv : unit -> QuoteEnv.t
   val denv : unit -> D.env
   val size : unit -> int
-  val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
+  val revert : D.tp -> (unit -> unit) -> (D.t -> unit) option
 
   val abstract_neg : ?name:Ident.binder -> D.tp -> (Ident.t * (D.tp * D.t) * int Ident.pat -> 'a) -> 'a
   val consume_neg : int -> unit -> (D.t -> unit) option
   val all_consumed : unit -> bool
-  val head : unit -> D.t
   val run_linear : (unit -> 'b) -> 'b
 end
 
