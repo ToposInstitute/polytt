@@ -14,6 +14,12 @@ struct
     match tm.node with
     | CS.Lam (names, tm) ->
       chk_lams names tm
+    | CS.LamSyn (qs, tm) ->
+      List.fold_left
+        (fun b (names, a) ms -> Pi.intro_chk ~names (chk a) (fun ns -> b (ms @ ns)))
+        (fun _ -> chk tm)
+        (List.rev qs)
+        []
     | CS.Let (name, tm1, tm2) ->
       let tm1 = syn tm1 in
       Var.let_bind ~name:name tm1 (fun _ -> chk tm2)

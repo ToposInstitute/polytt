@@ -28,6 +28,23 @@ let rec intro ?(name = Var `Anon) tac =
   | _ ->
     Error.error `TypeError "Expected element of Π."
 
+let unpack_pi tp v = begin function
+  | D.Pi (_, a, clo) ->
+    equate ~tp:D.Univ a tp;
+    inst_clo clo (Var.value v)
+  | _ ->
+    Error.error `TypeError "Expected element of Π."
+  end
+
+let intro_chk ?(names = [Var `Anon]) tp_tac tac =
+  Chk.rule @@ fun e ->
+  let stp = Chk.run tp_tac D.Univ in
+  let tp = eval stp in
+  let r = Var.abstracts ~names tp @@ fun v ->
+    Chk.run (tac v) @@ List.fold_right (unpack_pi tp) v e
+  in
+  List.fold_right (fun name r -> S.Lam (name, r)) (Var.choose_many names) r
+
 let intro_syn ?(names = [Var `Anon]) tp_tac tac =
   Syn.rule @@ fun () ->
   let stp = Chk.run tp_tac D.Univ in

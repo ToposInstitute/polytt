@@ -7,8 +7,8 @@ import Data::Void
 def ofP : Poly → Type → Type :=
   λ P A → Σ (p : base P), fib P p → A
 
-def mapₚ : Π (P : Poly), Π (A B : Type), (A → B) → (ofP P) A → (ofP P) B :=
-  λ P A B f (p , a) → ( p , λ x → f (a x) )
+def mapₚ (P : Poly) (A B : Type) : (A → B) → (ofP P) A → (ofP P) B :=
+  λ f (p , a) → ( p , λ x → f (a x) )
 
 -- S × Y^aₛ
 def monomialₚ : Type → Type → Poly :=
@@ -25,9 +25,8 @@ def constantₚ : Type → Poly :=
 --   │  └───┘  │
 --   └─────────┘
 --
-def idₚ : Π (P : Poly), P ⇒ P :=
-  λ P →
-    λ p⁺ ⇜ p⁻ ⇝
+def idₚ (P : Poly) : P ⇒ P :=
+  λ p⁺ ⇜ p⁻ ⇝
     return p⁺ ⇜ p⁻
 
 -- | Composition of polynomials
@@ -40,18 +39,18 @@ def idₚ : Π (P : Poly), P ⇒ P :=
 --   │  └─────────┘ r│
 --   └───────────────┘
 --
-def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
-  λ P Q R f g → λ p⁺ ⇜ p⁻ ⇝
+def compose (P Q R : Poly) : Q ⇒ R → P ⇒ Q → P ⇒ R :=
+  λ f g → λ p⁺ ⇜ p⁻ ⇝
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
     return r⁺ ⇜ r⁻
 
 -- Prefix notation for _⨟_
-def then : Π (P Q R : Poly), P ⇒ Q → Q ⇒ R → P ⇒ R :=
-  λ P Q R g f → compose P Q R f g
+def then (P Q R : Poly) : P ⇒ Q → Q ⇒ R → P ⇒ R :=
+  λ g f → compose P Q R f g
 
-def hom-base : Π (P Q : Poly), P ⇒ Q → base P → base Q :=
-  λ P Q f p → fst (f p)
+def hom-base (P Q : Poly) : P ⇒ Q → base P → base Q :=
+  λ f p → fst (f p)
 
 --------------------------------------------------------------------------------
 
@@ -99,20 +98,17 @@ def dupe-⊗ : Π (P : Poly), P ⇒ tensor-⊗  P P :=
 def tensor-× : Poly → Poly → Poly :=
   λ P Q → Σ ((i , j) : base P × base Q), Either (fib P i) (fib Q j)
 
-def fst-× : Π (P Q : Poly), tensor-× P Q ⇒ P :=
-  λ P Q →
-    λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
-      return p⁺ ⇜ λ⁻ p → pq⁻ ← Left (fib P p⁺) (fib Q q⁺) p; done
+def fst-× (P Q : Poly) : tensor-× P Q ⇒ P :=
+  λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
+    return p⁺ ⇜ λ⁻ p → pq⁻ ← Left (fib P p⁺) (fib Q q⁺) p; done
 
-def snd-× : Π (P Q : Poly), tensor-× P Q ⇒ Q :=
-  λ P Q →
-    λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
-      return q⁺ ⇜ λ⁻ q → pq⁻ ← Right (fib P p⁺) (fib Q q⁺) q; done
+def snd-× (P Q : Poly) : tensor-× P Q ⇒ Q :=
+  λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
+    return q⁺ ⇜ λ⁻ q → pq⁻ ← Right (fib P p⁺) (fib Q q⁺) q; done
 
-def dupe-× : Π (P : Poly), P ⇒ tensor-× P P :=
-  λ P →
-    λ p⁺ ⇜ p⁻ ⇝
-      return (p⁺ , p⁺) ⇜ p⁻ ∘ (from-either (fib P p⁺))
+def dupe-× (P : Poly) : P ⇒ tensor-× P P :=
+  λ p⁺ ⇜ p⁻ ⇝
+    return (p⁺ , p⁺) ⇜ p⁻ ∘ (from-either (fib P p⁺))
 
 --------------------------------------------------------------------------------
 

@@ -9,6 +9,10 @@ let locate (start, stop) node =
 
 let unlocate {CS.node; loc = _} = node
 let get_loc {CS.loc; node = _} = loc
+let clonecate other node =
+  { CS.node;
+    loc = get_loc other
+  }
 let duolocate (starter, stopper) node =
   { CS.node;
     loc = Span.make
@@ -120,10 +124,10 @@ command:
     { c }
 
 plain_command:
-  | DEF; name = name; COLON; tp = term; COLON_EQUALS; tm = term
-    { CS.Def {name; tp = Some tp; tm} }
-  | DEF; name = name; COLON_EQUALS; tm = term
-    { CS.Def {name; tp = None; tm} }
+  | DEF; name = name; quantifiers = list(quantifier); COLON; tp = term; COLON_EQUALS; tm = term
+    { CS.Def {name; tp = Some (clonecate tp (CS.Pi (quantifiers, tp))); tm = clonecate tm (CS.LamSyn (quantifiers, tm))} }
+  | DEF; name = name; quantifiers = list(quantifier); COLON_EQUALS; tm = term
+    { CS.Def {name; tp = None; tm = clonecate tm (CS.LamSyn (quantifiers, tm))} }
   | FAIL; name = name; COLON; tp = term; COLON_EQUALS; tm = term
     { CS.Fail {name; tp = Some tp; tm} }
   | FAIL; name = name; COLON_EQUALS; tm = term

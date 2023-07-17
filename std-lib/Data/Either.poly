@@ -6,24 +6,24 @@ import Data::Polynomial::Fin
 def Either : Type → Type → Type :=
   λ A B → Σ (tag : Bool), bool Type tag A B
 
-def Left : Π (A B : Type), A → Either A B :=
-  λ A B a → (.true, a)
+def Left (A B : Type) : A → Either A B :=
+  λ a → (.true, a)
 
-def Right : Π (A B : Type), B → Either A B :=
-  λ A B b → (.false, b)
+def Right (A B : Type) : B → Either A B :=
+  λ b → (.false, b)
 
 -- | Dependent Eliminator
-def either-elim : Π(A B : Type) (f : Either A B → Type),
+def either-elim (A B : Type) : Π (f : Either A B → Type),
   (Π(x : A), f (Left A B x)) → (Π(y : B), f (Right A B y)) →
   Π (x : Either A B), (f x) :=
-    λ A B mot l r e → ×-rec Bool { .true = A , .false = B } mot { .true = λ v → (l v) , .false = λ v → (r v) } e
+    λ mot l r e → ×-rec Bool { .true = A , .false = B } mot { .true = λ v → (l v) , .false = λ v → (r v) } e
 
 -- | Non-Dependent Eliminator
-def either : Π (A B C : Type), (A → C) → (B → C) → Either A B → C :=
-  λ A B C f g either → either-elim A B (λ _ → C) f g either
+def either (A B C : Type) : (A → C) → (B → C) → Either A B → C :=
+  λ f g either → either-elim A B (λ _ → C) f g either
 
-def from-either : Π (A : Type), Either A A → A :=
-  λ A → either A A A (λ a → a) (λ a → a)
+def from-either (A : Type) : Either A A → A :=
+  either A A A (λ a → a) (λ a → a)
 
-def bind-either : Π (E A B : Type), (A → Either E B) → Either E A → Either E B :=
-  λ E A B f → either E A (Either E B) (Left E B) f
+def bind-either (E A B : Type) : (A → Either E B) → Either E A → Either E B :=
+  either E A (Either E B) (Left E B)
