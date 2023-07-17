@@ -3,12 +3,18 @@ import Data::Void
 
 --------------------------------------------------------------------------------
 
--- Interpretation of a Poly as a functor Type → Type
+-- Interpret a Poly as a functor Type → Type
 def ofP : Poly → Type → Type :=
   λ P A → Σ (p : base P), fib P p → A
 
 def mapₚ (P : Poly) (A B : Type) : (A → B) → (ofP P) A → (ofP P) B :=
   λ f (p , a) → ( p , λ x → f (a x) )
+
+-- Interpret a morphism as a natural transformation
+def ofM (P Q : Poly) : P ⇒ Q → Π (A : Type), ofP P A → ofP Q A :=
+  λ m A (p , a) →
+    let (q , f) := m p in
+    ( q , λ x → a (f x) )
 
 -- S × Y^aₛ
 def monomialₚ : Type → Type → Poly :=

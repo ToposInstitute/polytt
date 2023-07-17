@@ -60,6 +60,8 @@ struct
       NegSigma.intro_simple_chk (neg_chk p) (neg_chk q)
     | CS.NegLam (name, body) ->
       Prog.neg_lam ~name (fun _ -> prog body)
+    | CS.Hole ->
+      Hole.unleash_neg
     | _ ->
       T.NegChk.syn (neg_syn tm)
 
@@ -167,6 +169,8 @@ struct
       NegSigma.intro_simple (neg_syn p) (neg_syn q)
     | CS.NegLamSyn (name, tp, body) ->
       Prog.neg_lam_syn ~name (chk tp) (fun _ -> prog body)
+    | CS.Hole ->
+      Hole.unleash_neg_syn
     | _ ->
       T.Error.error `TypeError "Cannot synthesize (negative) type."
 

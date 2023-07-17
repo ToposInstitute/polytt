@@ -278,6 +278,8 @@ plain_atomic_neg_term:
     { CS.Var path }
   | BANG
     { CS.Drop }
+  | QUESTION
+    { CS.Hole }
 
 atomic_term:
   | t = located(plain_atomic_term)
