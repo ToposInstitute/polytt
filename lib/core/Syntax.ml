@@ -228,7 +228,7 @@ let rec pp (env : ppenv) =
       (pp env (P.left_of this)) a
       (pp (abs_pos env `Anon) (P.right_of this)) b
   | Pi (nm, a, b) ->
-    Format.fprintf fmt "(%a : %a) → %a"
+    Format.fprintf fmt "Π (%a : %a), %a"
       Ident.pp nm
       (pp env P.isolated) a
       (pp (abs_pos env nm) (P.right_of this)) b
@@ -237,7 +237,7 @@ let rec pp (env : ppenv) =
       (pp env (P.left_of this)) a
       (pp (abs_pos env `Anon) (P.right_of this)) b
   | Sigma (nm, a, b) ->
-    Format.fprintf fmt "(%a : %a) × %a"
+    Format.fprintf fmt "Σ (%a : %a), %a"
       Ident.pp nm
       (pp env P.isolated) a
       (pp (abs_pos env nm) (P.right_of this)) b
@@ -257,7 +257,7 @@ let rec pp (env : ppenv) =
       (pp_sep_list ~sep:" " Ident.pp) nms
       (pp env (P.right_of this)) body
   | Let (nm, t1, t2) ->
-    Format.fprintf fmt "let %a = %a in %a"
+    Format.fprintf fmt "let %a := %a in %a"
       Ident.pp nm
       (pp env (P.right_of this)) t1
       (pp (abs_pos env nm) (P.right_of this)) t2
@@ -308,7 +308,7 @@ let rec pp (env : ppenv) =
   | Poly ->
     Format.fprintf fmt "Poly"
   | PolyIntro (nm, base, fib) ->
-    Format.fprintf fmt "(%a : %a) × %a"
+    Format.fprintf fmt "Σ (%a : %a), %a"
       Ident.pp nm
       (pp env P.isolated) base
       (pp (abs_pos env nm) P.isolated) fib
