@@ -1,4 +1,4 @@
---------------------[basics.poly]--------------------
+--------------------[./basic/basics.poly]--------------------
 
 Normal Form: 5
 tensor : Π (<27> : Poly), Π (<26> : Poly), Poly
@@ -16,13 +16,45 @@ Normal Form: ((2 , 1) , λ <3> → (snd <3> , fst <3>))
 Normal Form: λ P Q → Σ (<28> : base P), Σ (_ : base P), fib P _ ⇒ Σ (_ : base Q), fib Q _
 Normal Form: λ P Q → λ <3> → ((fst <3> , λ <4> → snd <3>) , λ <3> → (fst <3> , snd <3>))
 Normal Form: λ S T A B → #{ .get, .set } → { .get = Π (<68> : S), A, .set = Π (<70> : S), Π (<69> : B), T } _
---------------------[test-let.poly]--------------------
+--------------------[./let/test-let.poly]--------------------
 
 Normal Form: 9
---------------------[a.poly]--------------------
+--------------------[./namespaces/a.poly]--------------------
 
---------------------[b.poly]--------------------
+--------------------[./namespaces/b.poly]--------------------
 
---------------------[c.poly]--------------------
+--------------------[./namespaces/c.poly]--------------------
 
 baz : ℕ
+--------------------[./std-lib/Data/Bool.poly]--------------------
+
+--------------------[./std-lib/Data/Either.poly]--------------------
+
+--------------------[./std-lib/Data/Natural.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/Fin.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/Identity.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/Lens.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/List.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/Machines.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/Maybe.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/Store.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial/Vector.poly]--------------------
+
+--------------------[./std-lib/Data/Polynomial.poly]--------------------
+
+--------------------[./std-lib/Data/Unit.poly]--------------------
+
+--------------------[./std-lib/Data/Void.poly]--------------------
+
+--------------------[./std-lib/Prelude.poly]--------------------
+
+--------------------[./std-lib/Tutorial.poly]--------------------
+

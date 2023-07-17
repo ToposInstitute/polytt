@@ -53,7 +53,7 @@ lint-shell-changed:
 
 .PHONY: build
 ## build: build polytt
-build: 
+build:
 	dune build
 
 .PHONY: clean
@@ -70,5 +70,4 @@ test:
 .PHONY: snapshot
 ## snapshot: update golden testing snapshot
 snapshot:
-	dune runtest
-	dune promote
+	dune runtest; dune promote
