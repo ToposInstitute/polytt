@@ -1,34 +1,38 @@
 open Core
 open Tactic
 
+open Core.Ident
+
 let formation p_tac q_tac =
   Syn.rule @@ fun () ->
   let p = Chk.run p_tac D.Poly in
   let q = Chk.run q_tac D.Poly in
   D.Univ, S.Hom(p, q)
 
-let intro ?(pos_name = `Anon) ?(neg_name = `Anon) (bdy_tac : Var.tac -> NegVar.tac -> Hom.tac) : Chk.tac =
+let intro ?(pos_name = Var `Anon) ?(neg_name = Var `Anon) (bdy_tac : Var.tac -> NegVar.tac -> Hom.tac) : Chk.tac =
   Chk.rule @@
   function
   | D.Hom (p, q) ->
     let p_base = do_base p in
     let ok =
       Eff.Locals.run_linear @@ fun () ->
+      Debug.print "Introducing negated domain %a@." D.dump p;
       Var.abstract ~name:pos_name p_base @@ fun pos_var ->
+      Debug.print "Introducing negated base %a@." D.dump p_base;
       let p_fib = do_fib p (Var.value pos_var) in
-      Core.Debug.print "Introducing negated %a@." D.dump p_fib;
+      Debug.print "Introducing negated fib %a@." D.dump p_fib;
       NegVar.abstract ~name:neg_name p_fib @@ fun neg_var ->
       let tail () =
         begin
-          let thingy = Eff.Locals.head () in
-          let q = quote ~tp:p_fib thingy in
-          Debug.print "tail %a@.             %a@." D.dump thingy S.dump q;
-          q
+        let thingy = NegVar.borrow neg_var in
+        let q = quote ~tp:p_fib thingy in
+        Debug.print "tail %a@.             %a@." D.dump thingy S.dump q;
+        q
         end
       in
       let bdy = Hom.run (bdy_tac pos_var neg_var) (q, tail) in
       Debug.print "ran body: %a@." S.dump bdy;
-      S.HomLam (S.Lam (pos_name, bdy))
+      S.HomLam (S.Lam (Var.choose pos_name, bdy))
     in ok
   | _ ->
     Error.error `TypeError "Must do a hom lambda in hom."
@@ -53,21 +57,23 @@ let elim hom_tac arg_tac =
   | _ ->
     Error.error `TypeError "Tried to eliminate from non-hom."
 
-let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
+let pos_let ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Hom.tac) =
   Hom.rule @@ fun r ->
   let tp, tm = Syn.run tm in
   let v = Eff.eval tm in
   Var.concrete ~name tp v @@ fun v ->
   let steps = Hom.run (f v) r in
-  S.Let (name, tm, steps)
+  S.Let (Var.choose name, tm, steps)
 
-let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Hom.tac) =
+
+(* let- name = tm; f *)
+let neg_let ?(name = Var `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Hom.tac) =
   Hom.rule @@ fun r ->
   let tp, tm = NegSyn.run tm in
   NegVar.abstract ~name tp @@ fun v ->
-  Debug.print "reading from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
+  (* Debug.print "reading from %a = %a@." Ident.pp name D.dump (NegVar.borrow v); *)
   tm (NegVar.borrow v);
-  Debug.print "-> read from %a = %a@." Ident.pp name D.dump (NegVar.borrow v);
+  (* Debug.print "-> read from %a = %a@." Ident.pp name D.dump (NegVar.borrow v); *)
   Hom.run (f v) r
 
 let neg_ap (neg_tac : NegChk.tac) (fn_tac : Syn.tac) =
@@ -103,7 +109,7 @@ let set (pos_tac : Chk.tac) (neg_tac : NegSyn.tac) (steps_tac : Hom.tac) : Hom.t
 
 let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
     (phi_tac : Syn.tac)
-    ?(pos_name = `Anon) ?(neg_name = `Anon)
+    ?(pos_name = Var `Anon) ?(neg_name = Var `Anon)
     (steps_tac : Var.tac -> NegVar.tac -> Hom.tac) =
   Hom.rule @@ fun r ->
   let phi_tp, phi = Syn.run phi_tac in
@@ -119,7 +125,7 @@ let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
     NegVar.abstract ~name:neg_name (do_fib q (Var.value pos_var)) @@ fun neg_var ->
     neg (do_ap phi_fib (NegVar.borrow neg_var));
     let steps = Hom.run (steps_tac pos_var neg_var) r in
-    S.Let (pos_name, S.Fst (S.HomElim (phi, pos)), steps)
+    S.Let (Var.choose pos_name, S.Fst (S.HomElim (phi, pos)), steps)
   | _ ->
     Error.error `TypeError "Must ap a hom to a hom!"
 
@@ -128,23 +134,28 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
   Hom.rule @@ fun (r, i) ->
   let pos = Chk.run pos_tac (do_base r) in
   let fib = (do_fib r (eval pos)) in
-  let name = `Machine (Eff.Locals.size ()) in
-  Eff.Locals.abstract ~name fib @@ fun v ->
+  let name = Var (`Machine (Eff.Locals.size ())) in
+  (* generate a fake binding for the reverse direction *)
   let neg = NegChk.run neg_tac fib in
-  neg v;
-  let fib_act = i () in
-  match Eff.Locals.all_consumed () with
-  | true ->
-    ((Eff.Locals.ppenv ()).pos |>
-     Bwd.Bwd.iter @@ fun v ->
-     Debug.print "  - %a@." Ident.pp v);
-    Debug.print " ---- @.";
-    ((Eff.Locals.qenv ()).neg |>
-     Bwd.Bwd.iter @@ fun v ->
-     Debug.print "  - %a@." D.dump v);
-    Debug.print " ---- @.";
-    (Bwd.Bwd.iter2
-       (fun tp v ->
+  Var.abstract ~name fib @@ fun v ->
+    (* write it to the sink that is provided to `return` *)
+    neg (Var.value v);
+    (* get the *new* value of the initial sink that was provided to the
+       hom lambda thingy *)
+    (* see tail() in intro *)
+    let fib_act = i () in
+    match Eff.Locals.all_consumed () with
+    | true ->
+      ((Eff.Locals.ppenv ()).pos |>
+        Bwd.Bwd.iter @@ fun v ->
+          Debug.print "  - %a@." Ident.pp v);
+      Debug.print " ---- @.";
+      ((Eff.Locals.qenv ()).neg |>
+        Bwd.Bwd.iter @@ fun v ->
+          Debug.print "  - %a@." D.dump v);
+      Debug.print " ---- @.";
+      (Bwd.Bwd.iter2
+        (fun tp v ->
           Debug.print "  - %a@." S.dump (quote ~tp v))
        (Eff.Locals.qenv ()).neg
        (Eff.Locals.denv ()).neg
@@ -153,11 +164,11 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
     (Bwd.Bwd.iter2
        (fun tp v ->
           Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
-       (Eff.Locals.denv ()).neg
-       (Eff.Locals.qenv ()).neg
-    );
-    Debug.print " ---- @.";
-    Debug.print "%a@." S.dump fib_act;
-    S.Pair (pos, S.Lam (name, fib_act))
-  | false ->
-    Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in hom."
+        (Eff.Locals.denv ()).neg
+        (Eff.Locals.qenv ()).neg
+      );
+      Debug.print " ---- @.";
+      Debug.print "%a@." S.dump fib_act;
+      S.Pair (pos, S.Lam (Var.choose name, fib_act))
+    | false ->
+      Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in hom."

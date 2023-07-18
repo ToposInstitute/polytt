@@ -1,5 +1,6 @@
 open Core
 open Tactic
+open Ident
 
 let local (cell : Cell.pos) =
   Syn.rule @@ fun () ->
@@ -10,7 +11,7 @@ let global glbl =
   let tp = CodeUnit.get_def_tp glbl in
   tp, S.Global glbl
 
-let let_bind ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
+let let_bind ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
   Chk.rule @@ fun rtp ->
   let (vtp, etm) = Syn.run tm in
   let vtm = Eff.eval etm in
@@ -18,7 +19,7 @@ let let_bind ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Chk.tac) =
     Var.concrete ~name vtp vtm @@ fun v ->
     Chk.run (f v) rtp
   in
-  Let (name, etm, body)
+  Let (Var.choose name, etm, body)
 
 let negative (cell : Cell.neg) =
   NegSyn.rule @@ fun () ->

@@ -2,12 +2,23 @@
 open Asai
 
 module CS = Vernacular.Syntax
+module Ident = Core.Ident
 
 let locate (start, stop) node =
   {CS.node; loc = Span.make (Span.of_lex_position start) (Span.of_lex_position stop)}
 
 let unlocate {CS.node; loc = _} = node
 let get_loc {CS.loc; node = _} = loc
+let clonecate other node =
+  { CS.node;
+    loc = get_loc other
+  }
+let duolocate (starter, stopper) node =
+  { CS.node;
+    loc = Span.make
+      (fst @@ Span.to_positions @@ get_loc starter)
+      (snd @@ Span.to_positions @@ get_loc stopper)
+  }
 
 
 let ap_or_atomic =
@@ -25,6 +36,17 @@ let rec quantifier quant =
   function
   | [] -> fun t -> unlocate t
   | (name, ty) :: more -> fun t -> quant (name, ty, quantifier quant more t)
+
+let rec tupleitup : ('a Ident.pat) list -> 'a Ident.pat =
+  function
+  | [] -> failwith "Impossible Internal Error"
+  | [x] -> x
+  | x :: xs -> Tuple (x, tupleitup xs)
+
+let rec fold_pat = fun t ->
+  function
+  | Ident.Var r -> r
+  | Ident.Tuple (l, r) -> t (fold_pat t l) (fold_pat t r)
 %}
 
 %token <int> NUMERAL
@@ -76,6 +98,21 @@ name:
   | UNDERSCORE
     { `Anon }
 
+pattern:
+  | name = name
+    { Var name }
+  | LPR; l = pattern; COMMA; r = pattern; RPR
+    { Tuple (l, r) }
+
+%inline
+boxes(X, Y):
+  | l = X; LEFT_SQUIGGLY_ARROW; r = Y
+    { (Ident.Var l, Ident.Var r) }
+  | bs = nonempty_list(LPR; b = boxes(X, Y); RPR { b })
+    { let (ls, rs) = (List.map fst bs, List.map snd bs) in
+      (tupleitup ls, tupleitup rs)
+    }
+
 commands:
   | EOF
     { [] }
@@ -87,10 +124,10 @@ command:
     { c }
 
 plain_command:
-  | DEF; name = name; COLON; tp = term; COLON_EQUALS; tm = term
-    { CS.Def {name; tp = Some tp; tm} }
-  | DEF; name = name; COLON_EQUALS; tm = term
-    { CS.Def {name; tp = None; tm} }
+  | DEF; name = name; quantifiers = list(quantifier); COLON; tp = term; COLON_EQUALS; tm = term
+    { CS.Def {name; tp = Some (clonecate tp (CS.Pi (quantifiers, tp))); tm = clonecate tm (CS.LamSyn (quantifiers, tm))} }
+  | DEF; name = name; quantifiers = list(quantifier); COLON_EQUALS; tm = term
+    { CS.Def {name; tp = None; tm = clonecate tm (CS.LamSyn (quantifiers, tm))} }
   | FAIL; name = name; COLON; tp = term; COLON_EQUALS; tm = term
     { CS.Fail {name; tp = Some tp; tm} }
   | FAIL; name = name; COLON_EQUALS; tm = term
@@ -117,8 +154,12 @@ plain_term:
     { CS.Anno (tm, ty) }
 
 quantifiers:
-  | r = nonempty_list(LPR; names = nonempty_list(name); COLON; base = term; RPR { (names, base) })
+  | r = nonempty_list(quantifier)
     { r }
+
+quantifier:
+  | LPR; names = nonempty_list(pattern); COLON; base = term; RPR
+    { (names, base) }
 
 plain_unannotated_term:
   | tms = nonempty_list(atomic_term)
@@ -126,7 +167,7 @@ plain_unannotated_term:
   | EXISTS; quantifiers = quantifiers; COMMA; fam = term
     { CS.Sigma (quantifiers, fam) }
   | base = term; TIMES; fam = term
-    { CS.Sigma ([[`Anon], base], fam) }
+    { CS.Sigma ([[Var `Anon], base], fam) }
   | FST; tm = atomic_term
     { CS.Fst tm }
   | tm1 = atomic_term; EQUALS; tm2 = atomic_term
@@ -147,9 +188,9 @@ plain_unannotated_term:
     { tm }
 
 let_binding:
-  | LET; nm = name; COLON_EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = pattern; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, tm1, tm2) }
-  | LET; nm = name; COLON; ty1 = term; COLON_EQUALS; tm1 = term; IN; tm2 = term
+  | LET; nm = pattern; COLON; ty1 = term; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, { node = Anno(tm1, ty1) ; loc = get_loc tm1 }, tm2) }
 
 labeled_field(sep):
@@ -157,14 +198,16 @@ labeled_field(sep):
     { (label, term) }
 
 arrow:
-  | LAMBDA; nms = nonempty_list(name); RIGHT_ARROW; tm = term
-    { CS.Lam(nms, tm) }
+  | LAMBDA; nms = nonempty_list(pattern); RIGHT_ARROW; tm = term
+    { CS.Lam (nms, tm) }
+  | LAMBDA; quantifiers = quantifiers; RIGHT_ARROW; tm = term
+    { CS.LamSyn (quantifiers, tm) }
   | FORALL; quantifiers = quantifiers; COMMA; fam = term
     { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term
-    { CS.Pi ([[`Anon], base], fam) }
-  | LAMBDA; pos = name; neg = name; RIGHT_SQUIGGLY_ARROW; body = hom_body
-    { CS.HomLam(pos, neg, body) }
+    { CS.Pi ([[Var `Anon], base], fam) }
+  | LAMBDA; binders = boxes(pattern, pattern); RIGHT_SQUIGGLY_ARROW; body = hom_body
+    { CS.HomLam(Ident.join (fst binders), Ident.join (snd binders), body) }
   | p = term; RIGHT_THICK_ARROW; q = term
     { CS.Hom (p, q) }
 
@@ -175,16 +218,18 @@ hom_body:
 plain_hom_body:
   | neg = neg_term; LEFT_ARROW; tm = term; SEMICOLON; hom = hom_body
     { CS.Set (tm, neg, hom) }
-  | LET; LPR; pos_name = name; LEFT_SQUIGGLY_ARROW; neg_name = name; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = hom_body
+  | LET; LPR; pos_name = pattern; LEFT_SQUIGGLY_ARROW; neg_name = pattern; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = hom_body
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
-  | LET_MINUS; LPR; a_name = name; COMMA; b_name = name; RPR; COLON_EQUALS; p = neg_term; SEMICOLON; body = hom_body
-    { CS.NegUnpack (p, a_name, b_name, body) }
-  | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = hom_body
+  | LET; nm = pattern; COLON_EQUALS; tm = term; SEMICOLON; hom = hom_body
     { CS.Let (nm, tm, hom) }
-  | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
+  | LET_MINUS; nm = pattern; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = hom_body
     { CS.NegLet (nm, tm, hom) }
-  | RETURN; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term
-    { CS.Return (pos, neg) }
+  | RETURN; boxes = boxes(term, neg_term)
+    { CS.Return
+      ( fold_pat (fun l r -> duolocate (l, r) @@ CS.Pair (l, r)) (fst boxes)
+      , fold_pat (fun l r -> duolocate (l, r) @@ CS.NegPairSimple (l, r)) (snd boxes)
+      )
+    }
 
 program:
   | t = located(plain_program)
@@ -193,13 +238,11 @@ program:
 plain_program:
   | neg = neg_term; LEFT_ARROW; tm = term; SEMICOLON; hom = program
     { CS.Set (tm, neg, hom) }
-  | LET; LPR; pos_name = name; LEFT_SQUIGGLY_ARROW; neg_name = name; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = program
+  | LET; LPR; pos_name = pattern; LEFT_SQUIGGLY_ARROW; neg_name = pattern; RPR; COLON_EQUALS; hom = atomic_term; LPR; pos = term; LEFT_SQUIGGLY_ARROW; neg = neg_term; RPR; SEMICOLON; body = program
     { CS.HomAp (pos, neg, hom, pos_name, neg_name, body) }
-  | LET_MINUS; LPR; a_name = name; COMMA; b_name = name; RPR; COLON_EQUALS; p = neg_term; SEMICOLON; body = program
-    { CS.NegUnpack (p, a_name, b_name, body) }
-  | LET; nm = name; COLON_EQUALS; tm = term; SEMICOLON; hom = program
+  | LET; nm = pattern; COLON_EQUALS; tm = term; SEMICOLON; hom = program
     { CS.Let (nm, tm, hom) }
-  | LET_MINUS; nm = name; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = program
+  | LET_MINUS; nm = pattern; COLON_EQUALS; tm = neg_term; SEMICOLON; hom = program
     { CS.NegLet (nm, tm, hom) }
   | DONE
     { CS.Done }
@@ -215,8 +258,10 @@ neg_term:
 plain_neg_term:
   | neg = atomic_neg_term; tms = option(neg_spine)
     { neg_ap_or_atomic neg tms }
-  | LAMBDA_MINUS; LPR; nm = name; COLON; tp = term; RPR RIGHT_ARROW; prog = program
-    { CS.NegLam (nm, tp, prog) }
+  | LAMBDA_MINUS; LPR; nm = pattern; COLON; tp = term; RPR; RIGHT_ARROW; prog = program
+    { CS.NegLamSyn (nm, tp, prog) }
+  | LAMBDA_MINUS; nm = pattern; RIGHT_ARROW; prog = program
+    { CS.NegLam (nm, prog) }
 
 atomic_neg_term:
   | t = located(plain_atomic_neg_term)
@@ -225,7 +270,7 @@ atomic_neg_term:
 plain_atomic_neg_term:
   | LPR; tm = plain_neg_term; RPR
     { tm }
-  | LPR; a = neg_term; LEFT_ARROW; a_name = name; COMMA; b = neg_term; RPR
+  | LPR; a = neg_term; LEFT_ARROW; a_name = pattern; COMMA; b = neg_term; RPR
     { CS.NegPair (a, a_name, b) }
   | LPR; a = neg_term; COMMA; b = neg_term; RPR
     { CS.NegPairSimple (a, b) }
@@ -233,6 +278,8 @@ plain_atomic_neg_term:
     { CS.Var path }
   | BANG
     { CS.Drop }
+  | QUESTION
+    { CS.Hole }
 
 atomic_term:
   | t = located(plain_atomic_term)

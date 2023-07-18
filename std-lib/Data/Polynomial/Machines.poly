@@ -11,7 +11,7 @@ def Moore : Type → Type → Type → Type :=
 
 def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
   λ S I O output transition →
-    λ s⁺ s⁻ ⇝
+    λ s⁺ ⇜ s⁻ ⇝
       return (output s⁺) ⇜ s⁻ ∘ (transition s⁺)
 
 def disassemble-moore : Π (S I O : Type), Moore S I O → (S → O) × (S → I → S) :=
@@ -38,8 +38,8 @@ def DFSA : Type → Type → Type :=
 -- B × B ⇒ B × A
 def mds : Π (A B : Type), (A → B) → Moore B A B :=
   λ A B f →
-    λ b⁺ b⁻ ⇝
-      return b⁺ ⇜ b⁻ ∘ f 
+    λ b⁺ ⇜ b⁻ ⇝
+      return b⁺ ⇜ b⁻ ∘ f
 
 -- | An MDS given a partial function.
 --
@@ -48,17 +48,17 @@ def mds-partial : Π (A B : Type),
   (A → Either Unit B) →
   Moore (Either Unit B) A (Either Unit B) :=
   λ A B f →
-    λ b⁺ b⁻ ⇝
-      return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← (bind-either Unit B B (λ _ → f a) b⁺); done 
+    λ b⁺ ⇜ b⁻ ⇝
+      return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← (bind-either Unit B B (λ _ → f a) b⁺); done
 
 -- | Delay receives a ℕ as input, sets the state to it, and outputs
 --   the prior state ℕ.
--- 
---     ┌───────────┐       
---    -│  -┌───┐+  │+ 
+--
+--     ┌───────────┐
+--    -│  -┌───┐+  │+
 --   ──┼───┤ℕ ℕ├───┼──
---    ℕ│   └───┘   │ℕ 
---     └───────────┘     
+--    ℕ│   └───┘   │ℕ
+--     └───────────┘
 --
 -- ℕ × ℕ ⇒ ℕ × ℕ
 def delay : Moore ℕ ℕ ℕ :=
@@ -66,26 +66,26 @@ def delay : Moore ℕ ℕ ℕ :=
 
 -- | Sum receives a pair of ℕ as input and outputs their sum.
 --
---     ┌───────────┐       
---    -│  -┌───┐+  │+ 
+--     ┌───────────┐
+--    -│  -┌───┐+  │+
 --   ──┼─*─┤ℕ ℕ├───┼──
---  ℕ×ℕ│   └───┘   │ℕ 
---     └───────────┘     
+--  ℕ×ℕ│   └───┘   │ℕ
+--     └───────────┘
 --  Note at * we apply the addition operation
 --
 -- ℕ × ℕ ⇒ ℕ × (ℕ × ℕ)
 def sum : Moore ℕ (ℕ × ℕ) ℕ :=
-  mds (ℕ × ℕ) ℕ (λ xy → add (fst xy) (snd xy))
+  mds (ℕ × ℕ) ℕ (λ (x , y) → add x y)
 
 -- | Counter receives a unit input and outputs the sequence of natural
 -- numbers 0, 1, 2, 3, ... .
 --
---     ┌────────────┐       
---    -│  -┌───┐+   │+ 
+--     ┌────────────┐
+--    -│  -┌───┐+   │+
 --   ──┤  ┌┤ ℕ ├┬───┼──
---   ()│  │└───┘│   │ℕ 
+--   ()│  │└───┘│   │ℕ
 --     │  └──*──┘   │
---     └────────────┘     
+--     └────────────┘
 --     Note: At * we apply 'succ'
 --
 --  ℕ × ℕ ⇒ ℕ × #{ .unit }
@@ -94,11 +94,11 @@ def counter : Moore ℕ #{ .unit } ℕ :=
 
 -- | Repeater receives a unit input and outputs its state.
 --
---     ┌───────────┐       
---    -│  -┌───┐+  │+ 
+--     ┌───────────┐
+--    -│  -┌───┐+  │+
 --   ──┤   │ ℕ ├───┼──
---   ()│   └───┘   │ℕ 
---     └───────────┘     
+--   ()│   └───┘   │ℕ
+--     └───────────┘
 --     Note: At * we apply 'succ'
 --
 --  ℕ × ℕ ⇒ ℕ × #{ .unit }

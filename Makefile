@@ -53,7 +53,7 @@ lint-shell-changed:
 
 .PHONY: build
 ## build: build polytt
-build: 
+build:
 	dune build
 
 .PHONY: clean

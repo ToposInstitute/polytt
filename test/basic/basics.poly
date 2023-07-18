@@ -25,7 +25,7 @@ def pair : ℕ → ℕ → ℕ × ℕ :=
   λ n m → (n , m : ℕ)
 
 def projl : (ℕ × ℕ) → ℕ :=
-  λ x → fst x
+  λ (_ , x) → x
 
 def Bool := #{ .true, .false }
 
@@ -49,36 +49,37 @@ def nyan : Poly :=
   (ℕ × ℕ)
 
 def tensor : Poly → Poly → Poly :=
-  λ P Q → Σ (pq : base P × base Q), fib P (fst pq) × fib Q (snd pq)
+  λ P Q → Σ ((p , q) : base P × base Q), fib P p × fib Q q
 
+#print tensor
 #normalize base (tensor nyan nyan)
 #normalize fib (tensor nyan nyan) (1 , 2)
 
 
 def id : Π (P : Poly), P ⇒ P :=
-  λ P → λ a⁺ a⁻ ⇝
+  λ P → λ a⁺ ⇜ a⁻ ⇝
     return a⁺ ⇜ a⁻
 
 #print (λ P → P) : Poly → Poly
 
-#print (λ P → λ a⁺ a⁻ ⇝ return a⁺ ⇜ a⁻) : Π (P : Poly), P ⇒ P
+#print (λ P → λ a⁺ ⇜ a⁻ ⇝ return a⁺ ⇜ a⁻) : Π (P : Poly), P ⇒ P
 
 def nyan-hom : ℕ → nyan ⇒ nyan :=
-  λ n → λ a⁺ a⁻ ⇝
+  λ n → λ a⁺ ⇜ a⁻ ⇝
     let (b⁺ ⇜ b⁻) := (id nyan) (a⁺ ⇜ a⁻);
     return n ⇜ (b⁻ ∘ succ ∘ succ)
 
 #normalize nyan-hom 42 1
 
 def nyan-hom2 : nyan ⇒ nyan :=
-  λ a⁺ a⁻ ⇝
+  λ a⁺ ⇜ a⁻ ⇝
     let (b⁺ ⇜ b⁻) := (nyan-hom 12) (a⁺ ⇜ a⁻);
     return b⁺ ⇜ b⁻
 
 #normalize nyan-hom2 1
 
 def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
-  λ P Q R f g → λ p⁺ p⁻ ⇝
+  λ P Q R f g → λ p⁺ ⇜ p⁻ ⇝
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
     return r⁺ ⇜ r⁻
@@ -88,7 +89,7 @@ def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
 #normalize compose nyan nyan nyan nyan-hom2 nyan-hom2 1
 
 def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
-  λ n⁺ n⁻ ⇝
+  λ n⁺ ⇜ n⁻ ⇝
     return n⁺ ⇜ λ⁻ (x : #{ .single }) → n⁻ ← succ n⁺; done
 
 #normalize (const ℕ) ℕ
@@ -99,23 +100,22 @@ def Moore : Type → Type → Type → Type :=
   λ S I O → (S × S) ⇒ (O × I)
 
 def mds : Π (A B : Type), (A → B) → Moore B A B :=
-  λ A B f → λ b⁺ b⁻ ⇝
+  λ A B f → λ b⁺ ⇜ b⁻ ⇝
     return b⁺ ⇜ b⁻ ∘ f
 
 def Gate : Type → Type → Type :=
   λ I O → Moore O I O
 
 def test-pair : nyan ⇒ tensor nyan nyan :=
-  λ n⁺ n⁻ ⇝
+  λ n⁺ ⇜ n⁻ ⇝
     let (b⁺ ⇜ b⁻) := (nyan-hom 12) (n⁺ ⇜ n⁻);
     return (n⁺ , b⁺) ⇜ (! , b⁻ ∘ succ)
 
 #normalize (test-pair 1)
 
 def swap : Π (P Q : Poly), tensor P Q ⇒ tensor Q P :=
-  λ P Q → λ pq⁺ pq⁻ ⇝
-    let⁻ (p⁻ , q⁻) := pq⁻;
-    return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
+  λ P Q → λ (p⁺ , q⁺) ⇜ (p⁻ , q⁻) ⇝
+    return (q⁺ , p⁺) ⇜ (q⁻ , p⁻)
 
 -- λ (p⁺, q⁺) (p⁻, q⁻) ⇝ (q⁺ , p⁺) , (q⁻ , p⁻)
 
@@ -135,26 +135,14 @@ def internal-hom : Poly → Poly → Poly :=
 -- fib Q q⁺ *-|-----------------------------( fib Q (fst (f⁺ (borrow pb⁻))) )-[ f : P=>Q ]            -|- q⁺ : base Q
 --            |----------------------------------------------------------------------------------------|
 
-def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
-  λ P Q → λ pf⁺ pf⁻ ⇝
-    let p⁺ := fst pf⁺;
-    let f⁺ := snd pf⁺;
-    -- pf⁻ : ((fib P p⁺) × (fib (internal-hom P Q) f⁺))⁻
-    let⁻ (p⁻ , f⁻) := pf⁻;
-    -- borrow pf⁻ = (borrow p⁻ , borrow f⁻)
-    let qf⁺ := f⁺ p⁺;
-    let q⁺ := fst qf⁺;
-    let⁻ q₁⁻ := p⁻ ∘ (snd qf⁺);
-    -- f⁻ : ((p : base P) × fib Q (fst (f⁺ p)))⁻
-    let⁻ (pb⁻ , q⁻) := f⁻;
-    -- pb⁻ : (base P)⁻
-    -- q⁻ : (fib Q (fst (f⁺ (borrow pb⁻))))⁻
-    pb⁻ ← p⁺;
-    -- q⁻ : (fib Q (fst (f⁺ p⁺)))⁻
-    -- q⁻ : (fib Q q⁺)⁻
-    return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
-      (q⁻ , q₁⁻) ← (v , v);
-      done
+-- Π Σ Π Σ
+
+-- λ a⁺ ⇜ a⁻ ⇝
+--   p⁻ ← p⁺;
+--   return (base f) a⁺ ⇜ λ r →
+--     p⁻ ← p⁺;
+--     a⁻ ← (fib b a⁺) r;
+--     done
 
 -- Ideal syntax:
 --def eval (P Q : Poly) : tensor P (internal-hom P Q) ⇒ Q :=
@@ -181,17 +169,22 @@ def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
 -- snd : (xy : Σ (x : X), Y x) -> Y (fst xy)
 -- mfib = snd . m : (p : base P) -> fib Q (fst (m p)) -> fib P p
 
+#normalize (λ P Q → base (tensor P (internal-hom P Q))) : Poly → Poly → Type
 
-#normalize eval
-
-#normalize eval nyan nyan (3 , nyan-hom 12)
+def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
+  λ P Q → λ (p⁺ , f⁺) ⇜ (qf⁻ , (p⁻ , q⁻)) ⇝
+    let (q⁺ , qf⁺) := f⁺ p⁺;
+    p⁻ ← p⁺;
+    return q⁺ ⇜ λ⁻ (v : fib Q q⁺) →
+      (qf⁻ , q⁻) ← (qf⁺ v , v);
+      done
 
 def compose : Poly → Poly → Poly :=
-  λ P Q → Σ (pf : Σ (p : base P), fib P p → base Q), Σ (i : fib P (fst pf)), fib Q ((snd pf) i)
+  λ P Q → Σ ((p , f) : Σ (p : base P), fib P p → base Q), Σ (i : fib P p), fib Q (f i)
 
 def tensor-to-compose : Π (P Q : Poly), tensor P Q ⇒ compose P Q :=
-  λ P Q → λ pq⁺ pq⁻ ⇝
-    return (fst pq⁺ , λ _ → snd pq⁺) ⇜ pq⁻
+  λ P Q → λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
+    return (p⁺ , λ _ → q⁺) ⇜ pq⁻
 
 #normalize tensor-to-compose
 

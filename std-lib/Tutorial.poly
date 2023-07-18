@@ -50,9 +50,9 @@ def P : Π (Y : Type), Poly :=
   λ Y → Σ (_ : #{ .only }), Y × Y
 
 -- | Q y ≡ y³ + y²
-def Q : Π (Y : Type), Poly :=
-  λ Y → Σ (i : #{ .zero, .one }), {
-      .zero = Y × Y × Y
+def Q (Y : Type) : Poly :=
+  Σ (i : #{ .zero, .one }),
+    { .zero = Y × Y × Y
     , .one = Y × Y
     } i
 
@@ -62,20 +62,20 @@ def Q : Π (Y : Type), Poly :=
 --   where
 --     a : Fin 4 → Set
 --
-def R : Π (Y: Type), Poly :=
-  λ Y → Σ (i : #{ .zero, .one, .two, .three}), {
-      .zero = Y × Y × Y
+def R (Y : Type) : Poly :=
+  Σ (i : #{ .zero, .one, .two, .three}),
+    { .zero = Y × Y × Y
     , .one = Y × Y
     , .two = Y
     , .three = Unit
-  } i
+    } i
 
 def Listₚ : Poly :=
   Σ (n : ℕ), fin n
 
 -- | ℕy^ℕ
 def nyan : Poly :=
-  Σ(_ : ℕ), ℕ
+  Σ (_ : ℕ), ℕ
 
 -- | We can also define a non-dependent Poly using product shorthand
 -- in place of Sigma:
@@ -136,7 +136,7 @@ def idₚ : Π (P : Poly), P ⇒ P :=
     -- Here we bind the base and fiber-sink of the inner Poly:
     -- inner⁺ : base P
     -- inner⁻ : fib P inner⁺
-    λ inner⁺ inner⁻ ⇝
+    λ inner⁺ ⇜ inner⁻ ⇝
     -- And here we define the base and fiber-sink of the outer
     -- Poly. In this case we map the base to the base and the
     -- fiber-sink to the fiber-sink.
@@ -145,8 +145,8 @@ def idₚ : Π (P : Poly), P ⇒ P :=
 -- We can also define a morphism without the special lambda syntax, by providing
 -- the underlying map as a lambda.
 
-def idₚ' : Π (P : Poly), P ⇒ P :=
-  λ P → λ inner⁺ → (inner⁺ , λ inner → inner)
+def idₚ' (P : Poly) : P ⇒ P :=
+  λ inner⁺ → (inner⁺ , λ inner → inner)
 
 -- We can prove the equivalence of these two definitions:
 def idₚ≡idₚ' : idₚ = idₚ' := refl
@@ -164,12 +164,11 @@ def idₚ≡idₚ' : idₚ = idₚ' := refl
 --               A│ A└───┘B B└───┘C │C
 --                └─────────────────┘
 
-def two-chainₚ : Π(A B C : Type), (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
-  λ A B C →
-   λ pq⁺ pq⁻ ⇝
+def two-chainₚ (A B C : Type) : (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
+  λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
      let- (p⁻ , q⁻) := pq⁻;
-     q⁻ ← fst pq⁺;
-     return (snd pq⁺) ⇜ p⁻
+     q⁻ ← p⁺;
+     return q⁺ ⇜ p⁻
 
 -- Here we use _←_ to connect the 'fst' projection of the base of P to
 -- the fiber-sink of Q.
@@ -213,7 +212,7 @@ def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
   -- Bind the base and fiber-sink of the inner Poly:
   -- n⁺ : base (ℕ × ℕ)
   -- n⁻ : fib (ℕ × ℕ) n⁺
-  λ n⁺ n⁻ ⇝
+  λ n⁺ ⇜ n⁻ ⇝
 
     -- Apply 'succ' to n⁺ and connect it back to n⁻ to create the
     -- feedback loop:
@@ -293,13 +292,11 @@ def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
 
 def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
   λ P Q R f g →
-    λ p⁺ p⁻ ⇝
-      let q⁺ := fst (g p⁺);
-      let g⁻ := snd (g p⁺);
+    λ p⁺ ⇜ p⁻ ⇝
+      let (q⁺ , g⁻) := g p⁺;
       let- q⁻ := p⁻ ∘ g⁻;
 
-      let r⁺ := fst (f q⁺);
-      let f⁻ := snd (f q⁺);
+      let (r⁺ , f⁻) := f q⁺;
       let- r⁻ := q⁻ ∘ f⁻;
 
       return r⁺ ⇜ r⁻
@@ -312,14 +309,13 @@ def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
 --
 --    let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
 --
---    let q⁺ := fst (g p⁺);
---    let g⁻ := snd (g p⁺);
+--    let (q⁺ , g⁻) := g p⁺;
 --    let- q⁻ := p⁻ ∘ g⁻;
 --
 -- We can simplify composeₚ as such:
 
 def composeₚ' : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
-  λ P Q R f g → λ p⁺ p⁻ ⇝
+  λ P Q R f g → λ p⁺ ⇜ p⁻ ⇝
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
     return r⁺ ⇜ r⁻
@@ -350,18 +346,17 @@ def compose-equiv : composeₚ = composeₚ' := refl
 --              │    └───┘     │
 --              └──────────────┘
 
-def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
-  λ P Q →
-    λ pq⁺ pq⁻ ⇝
-      -- Case on the tensored fiber-sinks. Note that because
-      -- fiber-sinks are linear obligations we can no longer reference
-      -- pq⁻ after this point.
-      let⁻ (p⁻ , q⁻) := pq⁻;
+def swapₚ (P Q : Poly) : (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
+  λ pq⁺ ⇜ pq⁻ ⇝
+    -- Case on the tensored fiber-sinks. Note that because
+    -- fiber-sinks are linear obligations we can no longer reference
+    -- pq⁻ after this point.
+    let⁻ (p⁻ , q⁻) := pq⁻;
 
-      -- Reverse the positions of P and Q when connecting them to the
-      -- outer Poly. Note that we can use fst and snd on pq⁺ because
-      -- it is not linear.
-      return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
+    -- Reverse the positions of P and Q when connecting them to the
+    -- outer Poly. Note that we can use fst and snd on pq⁺ because
+    -- it is not linear.
+    return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
 
 -- | λ⁻ or Negative-lamda
 --
@@ -378,7 +373,7 @@ def swapₚ : Π(P Q : Poly), (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
 --
 
 def f : (ℕ × ℕ) ⇒ (ℕ × ℕ) :=
-  λ n⁺ n⁻ ⇝
+  λ n⁺ ⇜ n⁻ ⇝
     return n⁺ ⇜ λ⁻ (m : ℕ) → n⁻ ← add m n⁺; done
 
 --------------------------------------------------------------------------------
@@ -410,9 +405,9 @@ def counterₚ-is-a-machine : Moore ℕ #{ .unit } ℕ := counterₚ
 -- We can write a helper function for building a Moore Machine from
 -- output and transition functions:
 
-def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
-  λ S I O output transition →
-    λ s⁺ s⁻ ⇝
+def moore (S I O : Type) : (S → O) → (S → I → S) → Moore S I O :=
+  λ output transition →
+    λ s⁺ ⇜ s⁻ ⇝
       return (output s⁺) ⇜ λ⁻ (i : I) → s⁻ ← transition s⁺ i; done
 
 -- We can also define counterₚ using the 'moore' function:
@@ -446,7 +441,7 @@ def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
     , .C = { .a₀ = .A, .a₁ = .A }
     }
   in
-  λ s⁺ s⁻ ⇝ return (check s⁺) ⇜ (s⁻ ∘ (step s⁺))
+  λ s⁺ ⇜ s⁻ ⇝ return (check s⁺) ⇜ (s⁻ ∘ (step s⁺))
 
 -- | Memoryless Dynamical System
 --
@@ -455,9 +450,9 @@ def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
 --   Byᴬ ⇒ Byᴬ
 --
 
-def mds : Π (A B : Type), (A → B) → Moore B A B :=
-  λ A B f →
-    λ b⁺ b⁻ ⇝
+def mds (A B : Type) : (A → B) → Moore B A B :=
+  λ f →
+    λ b⁺ ⇜ b⁻ ⇝
       return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← f a; done
 
 -- With 'mds' we can build the delay line and summation examples:
@@ -479,6 +474,6 @@ def delayₘ : Moore ℕ ℕ ℕ :=
 --       Note at * we apply the addition operation
 
 def sumₘ : Moore ℕ (ℕ × ℕ) ℕ :=
-  mds (ℕ × ℕ) ℕ (λ xy → add (fst xy) (snd xy))
+  mds (ℕ × ℕ) ℕ (λ (x , y) → add x y)
 
 -- ** More examples can be found in Data::Polynomial::Machines **

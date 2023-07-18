@@ -23,5 +23,5 @@ def bool-elim : Π (f : (Bool → Type)), f .true → f .false → Π (p : Bool)
     }
 
 -- | Non-Dependent Eliminator
-def bool : Π (A : Type), Bool → A → A → A :=
-  λ A p X Y → bool-elim (λ _ → A) X Y p
+def bool (A : Type) : Bool → A → A → A :=
+  λ p X Y → bool-elim (λ _ → A) X Y p

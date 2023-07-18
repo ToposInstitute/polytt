@@ -1,24 +1,36 @@
 open Tactic
+open Core.Ident
 
-let neg_lam ?(name = `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
+module Debug = Core.Debug
+
+let neg_lam_syn ?(name = Var `Anon) (tp_tac : Chk.tac) (bdy_tac : Var.tac -> Prog.tac) : NegSyn.tac =
   NegSyn.rule @@ fun () ->
   let tp = eval (Chk.run tp_tac D.Univ) in
   Var.abstract ~name tp @@ fun var ->
   match NegVar.revert tp @@ Prog.run (bdy_tac var) with
   | None ->
-    Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in prorgam."
+    Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in program."
   | Some setter ->
     tp, fun actual_value ->
       setter actual_value
 
-let pos_let ?(name = `Anon) (tm : Syn.tac) (f : Var.tac -> Prog.tac) =
+let neg_lam ?(name = Var `Anon) (bdy_tac : Var.tac -> Prog.tac) : NegChk.tac =
+  NegChk.rule @@ fun tp ->
+  Var.abstract ~name tp @@ fun var ->
+  match NegVar.revert tp @@ Prog.run (bdy_tac var) with
+  | None ->
+    Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in program."
+  | Some setter ->
+    setter
+
+let pos_let ?(name = Var `Anon) (tm : Syn.tac) (f : Var.tac -> Prog.tac) =
   Prog.rule @@ fun () ->
   let tp, tm = Syn.run tm in
   let v = Eff.eval tm in
   Var.concrete ~name tp v @@ fun v ->
   Prog.run (f v) ()
 
-let neg_let ?(name = `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Prog.tac) =
+let neg_let ?(name = Var `Anon) (tm : NegSyn.tac) (f : NegVar.tac -> Prog.tac) =
   Prog.rule @@ fun () ->
   let tp, tm = NegSyn.run tm in
   NegVar.abstract ~name tp @@ fun v ->
@@ -34,7 +46,7 @@ let set (pos_tac : Chk.tac) (neg_tac : NegSyn.tac) (steps_tac : Prog.tac) : Prog
 
 let ap (pos_tac : Chk.tac) (neg_tac : NegChk.tac)
     (phi_tac : Syn.tac)
-    ?(pos_name = `Anon) ?(neg_name = `Anon)
+    ?(pos_name = Var `Anon) ?(neg_name = Var `Anon)
     (steps_tac : Var.tac -> NegVar.tac -> Prog.tac) =
   Prog.rule @@ fun r ->
   let phi_tp, phi = Syn.run phi_tac in

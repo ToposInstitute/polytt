@@ -2,6 +2,8 @@ open Core
 open Bwd
 include Eff
 
+open Ident
+
 include TermBuilder
 
 module rec Chk : sig
@@ -117,60 +119,89 @@ and Var : sig
   type tac
 
   val value : tac -> D.t
+  val name : tac -> Ident.t
+  val tree : tac -> (D.tp * D.t) Ident.pat
   val syn : tac -> Syn.tac
-  val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
-  val abstracts : ?names:Ident.t list -> D.tp -> (tac list -> 'a) -> 'a
-  val concrete : ?name:Ident.t -> D.tp -> D.t -> (tac -> 'a) -> 'a
+  val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
+  val abstracts : ?names:Ident.binder list -> D.tp -> (tac list -> 'a) -> 'a
+  val concrete : ?name:Ident.binder -> D.tp -> D.t -> (tac -> 'a) -> 'a
+
+  val choose : Ident.binder -> Ident.t
+  val choose_many : Ident.binder list -> Ident.t list
 end =
 struct
-  type tac = { tp : D.tp; value : D.t }
+  type tac = Ident.t * (D.tp * D.t) * (D.tp * D.t) Ident.pat
 
-  let value tac = tac.value
-  let syn {tp; value} =
+  let value (_, (_, v), _) = v
+  let name (ident, _, _) = ident
+  let tree (_, _, t) = t
+
+  let syn (_, (tp, value), _) =
     Syn.rule @@ fun () ->
     let tm = Eff.quote ~tp value in
     tp, tm
 
   let fresh_name : Ident.t -> Ident.t = function
-    | `Anon -> `Machine (Locals.size ())
-    | name -> name
+  | `Anon -> `Machine (Locals.size ())
+  | name -> name
 
-  let abstracts ?(names = [`Anon]) tp k =
+  let fresh_name_at : int -> Ident.t -> Ident.t =
+  fun i -> function
+  | `Anon -> `Machine i
+  | name -> name
+
+  let rec fresh_names_step : int ref -> Ident.binder -> Ident.binder =
+  fun i -> function
+  | Var ident ->
+    let ident = fresh_name_at !i ident in
+    i := !i+1;
+    Var ident
+  | Tuple (l, r) ->
+    let l = fresh_names_step i l in
+    let r = fresh_names_step i r in
+    Tuple (l, r)
+
+  let fresh_names : Ident.binder -> Ident.binder =
+    fun b ->
+      let i = ref (Locals.size ()) in
+      fresh_names_step i b
+
+  let choose = fun name -> fresh_name (Ident.choose name)
+
+  let choose_many =
+    let i = ref 0 in
+    List.map @@ fun name ->
+      Ident.choose (fresh_names_step i name)
+
+  let abstracts ?(names = [Var `Anon]) tp k =
     (* TODO: fresh_name *)
-    Locals.abstracts ~names tp @@ fun values ->
-    let tacs =
-      values
-      |> List.map @@ fun value -> { tp; value }
-    in
+    Locals.abstracts ~names tp @@ fun tacs ->
     k tacs
 
-  let abstract ?(name = `Anon) tp k =
-    Locals.abstract ~name:(fresh_name name) tp @@ fun value ->
-    k {tp; value}
+  let abstract ?(name = Var `Anon) tp k =
+    Locals.abstract ~name:(fresh_names name) tp k
 
-  let concrete ?(name = `Anon) tp value k =
-    Locals.concrete ~name:(fresh_name name) tp value @@ fun () ->
-    k {tp; value}
+  let concrete ?(name = Var `Anon) tp value k =
+    Locals.concrete ~name:(fresh_names name) tp value k
 end
 
 and NegVar : sig
   type tac
-  val abstract : ?name:Ident.t -> D.tp -> (tac -> 'a) -> 'a
+  val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
   val borrow : tac -> D.t
-  val set : tac -> D.t -> unit
+  val name : tac -> Ident.t
+  val tree : tac -> int Ident.pat
   val revert : D.t -> (unit -> unit) -> (D.t -> unit) option
 end =
 struct
-  type tac = { tp : D.tp; lvl : int }
-  let abstract ?(name = `Anon) tp k =
-    Locals.abstract_neg ~name tp @@ fun lvl ->
-    k { tp; lvl }
+  type tac = Ident.t * (D.tp * D.t) * int Ident.pat
 
-  let borrow { tp; lvl } = D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })
-  let set { lvl; _ } =
-    match Eff.Locals.consume_neg lvl () with
-    | None -> invalid_arg "Internal error: variable already consumed"
-    | Some setter -> setter
+  let abstract ?(name = Var `Anon) tp k =
+    Locals.abstract_neg ~name tp k
+
+  let borrow (_, (_, v), _) = v
+  let name (ident, _, _) = ident
+  let tree (_, _, t) = t
 
   let revert =
     Eff.Locals.revert
@@ -201,6 +232,26 @@ let pp_sequent_ctx ppenv fmt (ctx, k) =
   go ppenv 0 fmt ctx
 
 let pp_sequent_goal goal ppenv fmt =
+  Debug.print " GOAL %a@." S.dump goal;
+  Debug.print " ---- @.";
+  ((Eff.Locals.qenv ()).neg |>
+    Bwd.iter @@ fun v ->
+      Debug.print "  - %a@." D.dump v);
+  Debug.print " ---- @.";
+  (Bwd.iter2
+    (fun tp v ->
+      Debug.print "  - %a@." S.dump (quote ~tp v))
+    (Eff.Locals.qenv ()).neg
+    (Eff.Locals.denv ()).neg
+  );
+  Debug.print " ---- @.";
+  (Bwd.iter2
+    (fun tp v ->
+      Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
+    (Eff.Locals.denv ()).neg
+    (Eff.Locals.qenv ()).neg
+  );
+  Debug.print " ---- @.";
   Format.fprintf fmt "──────────────@.  ⊢ %a@."
     (S.pp ppenv Precedence.isolated) goal
 
@@ -210,4 +261,4 @@ let pp_sequent_nogoal _ppenv fmt =
 let print_ctx fmt k =
   let ppenv = Locals.ppenv () in
   let ctx = Locals.local_types () in
-  pp_sequent_ctx { pos = Emp; neg_size = 0; neg = Emp } fmt (List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx), k)
+  pp_sequent_ctx { pos = Emp; neg_size = ppenv.neg_size; neg = ppenv.neg } fmt (List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx), k)

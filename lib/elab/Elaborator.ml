@@ -14,6 +14,12 @@ struct
     match tm.node with
     | CS.Lam (names, tm) ->
       chk_lams names tm
+    | CS.LamSyn (qs, tm) ->
+      List.fold_left
+        (fun b (names, a) ms -> Pi.intro_chk ~names (chk a) (fun ns -> b (ms @ ns)))
+        (fun _ -> chk tm)
+        (List.rev qs)
+        []
     | CS.Let (name, tm1, tm2) ->
       let tm1 = syn tm1 in
       Var.let_bind ~name:name tm1 (fun _ -> chk tm2)
@@ -52,6 +58,10 @@ struct
       Hom.drop
     | CS.NegPairSimple (p, q) ->
       NegSigma.intro_simple_chk (neg_chk p) (neg_chk q)
+    | CS.NegLam (name, body) ->
+      Prog.neg_lam ~name (fun _ -> prog body)
+    | CS.Hole ->
+      Hole.unleash_neg
     | _ ->
       T.NegChk.syn (neg_syn tm)
 
@@ -61,7 +71,7 @@ struct
     | name :: names ->
       Pi.intro ~name @@ fun _ -> chk_lams names tm
 
-  and chk_sigma ?(names = [`Anon]) a b _ =
+  and chk_sigma ?(names = [Var `Anon]) a b _ =
     T.match_goal @@
     function
     | D.Univ -> T.Chk.syn @@ Sigma.formation ~names (chk a) b
@@ -79,6 +89,12 @@ struct
   and syn (tm : CS.t) =
     T.Syn.locate tm.loc @@
     match tm.node with
+    | CS.LamSyn (qs, tm) ->
+      List.fold_left
+        (fun b (names, a) ms -> Pi.intro_syn ~names (chk a) (fun ns -> b (ms @ ns)))
+        (fun _ -> syn tm)
+        (List.rev qs)
+        []
     | CS.Var path ->
       syn_var path
     | CS.Univ ->
@@ -151,8 +167,10 @@ struct
       T.Error.error `TypeError "Cannot synthesize type of drop."
     | CS.NegPairSimple (p, q) ->
       NegSigma.intro_simple (neg_syn p) (neg_syn q)
-    | CS.NegLam (name, tp, body) ->
-      Prog.neg_lam ~name (chk tp) (fun _ -> prog body)
+    | CS.NegLamSyn (name, tp, body) ->
+      Prog.neg_lam_syn ~name (chk tp) (fun _ -> prog body)
+    | CS.Hole ->
+      Hole.unleash_neg_syn
     | _ ->
       T.Error.error `TypeError "Cannot synthesize (negative) type."
 
@@ -205,6 +223,7 @@ struct
         | Some res ->
           Refiner.Var.global res
         | None ->
+          Core.Debug.print "%a@." Ident.pp_path path;
           T.Error.error `UnboundVariable "Variable is not bound (or is negative, idk)."
       end
 

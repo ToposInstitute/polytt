@@ -2,24 +2,24 @@ import Data::Polynomial
 
 --------------------------------------------------------------------------------
 
-def store : Type → Poly := λ S → S × S 
+def store : Type → Poly := λ S → S × S
 
 def Store : Type → Type → Type := λ S → ofP (store S)
 
 def pos : Π (S A : Type), Store S A → S :=
-  λ S A st → fst st
+  λ S A (s , _) → s
 
 def peek : Π (S A : Type), S → Store S A → A :=
-  λ S A s st → (snd st) s
+  λ S A s (s , t) → t s
 
 def peeks : Π (S A : Type), (S → S) → Store S A → A :=
-  λ S A f st → (snd st) (f (fst st))
+  λ S A f (s , t) → t (f s)
 
 def seek : Π (S A : Type), S → Store S A → Store S A :=
-  λ S A s st → (s , snd st)
+  λ S A s (_ , t) → (s , t)
 
 def seeks : Π (S A : Type), (S → S) → Store S A → Store S A :=
-  λ S A f st → (f (fst st), snd st)
+  λ S A f (s , t) → (f s, t)
 
 def experiment : Π (S A : Type), Π (F : Type → Type), (Π (X Y : Type), (X → Y) → F X → F Y) → (S → F S) → Store S A → F A :=
   λ S A F map f st → map S A (λ s → peek S A s st) (f (pos S A st))

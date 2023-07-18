@@ -6,6 +6,19 @@ type path = Yuujinchou.Trie.path
 (** The Type of Identifiers. *)
 type t = [ `Anon | `User of path | `Machine of int ]
 
+(** The functor of pattern trees, used for binders *)
+type 'a pat =
+  | Var of 'a
+  | Tuple of 'a pat * 'a pat
+
+val over_pat : ('a -> 'b) -> 'a pat -> 'b pat
+
+val choose : t pat -> t
+
+val join : ('a pat) pat -> 'a pat
+
+type binder = t pat
+
 (** Construct an anonymous Identifier. This is used for underscores. *)
 val anon : t
 

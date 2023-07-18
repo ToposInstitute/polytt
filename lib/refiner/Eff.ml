@@ -5,6 +5,9 @@ open Errors
 
 module D = Domain
 module S = Syntax
+module Sem = Semantics
+
+open Ident
 
 module IntSet = Set.Make (Int)
 
@@ -55,6 +58,8 @@ struct
     local_names : (Cell.t, unit) Yuujinchou.Trie.t;
     size : int;
     neg_size : int;
+    (* Snoc list of whether this cell has been consumed, and its value (which
+       will be written sometime after it is consumed) *)
     neg_values : (bool ref * D.t ref) bwd;
     neg_types : D.tp bwd;
     ppenv_pos : Ident.t bwd;
@@ -96,11 +101,6 @@ struct
   let all_consumed () =
     let env = Reader.read () in
     Bwd.for_all (fun (c, _) -> !c) env.neg_values
-
-  let head () =
-    let env = Reader.read () in
-    if (env.neg_size == 0) then invalid_arg (Format.asprintf "Eff.Locals.head on empty context");
-    ! (snd (Bwd.nth env.neg_values (env.neg_size - 1)))
 
   let run_linear k =
     Reader.scope drop_linear @@ fun () ->
@@ -177,21 +177,77 @@ struct
         ppenv_neg = env.ppenv_neg #< name
       }
 
+  let bind_transparent cell env =
+    let local_names =
+      match Cell.name cell with
+      | `User path ->
+        Yuujinchou.Trie.update_singleton path (fun _ -> Some (cell, ())) env.local_names
+      | _ -> env.local_names
+    in {
+      env with local_names
+    }
+
   let bind_vars cells env =
     List.fold_left (fun env cell -> bind_var cell env) env cells
 
-  let concrete ?(name = `Anon) tp tm k =
+  let concrete_ident ?(name = `Anon) tp tm k =
     let cell = Cell.Pos { name; tp; value = tm } in
     Reader.scope (bind_var cell) @@ fun () ->
     k ()
 
-  let abstract ?(name = `Anon) tp k =
+  let transparent_ident ?(name = `Anon) tp tm k =
+    let cell = Cell.Pos { name; tp; value = tm } in
+    Reader.scope (bind_transparent cell) @@ fun () ->
+    k ()
+
+  let abstract_ident ?(name = `Anon) tp k =
     let var = fresh_var tp () in
     let cell = Cell.Pos { name; tp; value = var } in
     Reader.scope (bind_var cell) @@ fun () ->
     k var
 
-  let abstract_neg ?(name = `Anon) tp k =
+  let rec coalesce = function
+  | Var (_, v) -> v
+  | Tuple (l, r) ->
+    let (lv) = coalesce l in
+    let (rv) = coalesce r in
+    D.Pair (lv, rv)
+
+  let rec bind_tree ?(name = Var `Anon) tp tm k =
+    begin match name with
+    | Var ident ->
+        transparent_ident ~name:ident tp tm
+          (fun () -> k (Var (tp, tm)))
+    | Tuple (l, r) ->
+      begin match tp with
+      | D.Sigma (_, a, clo) ->
+        Debug.print "a: %a@." D.dump a;
+        Debug.print "tm: %a@." D.dump tm;
+        Debug.print "tm.1: %a@." D.dump (Sem.do_fst tm);
+        Debug.print "tm.2: %a@." D.dump (Sem.do_snd tm);
+        bind_tree ~name:l a (Sem.do_fst tm) @@ fun lvars ->
+          bind_tree ~name:r (Sem.inst_clo clo (coalesce lvars)) (Sem.do_snd tm) @@ fun rvars ->
+            Debug.print "bound@.";
+            k (Tuple (lvars, rvars))
+      | _ -> failwith "can only unpack a sigma" (* FIXME *)
+      end
+    end
+
+  let concrete ?(name = Var `Anon) tp tm k =
+    (* No need to bind a single anonymous variable *)
+    begin match name with
+    | Var ident -> concrete_ident ~name:ident tp tm @@ fun _ -> k (ident, (tp, tm), Var (tp, tm))
+    | _ -> concrete_ident ~name:`Anon tp tm @@ fun _ -> bind_tree ~name tp tm @@ fun v -> k (`Anon, (tp, tm), v)
+    end
+
+  let abstract ?(name = Var `Anon) tp k =
+    (* No need to bind a single anonymous variable *)
+    begin match name with
+    | Var ident -> abstract_ident ~name:ident tp @@ fun tm -> k (ident, (tp, tm), Var (tp, tm))
+    | _ -> abstract_ident ~name:`Anon tp @@ fun tm -> bind_tree ~name tp tm @@ fun v -> k (`Anon, (tp, tm), v)
+    end
+
+  let abstract_neg_ident ?(name = `Anon) tp k =
     let lvl = fresh_neg_var () in
     let neg_cell = { Cell.name; tp; lvl } in
     let cell = Cell.Neg neg_cell in
@@ -208,14 +264,70 @@ struct
       consumed := true;
       Some (fun value -> value_ref := value)
 
-  let revert i_tp cb =
-    Debug.print "i_tp: %a@." D.dump i_tp;
+  let rec split = function
+  | Var (lvl, v) -> (Var lvl, v)
+  | Tuple (l, r) ->
+    let (ll, lv) = split l in
+    let (rl, rv) = split r in
+    (Tuple (ll, rl), D.Pair (lv, rv))
+
+  let rec bind_neg_tree ?(name = Var `Anon) tp k =
+    begin match name with
+    | Var ident ->
+      abstract_neg_ident ~name:ident tp @@
+        fun lvl -> k (Var (lvl, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })))
+    | Tuple (l, r) ->
+      begin match tp with
+      | D.Sigma (_, a, clo) ->
+        bind_neg_tree ~name:l a @@ fun lvars ->
+          Debug.print "ASDFASDFASFDSAFAS %a@." D.dump (snd (split lvars));
+          bind_neg_tree ~name:r (Sem.inst_clo clo (snd (split lvars))) @@ fun rvars ->
+            k (Tuple (lvars, rvars))
+      | _ -> failwith "can only unpack a sigma" (* FIXME *)
+      end
+    end
+
+  let abstract_neg ?(name = Var `Anon) tp k =
+    (* No need to bind a single anonymous variable *)
+    begin match name with
+    | Var ident ->
+      abstract_neg_ident ~name:ident tp @@ fun lvl ->
+        k (ident, (tp, D.Neu (tp, { hd = D.Borrow lvl; spine = Emp })), Var lvl)
+    | _ ->
+      (* allocate 1 *)
+      abstract_neg_ident ~name:`Anon tp @@ fun lvl ->
+        (* allocate n *)
+        bind_neg_tree ~name tp @@ fun lvls ->
+          (* e.g. binding (p , q) *)
+          match consume_neg lvl () with
+          | None -> failwith "internal error (abstract_neg -> consume_neg)"
+          | Some setter ->
+            let (r, value) = split lvls in
+            (* write 1 *)
+            (* value = Sigma.intro (borrow p) (borrow q) *)
+            setter value;
+            (* allocated n+1 cells *)
+            (* but net only n obligations *)
+            k (`Anon, (tp, value), r)
+    end
+
+  (* Used in Prog.neg_lam/Prog.neg_lam_syn *)
+  (* Calling convention: the most recently bound variable is abstract, of type i_tp *)
+  (* Pass it a program to run, whose changes to context are recorded and
+     replayed by writing a new value in place of the most recently bound
+     variable which this is called *)
+  (* If successful, this returns a sink, to replay the cb() with a new value *)
+  let revert (_i_tp : D.tp) cb =
+    (* save the environment before and after *)
     let env0 = Reader.read () in
     let already_used = Bwd.map2 (fun (used, _) tp -> !used, tp) env0.neg_values env0.neg_types in
     cb ();
     let env1 = Reader.read () in
     assert (env1.neg_size >= env0.neg_size);
+    (* we quote the updated values in the current environment *)
     let q = qenv () in
+    (* then we save the environment into the closure but with the most recent
+       bound variable dropped *)
     let d = denv () in
     let ok = ref true in
     let reverted =
@@ -224,9 +336,15 @@ struct
       let used_now = !used in
       match Bwd.nth_opt already_used i with
       | None ->
+        (* a sink that was allocated but not written to
+           (and is now unable to be written to) *)
         if not used_now then ok := false;
         None
+      (* a sink that was written to by cb() *)
       | Some (false, o_tp) when used_now ->
+        (* we are going to quote the value and plop it into a closure, where
+           the most recent bound variable gets dropped so that it will be
+           overwritten when instantiating the closure *)
         Debug.print "o_tp: %a@.              %a@." D.dump o_tp S.dump (Quote.quote ~env:q ~tp:D.Univ o_tp);
         Debug.print "value: %a@." D.dump !value;
         let quoted = Quote.quote ~env:q ~tp:o_tp !value in
@@ -238,23 +356,18 @@ struct
         in
         let abstracted : D.tm_clo = Clo { env = dropped; body = quoted } in
         Some (fun v -> value := Semantics.inst_clo abstracted v)
+      (* an old sink (already existed), not newly written to *)
       | Some _ -> None
     in
     match !ok with
     | false -> None
-    | true -> Some
-                (fun value -> Bwd.iter (fun f -> f value) reverted)
+    (* return a callback that applies all changes, but to the new value *)
+    | true -> Some (fun value -> Bwd.iter (fun f -> f value) reverted)
 
-  let abstracts ?(names = [`Anon]) tp k =
-    let cells =
-      names
-      |> List.mapi @@ fun i name ->
-      (* TODO cleanup *)
-      (Pos { Cell.name; tp; value = D.var tp ((Reader.read ()).size + i) } : Cell.t)
-    in
-    let vars = List.map Cell.value cells in
-    Reader.scope (bind_vars cells) @@ fun () ->
-    k vars
+  let abstracts ?(names = [Var `Anon]) tp k =
+    let step name cont bounds =
+        abstract ~name tp @@ fun bound -> cont (List.cons bound bounds)
+    in List.fold_right step names k []
 end
 
 
