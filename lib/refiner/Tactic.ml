@@ -10,6 +10,7 @@ module rec Chk : sig
   type tac
   val rule : (D.tp -> S.t) -> tac
   val run : tac -> D.tp -> S.t
+  val run2 : tac -> D.tp -> D.tp -> (S.t * bool)
   val syn : Syn.tac -> Chk.tac
   val locate : Asai.Span.t -> tac -> tac
 end =
@@ -17,6 +18,7 @@ struct
   type tac = D.tp -> S.t
   let rule k = k
   let run k tp = k tp
+  let run2 k tp1 tp2 = try k tp1, false with _ -> k tp2, true
   let syn tac =
     rule @@ fun goal ->
     let (actual, tm1) = Syn.run tac in
@@ -124,6 +126,7 @@ and Var : sig
   val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
   val abstracts : ?names:Ident.binder list -> D.tp -> (tac list -> 'a) -> 'a
   val concrete : ?name:Ident.binder -> D.tp -> D.t -> (tac -> 'a) -> 'a
+  val fresh_name : Ident.t -> Ident.t
 
   val choose : Ident.binder -> Ident.t
   val choose_many : Ident.binder list -> Ident.t list

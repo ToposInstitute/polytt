@@ -5,6 +5,6 @@ module D = Domain
 let coe : D.tp -> D.tp -> (S.t -> S.t) = fun actual goal ->
   match actual, goal with
   | D.Repr, D.Poly -> fun tm1 ->
-    S.PolyIntro (`Anon, S.FinSet ["unit"], S.shift (S.Log tm1))
+    S.Ap ( S.Lam (`Anon, S.PolyIntro (`Anon, S.FinSet ["unit"], S.Var 1)), S.Log tm1)
   | _, _ ->
     Eff.equate ~tp:D.Univ actual goal; fun tm1 -> tm1

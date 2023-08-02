@@ -4,7 +4,7 @@ import Data::Polynomial
 --------------------------------------------------------------------------------
 
 def Lens : Π (S T A B : Type), Type :=
-  λ S T A B → (S × T) ⇒ (A × B)
+  λ S T A B → (S × y^T) ⇒ (A × y^B)
 
 def view : Π (S T A B : Type), Lens S T A B → S → A :=
   λ S T A B lens s → fst (lens s)

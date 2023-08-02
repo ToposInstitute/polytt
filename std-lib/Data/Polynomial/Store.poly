@@ -2,7 +2,7 @@ import Data::Polynomial
 
 --------------------------------------------------------------------------------
 
-def store : Type → Poly := λ S → S × S
+def store : Type → Poly := λ S → S × y^S
 
 def Store : Type → Type → Type := λ S → ofP (store S)
 

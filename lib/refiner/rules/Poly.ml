@@ -23,11 +23,29 @@ let intro ?(name = Var `Anon) base_tac fib_tac =
   | D.Poly ->
     let base = Chk.run base_tac D.Univ in
     let vbase = eval base in
-    let fib =
+    let pr, isPoly =
       Var.abstract ~name vbase @@ fun var ->
-      Chk.run (fib_tac var) D.Univ
-    in
-    S.PolyIntro (Var.choose name, base, fib)
+        Chk.run2 (fib_tac var) D.Repr D.Poly
+    in if isPoly
+      then
+        S.Ap
+          ( S.Ap
+              ( S.Lam
+                  ( Var.fresh_name `Anon
+                  , S.Lam
+                      ( Var.fresh_name `Anon
+                      , S.PolyIntro
+                        ( Var.fresh_name `Anon
+                        , S.Sigma (Var.choose name, S.Var 1, S.Base (S.Ap (S.Var 1, S.Var 0)))
+                        , S.Fib (S.Ap (S.Var 1, S.Fst (S.Var 0)), S.Snd (S.Var 0))
+                        )
+                      )
+                  )
+              , base
+              )
+          , S.Lam (Var.choose name, pr)
+          )
+      else S.PolyIntro (Var.choose name, base, S.Log pr)
   | _ ->
     Error.error `TypeError "Poly intro must be in poly."
 

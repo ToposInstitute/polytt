@@ -7,7 +7,7 @@ import Data::Polynomial::Fin
 --------------------------------------------------------------------------------
 
 def Maybeₚ : Poly :=
-  Σ (tag : #{ .nothing, .just }), { .nothing = Void, .just = Unit} tag
+  Σ (tag : #{ .nothing, .just }), y^({ .nothing = Void, .just = Unit} tag)
 
 def Maybe : Type → Type := ofP Maybeₚ
 
