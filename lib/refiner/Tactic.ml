@@ -20,7 +20,7 @@ struct
   let syn tac =
     rule @@ fun goal ->
     let (actual, tm1) = Syn.run tac in
-    Coe.coe tm1 actual goal
+    Coe.coe actual goal tm1
   let locate loc k tp =
     Error.locate loc @@ fun () ->
     k tp
