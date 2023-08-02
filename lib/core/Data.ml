@@ -46,6 +46,7 @@ type syn =
   | Base of syn
   | Fib of syn * syn
   | Log of syn
+  | ElRepr of syn
   | Hom of syn * syn
   | HomLam of syn
   | HomElim of syn * syn

@@ -69,6 +69,7 @@ type t = Data.syn =
     Fib of t * t
   | (* log r *)
     Log of t
+  | ElRepr of t
   | (* p ⇒ q *)
     Hom of t * t
   | (* λ a⁺ a⁻ ⇒ p *)
@@ -159,6 +160,9 @@ let rec dump fmt =
   | Log r ->
     Format.fprintf fmt "log[%a]"
       dump r
+  | ElRepr r ->
+    Format.fprintf fmt "el-repr[%a]"
+      dump r
   | Hom (p, q) ->
     Format.fprintf fmt "hom[%a, %a]"
       dump p
@@ -210,6 +214,7 @@ let classify_tm =
   | Base _ -> juxtaposition
   | Fib _ -> juxtaposition
   | Log _ -> juxtaposition
+  | ElRepr _ -> juxtaposition
   | Lam _ -> arrow
   | Let _ -> atom
   | Ap _ -> juxtaposition
@@ -374,6 +379,10 @@ let rec pp (env : ppenv) =
       (pp env (P.right_of juxtaposition)) fib
   | Log r ->
     Format.fprintf fmt "log %a"
+      (pp env (P.right_of juxtaposition)) r
+  | ElRepr r ->
+    Format.fprintf fmt "(%a : Poly)"
+      (* FIXME precedence *)
       (pp env (P.right_of juxtaposition)) r
   | Hom (p, q) ->
     Format.fprintf fmt "%a ⇒ %a"

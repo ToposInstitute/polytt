@@ -40,6 +40,9 @@ struct
   let sigma ?(name = `Anon) base fam size =
     S.Sigma(name, base size, scope fam size)
 
+  let poly_intro ?(name = `Anon) base fib size =
+    S.PolyIntro(name, base size, scope fib size)
+
   let pair x y size =
     S.Pair (x size, y size)
 
@@ -69,6 +72,9 @@ struct
 
   let fib p i size =
     S.Fib (p size, i size)
+
+  let log r size =
+    S.Log (r size)
 end
 
 module Graft =

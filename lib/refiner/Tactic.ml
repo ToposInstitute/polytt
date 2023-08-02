@@ -21,8 +21,8 @@ struct
   let run2 k tp1 tp2 = try k tp1, false with _ -> k tp2, true
   let syn tac =
     rule @@ fun goal ->
-    let (actual, tm1) = Syn.run tac in
-    Coe.coe actual goal tm1
+    let (actual, tm) = Syn.run tac in
+    Coe.coe actual goal tm
   let locate loc k tp =
     Error.locate loc @@ fun () ->
     k tp

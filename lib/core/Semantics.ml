@@ -87,6 +87,8 @@ struct
       do_fib (eval p) (eval i)
     | S.Log r ->
       do_log (eval r)
+    | S.ElRepr r ->
+      do_el_repr (eval r)
     | S.Hom (p, q) ->
       D.Hom (eval p, eval q)
     | S.HomLam wrapped ->
@@ -206,6 +208,15 @@ struct
     | _ ->
       Debug.print "Bad do_log %a@." D.dump p;
       invalid_arg "bad do_log"
+
+  and do_el_repr r =
+    let p =
+      graft_value @@
+      Graft.value r @@ fun r ->
+      Graft.build @@
+      TB.poly_intro (TB.finset ["unit"]) @@ fun _ ->
+      TB.log r
+    in p
 
   and inst_clo clo v =
     match clo with
