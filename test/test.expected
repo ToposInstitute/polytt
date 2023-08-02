@@ -14,8 +14,11 @@ Normal Form: λ n⁺ → (n⁺ , λ <1> → succ n⁺)
 Normal Form: ((1 , 12) , λ <2> → succ (succ (succ (snd <2>))))
 Normal Form: ((2 , 1) , λ <3> → (snd <3> , fst <3>))
 Normal Form: λ P Q → Σ (<28> : base P), Σ (_ : base P), fib P _ ⇒ Σ (_ : base Q), fib Q _
+Normal Form: refl (λ P Q → Σ (<2> : Σ (p : base P), Π (<59> : fib P p), base Q), Σ (i : fib P (fst <2>)), fib Q (snd <2> i))
+Normal Form: λ P Q → Σ (<2> : Σ (p : base P), Π (<59> : fib P p), base Q), Σ (i : fib P (fst <2>)), fib Q (snd <2> i)
+Normal Form: λ P Q → Σ (<2> : Σ (p : base P), Π (<64> : fib P p), base Q), Σ (i : fib P (fst <2>)), fib Q (snd <2> i)
 Normal Form: λ P Q → λ <3> → ((fst <3> , λ <4> → snd <3>) , λ <3> → (fst <3> , snd <3>))
-Normal Form: λ S T A B → #{ .get, .set } → { .get = Π (<68> : S), A, .set = Π (<70> : S), Π (<69> : B), T } _
+Normal Form: λ S T A B → #{ .get, .set } → { .get = Π (<72> : S), A, .set = Π (<74> : S), Π (<73> : B), T } _
 --------------------[./let/test-let.poly]--------------------
 
 Normal Form: 9
