@@ -58,7 +58,7 @@ let rec fold_pat = fun t ->
 %token FORALL EXISTS LAMBDA LET IN LET_MINUS LAMBDA_MINUS RETURN DONE
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
-%token POLY BASE FIB RIGHT_THICK_ARROW
+%token POLY BASE FIB REPR Y_TO LOG RIGHT_THICK_ARROW
 %token LEFT_SQUIGGLY_ARROW CIRC
 %token HASH
 (* Delimiters *)
@@ -182,6 +182,8 @@ plain_unannotated_term:
     { CS.Base p }
   | FIB; p = atomic_term; i = atomic_term
     { CS.Fib (p, i) }
+  | LOG; r = atomic_term
+    { CS.Log r }
   | tm = let_binding
     { tm }
   | tm = arrow
@@ -304,6 +306,10 @@ plain_atomic_term:
     { CS.Univ }
   | POLY
     { CS.Poly }
+  | REPR
+    { CS.Repr }
+  | Y_TO; exp = atomic_term
+    { CS.ReprIntro exp }
   | QUESTION
     { CS.Hole }
   | HASH; LBR; labels = separated_list(COMMA, LABEL); RBR;

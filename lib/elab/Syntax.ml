@@ -35,8 +35,11 @@ and t_ =
   | NegPairSimple of t * t
   | NegUnpack of t * Ident.binder * Ident.binder * t
   | Poly
+  | Repr
+  | ReprIntro of t
   | Base of t
   | Fib of t * t
+  | Log of t
   | Hom of t * t
   | HomLam of Ident.binder * Ident.binder * t
   | Set of t * t * t

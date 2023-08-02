@@ -95,6 +95,8 @@ struct
       S.Univ
     | _, D.Poly ->
       S.Poly
+    | _, D.Repr ->
+      S.Repr
     | D.Poly, D.PolyIntro (nm, vbase, vfib) ->
       let base = quote D.Univ vbase in
       let fib = bind vbase @@ fun arg ->
@@ -107,6 +109,10 @@ struct
       let fib = bind base @@ fun i ->
         quote D.Univ (Sem.do_fib v i)
       in S.PolyIntro (`Anon, qbase, fib)
+    | D.Repr, D.ReprIntro exp ->
+      S.ReprIntro (quote D.Univ exp)
+    | D.Repr, v ->
+      S.ReprIntro (quote D.Univ (Sem.do_log v))
     | _, D.Hom (p, q) ->
       S.Hom (quote D.Poly p, quote D.Poly q)
     | D.Hom (p, q), D.HomLam wrapped ->
@@ -206,6 +212,8 @@ struct
       S.Base tm
     | D.Fib {base; value} ->
       S.Fib (tm, quote base value)
+    | D.Log ->
+      S.Log tm
     | D.HomElim {tp; arg} ->
       S.HomElim (tm, quote tp arg)
 end

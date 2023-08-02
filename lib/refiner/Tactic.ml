@@ -19,9 +19,8 @@ struct
   let run k tp = k tp
   let syn tac =
     rule @@ fun goal ->
-    let (actual, tm) = Syn.run tac in
-    equate ~tp:D.Univ goal actual;
-    tm
+    let (actual, tm1) = Syn.run tac in
+    Coe.coe tm1 actual goal
   let locate loc k tp =
     Error.locate loc @@ fun () ->
     k tp

@@ -77,10 +77,16 @@ struct
       D.Poly
     | S.PolyIntro (nm, base, fib) ->
       D.PolyIntro (nm, eval base, clo fib)
+    | S.Repr ->
+      D.Repr
+    | S.ReprIntro exp ->
+      D.ReprIntro (eval exp)
     | S.Base p ->
       do_base (eval p)
     | S.Fib (p, i) ->
       do_fib (eval p) (eval i)
+    | S.Log r ->
+      do_log (eval r)
     | S.Hom (p, q) ->
       D.Hom (eval p, eval q)
     | S.HomLam wrapped ->
@@ -191,6 +197,16 @@ struct
       Debug.print "Bad do_fib %a@." D.dump p;
       invalid_arg "bad do_fib"
 
+  and do_log p =
+    match p with
+    | D.ReprIntro exp ->
+      exp
+    | D.Neu (D.Repr, neu) ->
+      D.Neu (D.Univ, D.push_frm neu D.Log)
+    | _ ->
+      Debug.print "Bad do_log %a@." D.dump p;
+      invalid_arg "bad do_log"
+
   and inst_clo clo v =
     match clo with
     | D.Clo { env; body } ->
@@ -226,6 +242,9 @@ let do_base =
 let do_fib =
   Internal.do_fib
 
+let do_log =
+  Internal.do_log
+
 let do_cases =
   Internal.do_cases
 
@@ -243,6 +262,7 @@ let do_frm hd = function
   | D.Cases { mot; cases } -> do_cases mot cases hd
   | D.Base -> do_base hd
   | D.Fib { value; _ } -> do_fib hd value
+  | D.Log -> do_log hd
   | D.HomElim { arg; _ } -> do_hom_elim hd arg
 
 let do_spine hd spine =

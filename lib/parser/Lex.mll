@@ -32,8 +32,10 @@ let keywords =
     ("import", IMPORT);
     ("Type", TYPE);
     ("Poly", POLY);
+    ("Repr", REPR);
     ("base", BASE);
     ("fib", FIB);
+    ("log", LOG);
     ("ℕ", NAT);
     ("zero", ZERO);
     ("succ", SUCC);
@@ -127,6 +129,8 @@ and real_token = parse
     { LEFT_SQUIGGLY_ARROW }
   | "*" | "×"
     { TIMES }
+  | "y^" | "𝑦^"
+    { Y_TO }
   | ':'
      { COLON }
   | ';'

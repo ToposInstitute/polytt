@@ -9,6 +9,14 @@ let formation =
   | _ ->
     Error.error `TypeError "Poly must be in type."
 
+let repr_formation =
+  Chk.rule @@
+  function
+  | D.Univ ->
+    S.Repr
+  | _ ->
+    Error.error `TypeError "Repr must be in type."
+
 let intro ?(name = Var `Anon) base_tac fib_tac =
   Chk.rule @@
   function
@@ -23,6 +31,18 @@ let intro ?(name = Var `Anon) base_tac fib_tac =
   | _ ->
     Error.error `TypeError "Poly intro must be in poly."
 
+let repr_intro exp_tac =
+  Chk.rule @@
+  function
+  | D.Poly ->
+    let exp = Var.abstract (D.FinSet ["unit"]) @@ fun _ -> Chk.run exp_tac D.Univ in
+    S.PolyIntro (`Anon, S.FinSet ["unit"], exp)
+  | D.Repr ->
+    let exp = Chk.run exp_tac D.Univ in
+    S.ReprIntro exp
+  | _ ->
+    Error.error `TypeError "Poly intro must be in poly."
+
 let base p_tac =
   Syn.rule @@ fun () ->
   let p = Chk.run p_tac D.Poly in
@@ -34,3 +54,8 @@ let fib p_tac i_tac =
   let vp = eval p in
   let i = Chk.run i_tac (do_base vp) in
   D.Univ, S.Fib (p, i)
+
+let log r_tac =
+  Syn.rule @@ fun () ->
+  let r = Chk.run r_tac D.Repr in
+  D.Univ, S.Log r

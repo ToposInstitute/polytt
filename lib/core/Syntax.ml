@@ -59,10 +59,16 @@ type t = Data.syn =
     Poly
   | (* (p : P) × q *)
     PolyIntro of Ident.t * t * t
+  | (* Repr *)
+    Repr
+  | (* y^(p) *)
+    ReprIntro of t
   | (* base p *)
     Base of t
   | (* fib x y *)
     Fib of t * t
+  | (* log r *)
+    Log of t
   | (* p ⇒ q *)
     Hom of t * t
   | (* λ a⁺ a⁻ ⇒ p *)
@@ -108,6 +114,11 @@ let rec dump fmt =
       Ident.pp nm
       dump base
       dump fib
+  | Repr ->
+    Format.fprintf fmt "repr"
+  | ReprIntro exp ->
+    Format.fprintf fmt "repr-intro[%a]"
+      dump exp
   | Base p ->
     Format.fprintf fmt "base[%a]"
       dump p
@@ -115,6 +126,9 @@ let rec dump fmt =
     Format.fprintf fmt "fib[%a, %a]"
       dump p
       dump i
+  | Log r ->
+    Format.fprintf fmt "log[%a]"
+      dump r
   | Hom (p, q) ->
     Format.fprintf fmt "hom[%a, %a]"
       dump p
@@ -151,6 +165,7 @@ let classify_tm =
   function
   | Univ -> atom
   | Poly -> atom
+  | Repr -> atom
   | Var _ -> atom
   | Global _ -> atom
   | Borrow _ -> juxtaposition
@@ -159,10 +174,12 @@ let classify_tm =
   | Sigma _ -> arrow
   | Pair _ -> atom
   | PolyIntro _ -> star
+  | ReprIntro _ -> atom
   | Fst _ -> juxtaposition
   | Snd _ -> juxtaposition
   | Base _ -> juxtaposition
   | Fib _ -> juxtaposition
+  | Log _ -> juxtaposition
   | Lam _ -> arrow
   | Let _ -> atom
   | Ap _ -> juxtaposition
@@ -312,6 +329,12 @@ let rec pp (env : ppenv) =
       Ident.pp nm
       (pp env P.isolated) base
       (pp (abs_pos env nm) P.isolated) fib
+  | Repr ->
+    Format.fprintf fmt "Repr"
+  | ReprIntro exp ->
+    Format.fprintf fmt "y^%a"
+      (* FIXME precedence? *)
+      (pp env (P.surrounded_by atom)) exp
   | Base p ->
     Format.fprintf fmt "base %a"
       (pp env (P.right_of juxtaposition)) p
@@ -319,6 +342,9 @@ let rec pp (env : ppenv) =
     Format.fprintf fmt "fib %a %a"
       (pp env (P.right_of juxtaposition)) p
       (pp env (P.right_of juxtaposition)) fib
+  | Log r ->
+    Format.fprintf fmt "log %a"
+      (pp env (P.right_of juxtaposition)) r
   | Hom (p, q) ->
     Format.fprintf fmt "%a ⇒ %a"
       (pp env (P.left_of arrow)) p
