@@ -80,6 +80,36 @@ type t = Data.syn =
   | (* skolem *)
     Skolem of t
 
+let rec shift_from j =
+  function
+  | Var i -> Var (if i >= j then i+1 else i)
+  | Pi (nm, a, b) -> Pi (nm, shift_from j a, shift_from (j+1) b)
+  | Sigma (nm, a, b) -> Sigma (nm, shift_from j a, shift_from (j+1) b)
+  | Pair (a, b) -> Pair (shift_from j a, shift_from j b)
+  | Fst a -> Fst (shift_from j a)
+  | Snd a -> Snd (shift_from j a)
+  | Lam (nm, t) -> Lam (nm, shift_from (j+1) t)
+  | Let (nm, t1, t2) -> Let (nm, shift_from j t1, shift_from (j+1) t2)
+  | Ap (f, a) -> Ap (shift_from j f, shift_from j a)
+  | Eq (t, a, b) -> Eq (shift_from j t, shift_from j a, shift_from j b)
+  | Refl a -> Refl (shift_from j a)
+  | Succ n -> Succ (shift_from j n)
+  | NatElim { mot; zero; succ; scrut } -> NatElim { mot = shift_from j mot; zero = shift_from j zero; succ = shift_from j succ; scrut = shift_from j scrut }
+  | Cases (mot, cases, case) -> Cases (shift_from j mot, List.map (fun (l, e) -> l, shift_from j e) cases, shift_from j case)
+  | PolyIntro (nm, base, fib) -> PolyIntro (nm, shift_from j base, shift_from (j+1) fib)
+  | ReprIntro exp -> ReprIntro (shift_from j exp)
+  | Base p -> Base (shift_from j p)
+  | Fib (p, i) -> Fib (shift_from j p, shift_from j i)
+  | Log r -> Log (shift_from j r)
+  | Hom (p, q) -> Hom (shift_from j p, shift_from j q)
+  | HomLam wrapped -> HomLam (shift_from j wrapped)
+  | HomElim (hom, i) -> HomElim (shift_from j hom, shift_from j i)
+  | Hole (tp, n) -> Hole (shift_from j tp, n)
+  | Skolem tp -> Skolem (shift_from j tp)
+  | e -> e
+
+let shift = shift_from 0
+
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
 
