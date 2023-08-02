@@ -20,16 +20,6 @@ def ofM (P Q : Poly) : P ⇒ Q → Π (A : Type), ofP P A → ofP Q A :=
 def monomialₚ : Type → Type → Poly :=
   λ S T → S × y^T
 
-Repr
-T : Type |- y^(T) : Repr
-log y^(T) = T
-
-base (Σ (x : b), y^(f x)) = b × #{ .unit }
-
-(y^(T) : Poly) = Σ (_ : #{ .unit }), y^(T)
-
-Σ (a : A), Σ (b : B), y^(f a b)
-
 def constantₚ : Type → Poly :=
   λ S → S × y^Void
 
