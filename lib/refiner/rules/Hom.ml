@@ -146,29 +146,6 @@ let done_ (pos_tac : Chk.tac) (neg_tac : NegChk.tac) : Hom.tac =
     let fib_act = i () in
     match Eff.Locals.all_consumed () with
     | true ->
-      ((Eff.Locals.ppenv ()).pos |>
-        Bwd.Bwd.iter @@ fun v ->
-          Debug.print "  - %a@." Ident.pp v);
-      Debug.print " ---- @.";
-      ((Eff.Locals.qenv ()).neg |>
-        Bwd.Bwd.iter @@ fun v ->
-          Debug.print "  - %a@." D.dump v);
-      Debug.print " ---- @.";
-      (Bwd.Bwd.iter2
-        (fun tp v ->
-          Debug.print "  - %a@." S.dump (quote ~tp v))
-       (Eff.Locals.qenv ()).neg
-       (Eff.Locals.denv ()).neg
-    );
-    Debug.print " ---- @.";
-    (Bwd.Bwd.iter2
-       (fun tp v ->
-          Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
-        (Eff.Locals.denv ()).neg
-        (Eff.Locals.qenv ()).neg
-      );
-      Debug.print " ---- @.";
-      Debug.print "%a@." S.dump fib_act;
       S.Pair (pos, S.Lam (Var.choose name, fib_act))
     | false ->
       Error.error `LinearVariablesNotUsed "Didn't use all your linear variables in hom."

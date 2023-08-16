@@ -1,0 +1,13 @@
+def tensor-⊗ : Poly → Poly → Poly :=
+  λ P Q → Σ ((p , q) : base P × base Q), y^(fib P p × fib Q q)
+
+def internal-hom : Poly → Poly → Poly :=
+  λ P Q → Σ (f : P ⇒ Q), y^(Σ (p : base P), fib Q (fst (f p)))
+
+def eval : Π (P Q : Poly), tensor-⊗ P (internal-hom P Q) ⇒ Q :=
+  λ P Q → λ (p⁺ , m) ⇜ (x⁻ , (p⁻ , y⁻)) ⇝
+    let (q⁺ , f) := m p⁺;
+    return q⁺ ⇜ λ⁻ q →
+      x⁻ ← f q;
+      -- y⁻ involves (borrow p⁻)
+      ?

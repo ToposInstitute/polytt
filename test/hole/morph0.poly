@@ -1,0 +1,2 @@
+def idP (P : Poly) : P ⇒ P :=
+  λ p⁺ ⇜ p⁻ ⇝ ?

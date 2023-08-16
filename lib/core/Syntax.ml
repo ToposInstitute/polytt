@@ -251,6 +251,8 @@ let pp_braced_cond classify plain_pp penv fmt tm =
 
 let abs_pos env name = { env with pos = env.pos #< name }
 
+let abs_neg env name = { env with neg = env.neg #< name; neg_size = env.neg_size + 1 }
+
 let rec collect_lams env nms tm =
   match tm with
   | Lam (nm, t) ->

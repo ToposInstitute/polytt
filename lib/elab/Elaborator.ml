@@ -197,6 +197,8 @@ struct
       Hom.neg_let ~name (neg_syn tm) (fun _ -> hom body)
     | Return (pos, neg) ->
       Hom.done_ (chk pos) (neg_chk neg)
+    | Hole ->
+      Hole.unleash_hom
     | _ ->
       T.Error.error `NotAHom "Cannot be used to build a hom."
 
@@ -216,6 +218,8 @@ struct
       Prog.neg_let ~name (neg_syn tm) (fun _ -> prog body)
     | Done ->
       Prog.end_
+    | Hole ->
+      Hole.unleash_prog
     | _ ->
       (* FIXME *)
       T.Error.error `NotAHom "Cannot be used to build a program."

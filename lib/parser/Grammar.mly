@@ -232,6 +232,8 @@ plain_hom_body:
       , fold_pat (fun l r -> duolocate (l, r) @@ CS.NegPairSimple (l, r)) (snd boxes)
       )
     }
+  | QUESTION
+    { CS.Hole }
 
 program:
   | t = located(plain_program)
@@ -248,6 +250,8 @@ plain_program:
     { CS.NegLet (nm, tm, hom) }
   | DONE
     { CS.Done }
+  | QUESTION
+    { CS.Hole }
 
 neg_spine:
   | CIRC; tms = separated_nonempty_list(CIRC, atomic_term)
