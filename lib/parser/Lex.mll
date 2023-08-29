@@ -123,8 +123,6 @@ and real_token = parse
     { RIGHT_THICK_ARROW }
   | "." | "∘"
     { CIRC }
-  | "~>" | "⇝"
-    { RIGHT_SQUIGGLY_ARROW }
   | "<~" | "⇜"
     { LEFT_SQUIGGLY_ARROW }
   | "*" | "×"

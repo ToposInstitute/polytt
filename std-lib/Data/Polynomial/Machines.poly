@@ -11,7 +11,7 @@ def Moore : Type → Type → Type → Type :=
 
 def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
   λ S I O output transition →
-    λ s⁺ ⇜ s⁻ ⇝
+    λ s⁺ ⇜ s⁻ ⇒
       return (output s⁺) ⇜ s⁻ ∘ (transition s⁺)
 
 def disassemble-moore : Π (S I O : Type), Moore S I O → (S → O) × (S → I → S) :=
@@ -38,7 +38,7 @@ def DFSA : Type → Type → Type :=
 -- B × B ⇒ B × A
 def mds : Π (A B : Type), (A → B) → Moore B A B :=
   λ A B f →
-    λ b⁺ ⇜ b⁻ ⇝
+    λ b⁺ ⇜ b⁻ ⇒
       return b⁺ ⇜ b⁻ ∘ f
 
 -- | An MDS given a partial function.
@@ -48,7 +48,7 @@ def mds-partial : Π (A B : Type),
   (A → Either Unit B) →
   Moore (Either Unit B) A (Either Unit B) :=
   λ A B f →
-    λ b⁺ ⇜ b⁻ ⇝
+    λ b⁺ ⇜ b⁻ ⇒
       return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← (bind-either Unit B B (λ _ → f a) b⁺); done
 
 -- | Delay receives a ℕ as input, sets the state to it, and outputs
