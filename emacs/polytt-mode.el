@@ -74,7 +74,7 @@
   "Symbols for binders.")
 
 (defconst polytt-expression-symbols
-  '("→" "←" "×" "⇝" "⇜" "∘" "⇒")
+  '("→" "←" "×" "⇜" "∘" "⇒")
   "Expression symbols.")
 
 (defconst polytt-mode-font-lock-keywords

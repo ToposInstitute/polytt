@@ -65,7 +65,7 @@ type t = Data.syn =
     Fib of t * t
   | (* p ⇒ q *)
     Hom of t * t
-  | (* λ a⁺ a⁻ ⇝ p *)
+  | (* λ a⁺ a⁻ ⇒ p *)
     HomLam of t
   | (* x y *)
     HomElim of t * t

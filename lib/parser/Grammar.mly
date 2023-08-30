@@ -59,7 +59,7 @@ let rec fold_pat = fun t ->
 %token TIMES FST SND
 %token NAT ZERO SUCC NAT_ELIM
 %token POLY BASE FIB RIGHT_THICK_ARROW
-%token LEFT_SQUIGGLY_ARROW RIGHT_SQUIGGLY_ARROW CIRC
+%token LEFT_SQUIGGLY_ARROW CIRC
 %token HASH
 (* Delimiters *)
 %token LPR RPR LSQ RSQ LBR RBR
@@ -206,7 +206,7 @@ arrow:
     { CS.Pi (quantifiers, fam) }
   | base = term; RIGHT_ARROW; fam = term
     { CS.Pi ([[Var `Anon], base], fam) }
-  | LAMBDA; binders = boxes(pattern, pattern); RIGHT_SQUIGGLY_ARROW; body = hom_body
+  | LAMBDA; binders = boxes(pattern, pattern); RIGHT_THICK_ARROW; body = hom_body
     { CS.HomLam(Ident.join (fst binders), Ident.join (snd binders), body) }
   | p = term; RIGHT_THICK_ARROW; q = term
     { CS.Hom (p, q) }

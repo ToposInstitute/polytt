@@ -57,29 +57,29 @@ def tensor : Poly → Poly → Poly :=
 
 
 def id : Π (P : Poly), P ⇒ P :=
-  λ P → λ a⁺ ⇜ a⁻ ⇝
+  λ P → λ a⁺ ⇜ a⁻ ⇒
     return a⁺ ⇜ a⁻
 
 #print (λ P → P) : Poly → Poly
 
-#print (λ P → λ a⁺ ⇜ a⁻ ⇝ return a⁺ ⇜ a⁻) : Π (P : Poly), P ⇒ P
+#print (λ P → λ a⁺ ⇜ a⁻ ⇒ return a⁺ ⇜ a⁻) : Π (P : Poly), P ⇒ P
 
 def nyan-hom : ℕ → nyan ⇒ nyan :=
-  λ n → λ a⁺ ⇜ a⁻ ⇝
+  λ n → λ a⁺ ⇜ a⁻ ⇒
     let (b⁺ ⇜ b⁻) := (id nyan) (a⁺ ⇜ a⁻);
     return n ⇜ (b⁻ ∘ succ ∘ succ)
 
 #normalize nyan-hom 42 1
 
 def nyan-hom2 : nyan ⇒ nyan :=
-  λ a⁺ ⇜ a⁻ ⇝
+  λ a⁺ ⇜ a⁻ ⇒
     let (b⁺ ⇜ b⁻) := (nyan-hom 12) (a⁺ ⇜ a⁻);
     return b⁺ ⇜ b⁻
 
 #normalize nyan-hom2 1
 
 def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
-  λ P Q R f g → λ p⁺ ⇜ p⁻ ⇝
+  λ P Q R f g → λ p⁺ ⇜ p⁻ ⇒
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
     return r⁺ ⇜ r⁻
@@ -89,7 +89,7 @@ def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
 #normalize compose nyan nyan nyan nyan-hom2 nyan-hom2 1
 
 def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
-  λ n⁺ ⇜ n⁻ ⇝
+  λ n⁺ ⇜ n⁻ ⇒
     n⁻ ← succ n⁺;
     return n⁺ ⇜ λ⁻ _ → done
 
@@ -101,21 +101,21 @@ def Moore : Type → Type → Type → Type :=
   λ S I O → (S × S) ⇒ (O × I)
 
 def mds : Π (A B : Type), (A → B) → Moore B A B :=
-  λ A B f → λ b⁺ ⇜ b⁻ ⇝
+  λ A B f → λ b⁺ ⇜ b⁻ ⇒
     return b⁺ ⇜ b⁻ ∘ f
 
 def Gate : Type → Type → Type :=
   λ I O → Moore O I O
 
 def test-pair : nyan ⇒ tensor nyan nyan :=
-  λ n⁺ ⇜ n⁻ ⇝
+  λ n⁺ ⇜ n⁻ ⇒
     let (b⁺ ⇜ b⁻) := (nyan-hom 12) (n⁺ ⇜ n⁻);
     return (n⁺ , b⁺) ⇜ (! , b⁻ ∘ succ)
 
 #normalize (test-pair 1)
 
 def swap : Π (P Q : Poly), tensor P Q ⇒ tensor Q P :=
-  λ P Q → λ (p⁺ ⇜ p⁻) (q⁺ ⇜ q⁻) ⇝
+  λ P Q → λ (p⁺ ⇜ p⁻) (q⁺ ⇜ q⁻) ⇒
     return (q⁺ ⇜ q⁻) (p⁺ ⇜ p⁻)
 
 #normalize swap nyan nyan (1, 2)
@@ -136,7 +136,7 @@ def internal-hom : Poly → Poly → Poly :=
 
 -- Π Σ Π Σ
 
--- λ a⁺ ⇜ a⁻ ⇝
+-- λ a⁺ ⇜ a⁻ ⇒
 --   p⁻ ← p⁺;
 --   return (base f) a⁺ ⇜ λ r →
 --     p⁻ ← p⁺;
@@ -147,9 +147,9 @@ def internal-hom : Poly → Poly → Poly :=
 --def eval (P Q : Poly) : tensor P (internal-hom P Q) ⇒ Q :=
 --  -- These two lines are equivalent:
 --  -- either we take one (tensored) box, and deconstruct its bases (p⁺ , f⁺) and fibers (p₁⁻ , (p₂⁻ , q⁻))
---  -- λ (p⁺ , f⁺) ⇜ (p₁⁻ , (p₂⁻ , q⁻)) ⇝
+--  -- λ (p⁺ , f⁺) ⇜ (p₁⁻ , (p₂⁻ , q⁻)) ⇒
 --  -- or we take two boxes (implicitly tensored), and deconstruct each base and fiber separately
---  λ (p⁺ ⇜ p₁⁻) (f⁺ ⇜ (p₂⁻ , q⁻)) ⇝
+--  λ (p⁺ ⇜ p₁⁻) (f⁺ ⇜ (p₂⁻ , q⁻)) ⇒
 --    let (q⁺ , bwd) := f⁺ p⁺;
 --    p₂⁻ ← p⁺;
 --    return
@@ -176,7 +176,7 @@ def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
   -- p⁻ : fib P p⁺
   -- p_base⁻ : base P
   -- fq⁻ : fib Q (fst (f⁺ (borrow p_base⁻)))
-  λ P Q → λ (p⁺ ⇜ p⁻) (f⁺ ⇜ (p_base⁻ , fq⁻)) ⇝
+  λ P Q → λ (p⁺ ⇜ p⁻) (f⁺ ⇜ (p_base⁻ , fq⁻)) ⇒
     p_base⁻ ← p⁺;
     -- q⁺ : base Q
     -- f_fib_p⁺ : fib Q q⁺ → fib P p⁺
@@ -191,7 +191,7 @@ def compose : Poly → Poly → Poly :=
   λ P Q → Σ ((p , f) : Σ (p : base P), fib P p → base Q), Σ (i : fib P p), fib Q (f i)
 
 def tensor-to-compose : Π (P Q : Poly), tensor P Q ⇒ compose P Q :=
-  λ P Q → λ (p⁺ , q⁺) ⇜ pq⁻ ⇝
+  λ P Q → λ (p⁺ , q⁺) ⇜ pq⁻ ⇒
     return (p⁺ , λ _ → q⁺) ⇜ pq⁻
 
 #normalize tensor-to-compose
