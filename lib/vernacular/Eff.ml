@@ -17,8 +17,7 @@ struct
   type hook = empty
   type context = empty
 end
-module Modifier = Yuujinchou.Modifier.Make(Param)
-module Scope = Yuujinchou.Scope.Make(Param)(Modifier)
+module Scope = Yuujinchou.Scope.Make(Param)
 
 let load path =
   let env = Eff.read () in
