@@ -2,7 +2,7 @@ def tensor-⊗ : Poly → Poly → Poly :=
   λ P Q → Σ ((p , q) : base P × base Q), y^(fib P p × fib Q q)
 
 def collapse (P : Poly) : tensor-⊗ P P ⇒ P :=
-  λ (p⁺ , _) ⇜ (p1⁻ , p2⁻) ⇝
+  λ (p⁺ , _) ⇜ (p1⁻ , p2⁻) ⇒
     return p⁺ ⇜ λ⁻ p →
       p1⁻ ← p;
       -- Note: this hole cannot be filled
