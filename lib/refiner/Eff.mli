@@ -30,6 +30,8 @@ module Locals : sig
   val abstract : ?name:Ident.binder -> D.tp -> ((Ident.t * (D.tp * D.t) * (D.tp * D.t) Ident.pat) -> 'a) -> 'a
   val abstracts : ?names:Ident.binder list -> D.tp -> ((Ident.t * (D.tp * D.t) * (D.tp * D.t) Ident.pat) list -> 'a) -> 'a
   val local_types : unit -> D.tp bwd
+  val neg_types : unit -> D.tp bwd
+  val neg_values : unit -> D.t bwd
   val ppenv : unit -> S.ppenv
   val qenv : unit -> QuoteEnv.t
   val denv : unit -> D.env

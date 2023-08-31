@@ -14,8 +14,104 @@ Normal Form: λ n⁺ → (n⁺ , λ <1> → succ n⁺)
 Normal Form: ((1 , 12) , λ <2> → succ (succ (succ (snd <2>))))
 Normal Form: ((2 , 1) , λ <3> → (snd <3> , fst <3>))
 Normal Form: λ P Q → Σ (<28> : base P), Σ (_ : base P), fib P _ ⇒ Σ (_ : base Q), fib Q _
+Normal Form: refl (λ P Q → Σ (<2> : Σ (p : base P), Π (<59> : fib P p), base Q), Σ (i : fib P (fst <2>)), fib Q (snd <2> i))
+Normal Form: λ P Q → Σ (<2> : Σ (p : base P), Π (<59> : fib P p), base Q), Σ (i : fib P (fst <2>)), fib Q (snd <2> i)
+Normal Form: λ P Q → Σ (<2> : Σ (p : base P), Π (<64> : fib P p), base Q), Σ (i : fib P (fst <2>)), fib Q (snd <2> i)
 Normal Form: λ P Q → λ <3> → ((fst <3> , λ <4> → snd <3>) , λ <3> → (fst <3> , snd <3>))
-Normal Form: λ S T A B → #{ .get, .set } → { .get = Π (<68> : S), A, .set = Π (<70> : S), Π (<69> : B), T } _
+Normal Form: λ S T A B → #{ .get, .set } → { .get = Π (<72> : S), A, .set = Π (<74> : S), Π (<73> : B), T } _
+--------------------[./hole/eval.poly]--------------------
+
+Here is the context!
++ P : Poly
++ Q : Poly
++ _ : Σ (<85> : base P), Σ (_ : base P), fib P _ ⇒ Σ (_ : base Q), fib Q _
++ _ : base Q × (fib Q _ → fib P (fst _))
++ q : fib Q (fst (snd _ (fst _)))
+- p⁻ : base P
+- y⁻ : fib Q (fst (snd _ (borrow p⁻)))
+──────────────
+
+
+    🭁 ./hole/eval.poly
+    │
+ 10 │     return q⁺ ⇜ λ⁻ q →
+ 11 │       x⁻ ← f q;
+ 12 │       -- y⁻ involves (borrow p⁻)
+ 13 │       ?
+    │
+    █ [E010] Didn't use all your linear variables in hom.
+--------------------[./hole/let.poly]--------------------
+
+Encountered hole with known type!
+──────────────
++ ⊢ ?0 : ℕ
+
+--------------------[./hole/morph0.poly]--------------------
+
+Encountered hole at end of hom!
++ P : Poly
++ p⁺ : base P
+- p⁻ : fib P p⁺
+──────────────
++ ⊢ ?0 : base P
+- ⊢ ?1 : fib P ?0
+
+--------------------[./hole/morph1.poly]--------------------
+
+Encountered hole with known type!
++ P : Poly
++ p⁺ : base P
+- p⁻ : fib P p⁺
+──────────────
++ ⊢ ?0 : base P
+
+Encountered negative hole with known type!
++ P : Poly
++ p⁺ : base P
+- p⁻ : fib P p⁺
+──────────────
+- ⊢ ?1 : fib P ?0
+
+
+   🭁 ./hole/morph1.poly
+   │
+ 3 │     return ? ⇜ ?
+   │
+   █ [E010] Didn't use all your linear variables in hom.
+--------------------[./hole/morph2.poly]--------------------
+
+Encountered hole with known type!
++ P : Poly
++ p⁺ : base P
+- p⁻ : fib P p⁺
+──────────────
++ ⊢ ?0 : base P
+
+
+   🭁 ./hole/morph2.poly
+   │
+ 3 │     return ? ⇜ p⁻
+   │
+   █ [E006] Could not solve fib P ?0 = fib P p⁺
+
+--------------------[./hole/morph3.poly]--------------------
+
+Encountered hole with known type!
++ P : Poly
++ _ : Σ (<98> : base P), base P
++ p : fib P (fst _)
+- p2⁻ : fib P (snd _)
+──────────────
++ ⊢ ?0 : fib P (snd _)
+
+--------------------[./hole/pos.poly]--------------------
+
+Encountered hole with known type!
++ A : Type
++ a : A
+──────────────
++ ⊢ ?0 : A
+
 --------------------[./let/test-let.poly]--------------------
 
 Normal Form: 9

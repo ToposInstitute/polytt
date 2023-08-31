@@ -2,8 +2,8 @@ import Data::Polynomial
 import Data::Polynomial::Fin
 
 --------------------------------------------------------------------------------
-  
-def Identityₚ : Poly := Σ (_ : Unit), Unit
+
+def Identityₚ : Poly := Σ (_ : Unit), y^Unit
 
 def Identity : Type → Type := ofP Identityₚ
 

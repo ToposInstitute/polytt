@@ -46,10 +46,10 @@ def let-example :=
 #normalize let-example
 
 def nyan : Poly :=
-  (ℕ × ℕ)
+  ℕ × y^ℕ
 
 def tensor : Poly → Poly → Poly :=
-  λ P Q → Σ ((p , q) : base P × base Q), fib P p × fib Q q
+  λ P Q → Σ ((p , q) : base P × base Q), y^(fib P p × fib Q q)
 
 #print tensor
 #normalize base (tensor nyan nyan)
@@ -88,7 +88,7 @@ def compose : Π (P Q R : Poly), Q ⇒ R → P ⇒ Q → P ⇒ R :=
 -- 🐈🌈
 #normalize compose nyan nyan nyan nyan-hom2 nyan-hom2 1
 
-def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
+def counter : (ℕ × y^ℕ) ⇒ (ℕ × y^#{ .single }) :=
   λ n⁺ ⇜ n⁻ ⇒
     return n⁺ ⇜ λ⁻ (x : #{ .single }) → n⁻ ← succ n⁺; done
 
@@ -97,7 +97,7 @@ def counter : (ℕ × ℕ) ⇒ (ℕ × #{ .single }) :=
 #normalize counter
 
 def Moore : Type → Type → Type → Type :=
-  λ S I O → (S × S) ⇒ (O × I)
+  λ S I O → (S × y^S) ⇒ (O × y^I)
 
 def mds : Π (A B : Type), (A → B) → Moore B A B :=
   λ A B f → λ b⁺ ⇜ b⁻ ⇒
@@ -122,7 +122,7 @@ def swap : Π (P Q : Poly), tensor P Q ⇒ tensor Q P :=
 #normalize swap nyan nyan (1, 2)
 
 def internal-hom : Poly → Poly → Poly :=
-  λ P Q → Σ (f : P ⇒ Q), (Σ (p : base P), fib Q (fst (f p)))
+  λ P Q → Σ (f : P ⇒ Q), y^(Σ (p : base P), fib Q (fst (f p)))
 
     -- ? → (q⁻ ∘ (snd ((snd pf⁺) (fst pf⁺))));
     -- (fst pf⁺ , p⁻) ⤚ (snd pf⁺) → (q₁⁺ , q₁⁻);
@@ -180,7 +180,14 @@ def eval : Π (P Q : Poly), tensor P (internal-hom P Q) ⇒ Q :=
       done
 
 def compose : Poly → Poly → Poly :=
-  λ P Q → Σ ((p , f) : Σ (p : base P), fib P p → base Q), Σ (i : fib P p), fib Q (f i)
+  λ P Q → Σ ((p , f) : Σ (p : base P), fib P p → base Q), y^(Σ (i : fib P p), fib Q (f i))
+
+def compose' : Poly → Poly → Poly :=
+  λ P Q → Σ (p : base P), Σ (f : fib P p → base Q), y^(Σ (i : fib P p), fib Q (f i))
+
+#normalize refl : compose = compose'
+#normalize compose
+#normalize compose'
 
 def tensor-to-compose : Π (P Q : Poly), tensor P Q ⇒ compose P Q :=
   λ P Q → λ (p⁺ , q⁺) ⇜ pq⁻ ⇒

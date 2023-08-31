@@ -7,7 +7,7 @@ import Data::Polynomial
 --------------------------------------------------------------------------------
 
 def Moore : Type → Type → Type → Type :=
-  λ S I O → (S × S) ⇒ (O × I)
+  λ S I O → (S × y^S) ⇒ (O × y^I)
 
 def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
   λ S I O output transition →
@@ -18,7 +18,7 @@ def disassemble-moore : Π (S I O : Type), Moore S I O → (S → O) × (S → I
   λ S I O moore → (λ s → fst (moore s) , λ s → snd (moore s) )
 
 def Mealy : Type → Type → Type → Type :=
-  λ S I O → ((S × I) × S) ⇒ (O × Unit)
+  λ S I O → ((S × I) × y^S) ⇒ (O × y^Unit)
 
 --------------------------------------------------------------------------------
 

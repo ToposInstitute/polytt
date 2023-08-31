@@ -44,6 +44,10 @@ struct
       FinSet.record_lit (List.map (fun (l, v) -> l, chk v) cases)
     | CS.Poly ->
       Poly.formation
+    | CS.Repr ->
+      Poly.repr_formation
+    | CS.ReprIntro exp ->
+      Poly.repr_intro (chk exp)
     | CS.HomLam (pos_name, neg_name, bdy) ->
       Hom.intro ~pos_name ~neg_name (fun _ _ -> hom bdy)
     | _ ->
@@ -143,10 +147,14 @@ struct
       Poly.base (chk p)
     | CS.Fib (p, i) ->
       Poly.fib (chk p) (chk i)
+    | CS.Log r ->
+      Poly.log (chk r)
     | CS.Hom (p, q) ->
       Hom.formation (chk p) (chk q)
     | CS.RecordLit cases ->
       FinSet.record_lit_syn (List.map (fun (l, v) -> l, syn v) cases)
+    | CS.ReprIntro exp ->
+      T.Syn.ann (Poly.repr_intro (chk exp)) Poly.repr_formation
     | _ ->
       T.Error.error `RequiresAnnotation "Term requires an annotation."
 
@@ -189,6 +197,8 @@ struct
       Hom.neg_let ~name (neg_syn tm) (fun _ -> hom body)
     | Return (pos, neg) ->
       Hom.done_ (chk pos) (neg_chk neg)
+    | Hole ->
+      Hole.unleash_hom
     | _ ->
       T.Error.error `NotAHom "Cannot be used to build a hom."
 
@@ -208,6 +218,8 @@ struct
       Prog.neg_let ~name (neg_syn tm) (fun _ -> prog body)
     | Done ->
       Prog.end_
+    | Hole ->
+      Hole.unleash_prog
     | _ ->
       (* FIXME *)
       T.Error.error `NotAHom "Cannot be used to build a program."

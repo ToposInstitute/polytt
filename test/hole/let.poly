@@ -1,0 +1,3 @@
+-- let bindings don't exist in the local environment in the same way
+-- so they are not printed
+def ex := let answer := 42 in ?

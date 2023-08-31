@@ -59,10 +59,17 @@ type t = Data.syn =
     Poly
   | (* (p : P) × q *)
     PolyIntro of Ident.t * t * t
+  | (* Repr *)
+    Repr
+  | (* y^(p) *)
+    ReprIntro of t
   | (* base p *)
     Base of t
   | (* fib x y *)
     Fib of t * t
+  | (* log r *)
+    Log of t
+  | ElRepr of t
   | (* p ⇒ q *)
     Hom of t * t
   | (* λ a⁺ a⁻ ⇒ p *)
@@ -73,6 +80,36 @@ type t = Data.syn =
     Hole of t * int
   | (* skolem *)
     Skolem of t
+
+let rec shift_from j =
+  function
+  | Var i -> Var (if i >= j then i+1 else i)
+  | Pi (nm, a, b) -> Pi (nm, shift_from j a, shift_from (j+1) b)
+  | Sigma (nm, a, b) -> Sigma (nm, shift_from j a, shift_from (j+1) b)
+  | Pair (a, b) -> Pair (shift_from j a, shift_from j b)
+  | Fst a -> Fst (shift_from j a)
+  | Snd a -> Snd (shift_from j a)
+  | Lam (nm, t) -> Lam (nm, shift_from (j+1) t)
+  | Let (nm, t1, t2) -> Let (nm, shift_from j t1, shift_from (j+1) t2)
+  | Ap (f, a) -> Ap (shift_from j f, shift_from j a)
+  | Eq (t, a, b) -> Eq (shift_from j t, shift_from j a, shift_from j b)
+  | Refl a -> Refl (shift_from j a)
+  | Succ n -> Succ (shift_from j n)
+  | NatElim { mot; zero; succ; scrut } -> NatElim { mot = shift_from j mot; zero = shift_from j zero; succ = shift_from j succ; scrut = shift_from j scrut }
+  | Cases (mot, cases, case) -> Cases (shift_from j mot, List.map (fun (l, e) -> l, shift_from j e) cases, shift_from j case)
+  | PolyIntro (nm, base, fib) -> PolyIntro (nm, shift_from j base, shift_from (j+1) fib)
+  | ReprIntro exp -> ReprIntro (shift_from j exp)
+  | Base p -> Base (shift_from j p)
+  | Fib (p, i) -> Fib (shift_from j p, shift_from j i)
+  | Log r -> Log (shift_from j r)
+  | Hom (p, q) -> Hom (shift_from j p, shift_from j q)
+  | HomLam wrapped -> HomLam (shift_from j wrapped)
+  | HomElim (hom, i) -> HomElim (shift_from j hom, shift_from j i)
+  | Hole (tp, n) -> Hole (shift_from j tp, n)
+  | Skolem tp -> Skolem (shift_from j tp)
+  | e -> e
+
+let shift = shift_from 0
 
 let pp_sep_list ?(sep = ", ") pp_elem fmt xs =
   Format.pp_print_list ~pp_sep:(fun fmt () -> Format.pp_print_string fmt sep) pp_elem fmt xs
@@ -108,6 +145,11 @@ let rec dump fmt =
       Ident.pp nm
       dump base
       dump fib
+  | Repr ->
+    Format.fprintf fmt "repr"
+  | ReprIntro exp ->
+    Format.fprintf fmt "repr-intro[%a]"
+      dump exp
   | Base p ->
     Format.fprintf fmt "base[%a]"
       dump p
@@ -115,6 +157,12 @@ let rec dump fmt =
     Format.fprintf fmt "fib[%a, %a]"
       dump p
       dump i
+  | Log r ->
+    Format.fprintf fmt "log[%a]"
+      dump r
+  | ElRepr r ->
+    Format.fprintf fmt "el-repr[%a]"
+      dump r
   | Hom (p, q) ->
     Format.fprintf fmt "hom[%a, %a]"
       dump p
@@ -151,6 +199,7 @@ let classify_tm =
   function
   | Univ -> atom
   | Poly -> atom
+  | Repr -> atom
   | Var _ -> atom
   | Global _ -> atom
   | Borrow _ -> juxtaposition
@@ -159,10 +208,13 @@ let classify_tm =
   | Sigma _ -> arrow
   | Pair _ -> atom
   | PolyIntro _ -> star
+  | ReprIntro _ -> atom
   | Fst _ -> juxtaposition
   | Snd _ -> juxtaposition
   | Base _ -> juxtaposition
   | Fib _ -> juxtaposition
+  | Log _ -> juxtaposition
+  | ElRepr _ -> juxtaposition
   | Lam _ -> arrow
   | Let _ -> atom
   | Ap _ -> juxtaposition
@@ -198,6 +250,8 @@ let pp_braced_cond classify plain_pp penv fmt tm =
     plain_pp this penv fmt tm
 
 let abs_pos env name = { env with pos = env.pos #< name }
+
+let abs_neg env name = { env with neg = env.neg #< name; neg_size = env.neg_size + 1 }
 
 let rec collect_lams env nms tm =
   match tm with
@@ -312,6 +366,12 @@ let rec pp (env : ppenv) =
       Ident.pp nm
       (pp env P.isolated) base
       (pp (abs_pos env nm) P.isolated) fib
+  | Repr ->
+    Format.fprintf fmt "Repr"
+  | ReprIntro exp ->
+    Format.fprintf fmt "y^%a"
+      (* FIXME precedence? *)
+      (pp env (P.surrounded_by atom)) exp
   | Base p ->
     Format.fprintf fmt "base %a"
       (pp env (P.right_of juxtaposition)) p
@@ -319,6 +379,13 @@ let rec pp (env : ppenv) =
     Format.fprintf fmt "fib %a %a"
       (pp env (P.right_of juxtaposition)) p
       (pp env (P.right_of juxtaposition)) fib
+  | Log r ->
+    Format.fprintf fmt "log %a"
+      (pp env (P.right_of juxtaposition)) r
+  | ElRepr r ->
+    Format.fprintf fmt "(%a : Poly)"
+      (* FIXME precedence *)
+      (pp env (P.right_of juxtaposition)) r
   | Hom (p, q) ->
     Format.fprintf fmt "%a ⇒ %a"
       (pp env (P.left_of arrow)) p

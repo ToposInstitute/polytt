@@ -109,9 +109,21 @@ struct
   let env () =
     Reader.read ()
 
+  let locals () =
+    let env = Reader.read () in
+    env.locals
+
   let local_types () =
     let env = Reader.read () in
     env.local_types
+
+  let neg_types () =
+    let env = Reader.read () in
+    env.neg_types
+
+  let neg_values () =
+    let env = Reader.read () in
+    Bwd.map (fun (_, r) -> !r) env.neg_values
 
   let ppenv () : S.ppenv =
     let env = Reader.read () in

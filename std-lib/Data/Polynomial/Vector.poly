@@ -2,9 +2,9 @@ import Data::Polynomial
 import Data::Polynomial::Fin
 
 --------------------------------------------------------------------------------
-  
+
 def Vectorₚ : ℕ → Poly :=
-  λ n → Σ( tag : #{ .only }), {.only = fin n} tag
+  λ n → Σ( tag : #{ .only }), y^({.only = fin n} tag)
 
 def Vector : ℕ → Type → Type := λ n → ofP (Vectorₚ n)
 

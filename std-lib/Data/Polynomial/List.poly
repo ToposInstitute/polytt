@@ -4,7 +4,7 @@ import Data::Polynomial::Fin
 
 --------------------------------------------------------------------------------
 
-def Listₚ : Poly := Σ (n : ℕ), fin n
+def Listₚ : Poly := Σ (n : ℕ), y^(fin n)
 
 def List : Type → Type := ofP Listₚ
 

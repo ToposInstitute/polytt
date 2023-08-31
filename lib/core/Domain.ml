@@ -26,6 +26,8 @@ type t = Data.value =
   | Univ
   | Poly
   | PolyIntro of Ident.t * t * tm_clo
+  | Repr
+  | ReprIntro of t
   | Hom of t * t
   | HomLam of t
 
@@ -47,6 +49,7 @@ and frame = Data.frame =
   | Cases of { mot : t; cases : t labeled }
   | Base
   | Fib of { base : t; value : t }
+  | Log
   | HomElim of { tp : t; arg : t }
 
 and env = Data.env = { pos : t bwd; neg_size : int; neg : tp bwd }
@@ -90,6 +93,11 @@ let rec dump fmt =
       Ident.pp nm
       dump base
       dump_clo fib
+  | Repr ->
+    Format.fprintf fmt "repr"
+  | ReprIntro exp ->
+    Format.fprintf fmt "repr-intro[%a]"
+      dump exp
   | Hom (p, q) ->
     Format.fprintf fmt "hom[%a, %a]"
       dump p
@@ -132,6 +140,8 @@ and dump_frm fmt =
     Format.fprintf fmt "base"
   | Fib _ ->
     Format.fprintf fmt "fib"
+  | Log ->
+    Format.fprintf fmt "log"
   | HomElim _ ->
     Format.fprintf fmt "hom-elim"
 

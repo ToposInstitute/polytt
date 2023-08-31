@@ -13,10 +13,10 @@ type syn =
   | Global of Global.t
   | Borrow of int
   (** Negative variables are DeBruijn levels, even in the syntax! *)
-  | Pi of Ident.t * syn * syn 
-  | Lam of Ident.t * syn 
-  | Let of Ident.t * syn * syn 
-  | Ap of syn * syn 
+  | Pi of Ident.t * syn * syn
+  | Lam of Ident.t * syn
+  | Let of Ident.t * syn * syn
+  | Ap of syn * syn
   | Sigma of Ident.t * syn * syn
   | Pair of syn * syn
   | Fst of syn
@@ -31,18 +31,22 @@ type syn =
       -> P y p
   *)
   (* | AxiomJ of  *)
-  | Nat 
-  | Zero 
-  | Succ of syn 
+  | Nat
+  | Zero
+  | Succ of syn
   | NatElim of { mot : syn; zero : syn; succ : syn; scrut : syn }
-  | FinSet of labelset 
-  | Label of labelset * label 
-  | Cases of syn * syn labeled * syn 
+  | FinSet of labelset
+  | Label of labelset * label
+  | Cases of syn * syn labeled * syn
   | Univ
   | Poly
   | PolyIntro of Ident.t * syn * syn
+  | Repr
+  | ReprIntro of syn
   | Base of syn
   | Fib of syn * syn
+  | Log of syn
+  | ElRepr of syn
   | Hom of syn * syn
   | HomLam of syn
   | HomElim of syn * syn
@@ -66,6 +70,8 @@ and value =
   | Univ
   | Poly
   | PolyIntro of Ident.t * value * tm_clo
+  | Repr
+  | ReprIntro of value
   | Hom of value * value
   | HomLam of value
 
@@ -85,6 +91,7 @@ and frame =
   | Cases of { mot : value; cases : (string * value) list }
   | Base
   | Fib of { base : value; value : value }
+  | Log
   | HomElim of { tp : value; arg : value }
 
 and env = { pos : value bwd; neg_size : int; neg : value bwd }

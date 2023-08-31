@@ -104,7 +104,13 @@ struct
       let base2 = Sem.do_base v2 in
       equate D.Univ base1 base2;
       bind base1 @@ fun i ->
-      equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
+        equate D.Univ (Sem.do_fib v1 i) (Sem.do_fib v2 i)
+    | _, D.Repr, D.Repr ->
+      ()
+    | D.Repr, v1, v2 ->
+      let exp1 = Sem.do_log v1 in
+      let exp2 = Sem.do_log v2 in
+      equate D.Univ exp1 exp2
     | _, D.Hom (p1, q1), D.Hom (p2, q2) ->
       equate D.Poly p1 p2;
       equate D.Poly q1 q2;
@@ -197,6 +203,8 @@ struct
       ()
     | D.Fib fib1, D.Fib fib2 ->
       equate fib1.base fib1.value fib2.value
+    | D.Log, D.Log ->
+      ()
     | D.HomElim {tp; arg = v1}, D.HomElim {arg = v2; _} ->
       equate tp v1 v2
     | _ ->

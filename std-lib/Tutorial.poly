@@ -47,14 +47,16 @@ def rgb-func : RGB → ℕ :=
 
 -- | P y ≡ y²
 def P : Π (Y : Type), Poly :=
-  λ Y → Σ (_ : #{ .only }), Y × Y
+  λ Y → Σ (_ : #{ .only }), y^(Y × Y)
 
 -- | Q y ≡ y³ + y²
 def Q (Y : Type) : Poly :=
   Σ (i : #{ .zero, .one }),
-    { .zero = Y × Y × Y
-    , .one = Y × Y
-    } i
+    y^(
+      { .zero = Y × Y × Y
+      , .one = Y × Y
+      } i
+    )
 
 -- R y ≡ y³ + y² + y + 1
 --
@@ -64,23 +66,25 @@ def Q (Y : Type) : Poly :=
 --
 def R (Y : Type) : Poly :=
   Σ (i : #{ .zero, .one, .two, .three}),
-    { .zero = Y × Y × Y
-    , .one = Y × Y
-    , .two = Y
-    , .three = Unit
-    } i
+    y^(
+      { .zero = Y × Y × Y
+      , .one = Y × Y
+      , .two = Y
+      , .three = Unit
+      } i
+    )
 
 def Listₚ : Poly :=
-  Σ (n : ℕ), fin n
+  Σ (n : ℕ), y^(fin n)
 
 -- | ℕy^ℕ
 def nyan : Poly :=
-  Σ (_ : ℕ), ℕ
+  Σ (_ : ℕ), y^ℕ
 
 -- | We can also define a non-dependent Poly using product shorthand
 -- in place of Sigma:
 def nyan' : Poly :=
-  (ℕ × ℕ)
+  ℕ × y^ℕ
 
 -- | We can then prove their equivalence:
 def sigma≡pair : nyan = nyan' := refl
@@ -164,7 +168,7 @@ def idₚ≡idₚ' : idₚ = idₚ' := refl
 --               A│ A└───┘B B└───┘C │C
 --                └─────────────────┘
 
-def two-chainₚ (A B C : Type) : (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
+def two-chainₚ (A B C : Type) : (tensor-⊗ (B × y^A) (C × y^B)) ⇒ (C × y^A) :=
   λ (p⁺ , q⁺) ⇜ pq⁻ ⇒
      let- (p⁻ , q⁻) := pq⁻;
      q⁻ ← p⁺;
@@ -208,7 +212,7 @@ def two-chainₚ (A B C : Type) : (tensor-⊗ (B × A) (C × B)) ⇒ (C × A) :=
 --    reinforce that you can apply any pure function in a positive
 --    fragment.
 
-def counterₚ : (ℕ × ℕ) ⇒ (ℕ × #{ .unit }) :=
+def counterₚ : (ℕ × y^ℕ) ⇒ (ℕ × y^#{ .unit }) :=
   -- Bind the base and fiber-sink of the inner Poly:
   -- n⁺ : base (ℕ × ℕ)
   -- n⁻ : fib (ℕ × ℕ) n⁺
@@ -372,7 +376,7 @@ def swapₚ (P Q : Poly) : (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
 --      Note at * we apply 'add : ℕ → ℕ → ℕ'
 --
 
-def f : (ℕ × ℕ) ⇒ (ℕ × ℕ) :=
+def f : (ℕ × y^ℕ) ⇒ (ℕ × y^ℕ) :=
   λ n⁺ ⇜ n⁻ ⇒
     return n⁺ ⇜ λ⁻ (m : ℕ) → n⁻ ← add m n⁺; done
 
@@ -388,7 +392,7 @@ def f : (ℕ × ℕ) ⇒ (ℕ × ℕ) :=
 --
 
 def Moore : Type → Type → Type → Type :=
-  λ S I O → (S × S) ⇒ (O × I)
+  λ S I O → (S × y^S) ⇒ (O × y^I)
 
 -- The inner Poly 'S × S' represents the internal state of the machine
 -- and the outer Poly 'O × I' describes the input and output types.

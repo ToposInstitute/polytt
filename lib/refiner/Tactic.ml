@@ -1,5 +1,6 @@
 open Core
 open Bwd
+open Bwd.Infix
 include Eff
 
 open Ident
@@ -10,6 +11,7 @@ module rec Chk : sig
   type tac
   val rule : (D.tp -> S.t) -> tac
   val run : tac -> D.tp -> S.t
+  val run2 : tac -> D.tp -> D.tp -> (S.t * bool)
   val syn : Syn.tac -> Chk.tac
   val locate : Asai.Span.t -> tac -> tac
 end =
@@ -17,11 +19,11 @@ struct
   type tac = D.tp -> S.t
   let rule k = k
   let run k tp = k tp
+  let run2 k tp1 tp2 = try k tp1, false with _ -> k tp2, true
   let syn tac =
     rule @@ fun goal ->
     let (actual, tm) = Syn.run tac in
-    equate ~tp:D.Univ goal actual;
-    tm
+    Coe.coe actual goal tm
   let locate loc k tp =
     Error.locate loc @@ fun () ->
     k tp
@@ -50,12 +52,12 @@ end
 
 and Hom : sig
   type tac
-  val rule : (D.tp * (unit -> S.t) -> S.t) -> tac
-  val run : tac -> D.tp * (unit -> S.t) -> S.t
+  val rule : (D.t * (unit -> S.t) -> S.t) -> tac
+  val run : tac -> D.t * (unit -> S.t) -> S.t
   val locate : Asai.Span.t -> tac -> tac
 end =
 struct
-  type tac = D.tp * (unit -> S.t) -> S.t
+  type tac = D.t * (unit -> S.t) -> S.t
   let rule k = k
   let run k tp = k tp
   let locate loc k (tp, set) =
@@ -125,6 +127,7 @@ and Var : sig
   val abstract : ?name:Ident.binder -> D.tp -> (tac -> 'a) -> 'a
   val abstracts : ?names:Ident.binder list -> D.tp -> (tac list -> 'a) -> 'a
   val concrete : ?name:Ident.binder -> D.tp -> D.t -> (tac -> 'a) -> 'a
+  val fresh_name : Ident.t -> Ident.t
 
   val choose : Ident.binder -> Ident.t
   val choose_many : Ident.binder list -> Ident.t list
@@ -222,43 +225,68 @@ let pp_sequent_ctx ppenv fmt (ctx, k) =
     | [] ->
       k ppenv fmt
     | (name, tp) :: ctx ->
-      (* FIXME this does not include negatives *)
+      (* Since this is the positive fragment, we do not need negatives here *)
       let tp = Quote.quote ~env:{ pos_size = size; neg_size = 0; neg = Emp } ~tp:D.Univ tp in
-      Format.fprintf fmt "  %a : %a@.%a"
+      Format.fprintf fmt "+ %a : %a@.%a"
         Ident.pp name
         (S.pp ppenv Precedence.isolated) tp
         (go (S.abs_pos ppenv name) (size + 1)) ctx
   in
   go ppenv 0 fmt ctx
 
-let pp_sequent_goal goal ppenv fmt =
-  Debug.print " GOAL %a@." S.dump goal;
-  Debug.print " ---- @.";
-  ((Eff.Locals.qenv ()).neg |>
-    Bwd.iter @@ fun v ->
-      Debug.print "  - %a@." D.dump v);
-  Debug.print " ---- @.";
-  (Bwd.iter2
-    (fun tp v ->
-      Debug.print "  - %a@." S.dump (quote ~tp v))
-    (Eff.Locals.qenv ()).neg
-    (Eff.Locals.denv ()).neg
-  );
-  Debug.print " ---- @.";
-  (Bwd.iter2
-    (fun tp v ->
-      Debug.print "  - %a@." (S.pp (Eff.Locals.ppenv ()) S.P.isolated) (quote ~tp v))
-    (Eff.Locals.denv ()).neg
-    (Eff.Locals.qenv ()).neg
-  );
-  Debug.print " ---- @.";
-  Format.fprintf fmt "──────────────@.  ⊢ %a@."
-    (S.pp ppenv Precedence.isolated) goal
+let pp_sequent_neg_ctx (ppenv : S.ppenv) fmt (ctx, k) =
+  let pos_size = Bwd.length ppenv.pos in
+  let rec go ppenv neg_size neg fmt ctx =
+    match ctx with
+    | [] ->
+      k ppenv fmt
+    | (name, (tp, (D.Neu (_, { hd = D.Borrow sz; spine = Emp }) as tm))) :: ctx when sz = neg_size ->
+      let tp = Quote.quote ~env:{ pos_size; neg_size; neg } ~tp:D.Univ tp in
+      Format.fprintf fmt "- %a : %a@.%a"
+        Ident.pp name
+        (S.pp ppenv Precedence.isolated) tp
+        (go (S.abs_neg ppenv name) (neg_size + 1) (neg #< tm)) ctx
+    | (name, (tp, tm)) :: ctx when false ->
+      let tp = Quote.quote ~env:{ pos_size; neg_size; neg } ~tp:D.Univ tp in
+      Format.fprintf fmt "- %a ← … : %a@.%a"
+        Ident.pp name
+        (S.pp ppenv Precedence.isolated) tp
+        (go (S.abs_neg ppenv name) (neg_size + 1) (neg #< tm)) ctx
+    | (name, (tp, tm)) :: ctx when false ->
+      let tm_s = Quote.quote ~env:{ pos_size; neg_size; neg } ~tp tm in
+      let tp = Quote.quote ~env:{ pos_size; neg_size; neg } ~tp:D.Univ tp in
+      Format.fprintf fmt "- %a ← %a : %a@.%a"
+        Ident.pp name
+        (S.pp ppenv Precedence.isolated) tm_s
+        (S.pp ppenv Precedence.isolated) tp
+        (go (S.abs_neg ppenv name) (neg_size + 1) (neg #< tm)) ctx
+    | (name, (_tp, tm)) :: ctx ->
+      Format.fprintf fmt "%a"
+        (go (S.abs_neg ppenv name) (neg_size + 1) (neg #< tm)) ctx
+  in
+  go ppenv 0 Emp fmt ctx
+
+let pp_sequent_goal is_neg goal_tm goal_tp ppenv fmt =
+  Format.fprintf fmt "──────────────@.%s ⊢ %a : %a@."
+    (if is_neg then "-" else "+")
+    (S.pp ppenv Precedence.isolated) goal_tm
+    (S.pp ppenv Precedence.isolated) goal_tp
+
+let pp_sequent_pos_goal = pp_sequent_goal false
+let pp_sequent_neg_goal = pp_sequent_goal true
 
 let pp_sequent_nogoal _ppenv fmt =
-  Format.fprintf fmt "──────────────@.  ⊢ ?@."
+  Format.fprintf fmt "──────────────@."
 
 let print_ctx fmt k =
   let ppenv = Locals.ppenv () in
   let ctx = Locals.local_types () in
-  pp_sequent_ctx { pos = Emp; neg_size = ppenv.neg_size; neg = ppenv.neg } fmt (List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx), k)
+  let neg_ctx = Bwd.combine (Locals.neg_types ()) (Locals.neg_values ()) in
+  pp_sequent_ctx { pos = Emp; neg_size = 0; neg = Emp } fmt
+    ( List.combine (Bwd.to_list ppenv.pos) (Bwd.to_list ctx)
+    , fun halfway fmt ->
+      pp_sequent_neg_ctx halfway fmt
+        ( List.combine (Bwd.to_list ppenv.neg) (Bwd.to_list neg_ctx)
+        , k
+        )
+    )
