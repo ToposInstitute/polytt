@@ -432,7 +432,7 @@ let equate ~tp v1 v2 =
     let tm1 = Quote.quote ~env ~tp v1 in
     let tm2 = Quote.quote ~env ~tp v2 in
     Debug.print "Unequal:@.%a@.%a@." S.dump tm1 S.dump tm2;
-    Error.error `ConversionError "Could not solve %a = %a@."
+    Error.error `ConversionError "@[<v 2>Could not solve:@ @[<v>%a@] = @[<v>%a@]@]"
       (S.pp ppenv (Precedence.left_of S.equals)) tm1
       (S.pp ppenv (Precedence.right_of S.equals)) tm2
 
