@@ -3,24 +3,115 @@ import Data::Either
 import Data::Natural
 import Data::Unit
 import Data::Polynomial
+import Data::Polynomial::List
 
 --------------------------------------------------------------------------------
 
+-- | Moore Machines
+--
+-- ▆  If 𝐴, 𝐵, and 𝑆 are sets, an (𝐴, 𝐵)-Moore machine with
+-- │  states 𝑆 consists of two functions
+-- │    return : 𝑆 → 𝐵
+-- │    update : 𝑆 × 𝐴 → 𝑆
+--
+-- An AB-Moore Machine is simply morphism between monomials:
+--
+--   Syˢ ⇒ Byᴬ
 def Moore : Type → Type → Type → Type :=
   λ S I O → (S × y^S) ⇒ (O × y^I)
 
-def moore : Π (S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
+-- | Build a 'Moore' machine from return and update functions.
+def moore : Π(S I O : Type), (S → O) → (S → I → S) → Moore S I O :=
   λ S I O output transition →
     λ s⁺ ⇜ s⁻ ⇒
       return (output s⁺) ⇜ s⁻ ∘ (transition s⁺)
 
 def disassemble-moore : Π (S I O : Type), Moore S I O → (S → O) × (S → I → S) :=
-  λ S I O moore → (λ s → fst (moore s) , λ s → snd (moore s) )
+  λ S I O moore →
+    (λ s → fst (moore s) , λ s → snd (moore s) )
 
+-- | Given an input 'I' and a state 'S', execute one step of a 'Moore'
+-- | machine emitting:
+--     - The observation 'O' at the initial state.
+--     - A new  state generated from the input and initial state.
+def step-moore : Π(S I O : Type), I → S → Moore S I O → (O × S) :=
+  λ S I O i s machine →
+    let observe := hom-base (S × y^S) (O × y^I) machine in
+    let transition := hom-fiber (S × y^S) (O × y^I) machine in
+    ( observe s , transition s i )
+
+-- | Given an initial state 'S' and a list of inputs 'List I', run the
+-- | 'Moore' machine on all the sequential inputs returning a list of
+-- | outputs and states.
+--
+-- TODO: Return a Vector of outputs and a single final state.
+def process-moore : Π(S I O : Type), S → List I → Moore S I O → List (O × S) :=
+  λ S I O s xs machine →
+    list-rec
+      I
+      (List (O × S))
+      (Nil (O × S))
+      (λ a acc → let os := step-moore S I O a s machine in Cons (O × S) os acc)
+      xs
+
+--------------------------------------------------------------------------------
+
+-- An AB-Mealy Machine is simply morphism between monomials:
+--
+--   SAyˢ ⇒ By^Unit
 def Mealy : Type → Type → Type → Type :=
   λ S I O → ((S × I) × y^S) ⇒ (O × y^Unit)
 
+-- | Build a 'Mealy' machine from a transition function.
+def mealy : Π(S I O : Type), ((S × I) → (S × O)) → Mealy S I O :=
+  λ S I O transition →
+    λ si⁺ ⇜ si⁻ ⇒
+      return snd (transition si⁺) ⇜ λ⁻ (_ : Unit) → si⁻ ← fst (transition si⁺); done
+
+-- | Given an input 'I' and a state 'S', execute one step of a 'Mealy'
+-- | machine emitting:
+--     - The observation 'O' at the initial state and input.
+--     - A new  state generated from the input and initial state.
+def step-mealy : Π(S I O : Type), I → S → Mealy S I O → (O × S) :=
+  λ S I O i s machine →
+    let observe := hom-base ((S × I) × y^S) (O × y^Unit) machine in
+    let transition := hom-fiber ((S × I) × y^S) (O × y^Unit) machine in
+    (observe  (s , i), transition (s , i) .unit)
+
+-- | Given an initial state 'S' and a list of inputs 'List I', run the
+-- | 'Mealy' machine on all the sequential inputs returning a list of
+-- | outputs and states.
+--
+-- TODO: Return a Vector of outputs and a single final state.
+def process-mealy : Π(S I O : Type), S → List I → Mealy S I O → List (O × S) :=
+  λ S I O s xs machine →
+    list-rec
+      I
+      (List (O × S))
+      (Nil (O × S))
+      (λ a acc → let os := step-mealy S I O a s machine in Cons (O × S) os acc)
+      xs
+
 --------------------------------------------------------------------------------
+
+-- | We can convert any 'Moore' to a 'Mealy'
+def Moore→Mealy : Π(S I O : Type), Moore S I O → Mealy S I O :=
+  λ S I O moore →
+    let output : S → O := hom-base (S × y^S) (O × y^I) moore in
+    let transition : S → I → S := hom-fiber (S × y^S) (O × y^I) moore in
+    λ si⁺ ⇜ si⁻ ⇒
+      return (output (fst si⁺)) ⇜ λ⁻ (_ : Unit) → si⁻ ← transition (fst si⁺) (snd si⁺); done
+
+-- | We can convert any 'Mealy' to an awkward 'Moore'
+def Mealy→Moore : Π(S I O : Type), Mealy S I O → Moore (S × I) I O :=
+  λ S I O mealy →
+    let output : ((S × I) → O) := (hom-base ((S × I) × y^S) (O × y^Unit) mealy) in
+    let transition : (S × I) → Unit → S := hom-fiber ((S × I) × y^S) (O × y^Unit) mealy in
+    λ s⁺ ⇜ s⁻ ⇒
+      return output s⁺ ⇜ λ⁻ (i : I) → s⁻ ← (transition s⁺ unit, i) ; done
+
+--------------------------------------------------------------------------------
+-- Examples
 
 -- | Determinisitic Finite State Automata. The output 'Bool'
 -- determines the accept states.
@@ -31,19 +122,23 @@ def Mealy : Type → Type → Type → Type :=
 def DFSA : Type → Type → Type :=
   λ S A → Moore S A Bool
 
--- | A "memoryless dynamical system"
+-- | A memoryless dynamical system
 --
--- Byᴬ ⇒ Byᴬ
---
--- B × B ⇒ B × A
+-- B × y^B ⇒ B × y^A
 def mds : Π (A B : Type), (A → B) → Moore B A B :=
   λ A B f →
     λ b⁺ ⇜ b⁻ ⇒
       return b⁺ ⇜ b⁻ ∘ f
 
+-- | A mealy encoding of a memoryless dynamical system
+def mds-mealy : Π(A B : Type), (A → B) → Mealy Unit A B :=
+  λ A B f →
+    λ (_ , i⁺) ⇜ si⁻ ⇒
+      return f i⁺ ⇜ si⁻
+
 -- | An MDS given a partial function.
 --
--- (B ⊎ Fin 1) × (B ⊎ Fin 1) ⇒ (B × A + (Fin 1) × (Fin 1))
+-- (1 + B) × y^(1 + B) ⇒ (1 + B) × y^A
 def mds-partial : Π (A B : Type),
   (A → Either Unit B) →
   Moore (Either Unit B) A (Either Unit B) :=
@@ -51,18 +146,18 @@ def mds-partial : Π (A B : Type),
     λ b⁺ ⇜ b⁻ ⇒
       return b⁺ ⇜ λ⁻ (a : A) → b⁻ ← (bind-either Unit B B (λ _ → f a) b⁺); done
 
--- | Delay receives a ℕ as input, sets the state to it, and outputs
---   the prior state ℕ.
+-- | Delay receives an 'A' as input, sets the state to it, and outputs
+--   the prior state 'A'.
 --
 --     ┌───────────┐
 --    -│  -┌───┐+  │+
---   ──┼───┤ℕ ℕ├───┼──
---    ℕ│   └───┘   │ℕ
+--   ──┼───┤   ├───┼──
+--     │   └───┘   │ 
 --     └───────────┘
 --
--- ℕ × ℕ ⇒ ℕ × ℕ
-def delay : Moore ℕ ℕ ℕ :=
-  mds ℕ ℕ (λ x → x)
+-- A × y^A ⇒ A × y^A
+def delay : Π(A : Type), Moore A A A :=
+  λ A → mds A A (λ x → x)
 
 -- | Sum receives a pair of ℕ as input and outputs their sum.
 --
@@ -73,11 +168,11 @@ def delay : Moore ℕ ℕ ℕ :=
 --     └───────────┘
 --  Note at * we apply the addition operation
 --
--- ℕ × ℕ ⇒ ℕ × (ℕ × ℕ)
+-- ℕ × y^ℕ ⇒ ℕ × y^(ℕ × ℕ)
 def sum : Moore ℕ (ℕ × ℕ) ℕ :=
   mds (ℕ × ℕ) ℕ (λ (x , y) → add x y)
 
--- | Counter receives a unit input and outputs the sequence of natural
+-- | Counter receives a 'Unit' and outputs the sequence of natural
 -- numbers 0, 1, 2, 3, ... .
 --
 --     ┌────────────┐
@@ -88,11 +183,13 @@ def sum : Moore ℕ (ℕ × ℕ) ℕ :=
 --     └────────────┘
 --     Note: At * we apply 'succ'
 --
---  ℕ × ℕ ⇒ ℕ × #{ .unit }
-def counter : Moore ℕ #{ .unit } ℕ :=
-  moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
+--  ℕ × y^ℕ ⇒ ℕ × y^Unit
+def counter : Moore ℕ Unit ℕ :=
+  moore ℕ Unit ℕ (λ a → a) (λ n _ → succ n)
 
--- | Repeater receives a unit input and outputs its state.
+-- #normalize (step-moore ℕ Unit ℕ .unit 0 counter)
+
+-- | Repeater receives a Unit and outputs its state.
 --
 --     ┌───────────┐
 --    -│  -┌───┐+  │+
@@ -101,6 +198,8 @@ def counter : Moore ℕ #{ .unit } ℕ :=
 --     └───────────┘
 --     Note: At * we apply 'succ'
 --
---  ℕ × ℕ ⇒ ℕ × #{ .unit }
-def repeater : Moore ℕ #{ .unit } ℕ :=
-  moore ℕ #{ .unit } ℕ (λ x → x) (λ n _ → n)
+--  ℕ × y^ℕ ⇒ ℕ × y^Unit
+def repeater : Moore ℕ Unit ℕ :=
+  moore ℕ Unit ℕ (λ x → x) (λ n _ → n)
+
+-- #normalize (step-moore ℕ Unit ℕ .unit 42 repeater)
