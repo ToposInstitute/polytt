@@ -1,15 +1,16 @@
+import Data::Bool
 import Data::Polynomial
 import Data::Polynomial::Fin
 
 --------------------------------------------------------------------------------
 
 def Vectorₚ : ℕ → Poly :=
-  λ n → Σ( tag : #{ .only }), y^({.only = fin n} tag)
+  λ n → Σ( tag : Unit), y^({.unit = fin n} tag)
 
 def Vector : ℕ → Type → Type := λ n → ofP (Vectorₚ n)
 
 def vnil : Π (A : Type), Vector 0 A :=
-  λ _ → ( .only , {} )
+  λ _ → ( .unit , {} )
 
 -- def vcons : Π (A : Type), Π (n : ℕ), A → Vector n A → Vector (succ n) A :=
 --   λ A n a vec → ?
