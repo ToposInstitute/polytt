@@ -1,29 +1,39 @@
-import Data::Natural
 import Data::Unit
 import Data::Void
 import Data::Polynomial
-import Data::Polynomial::Fin
 
 --------------------------------------------------------------------------------
 
 def Maybeₚ : Poly :=
-  Σ (tag : #{ .nothing, .just }), y^({ .nothing = Void, .just = Unit} tag)
+  Σ (tag : #{ .nothing , .just }), y^({ .nothing = Void , .just = Unit} tag)
 
+-- | The Functor interpretation of 'Maybeₚ'
 def Maybe : Type → Type := ofP Maybeₚ
 
-def Just : Π (A : Type), A → Maybe A :=
+-- | 'Just' Data Constructor
+def Just : Π(A : Type), A → Maybe A :=
   λ A a → ( .just , λ _ → a )
 
-def Nothing : Π (A : Type), Maybe A :=
+-- | 'Nothing' Data Constructor
+def Nothing : Π(A : Type), Maybe A :=
   λ A → ( .nothing , {} )
 
--- | Dependent Eliminator
-def maybe-elim : Π (A : Type) (f : Maybe A → Type),
-  (Π(x : A), f (Just A x)) → f (Nothing A) → Π (x : Maybe A), (f x) :=
-    λ A mot j n m → ×-rec #{ .nothing, .just} (λ p → { .nothing = #{}, .just = #{ .unit } } p → A) mot { .nothing = λ _ → n , .just = λ v → j (v .unit) } m
+--------------------------------------------------------------------------------
 
--- | Non-dependent Eliminator
-def maybe : Π (A B : Type), B → (A → B) → Maybe A → B :=
+-- | The map operation for the 'Maybe' Functor
+def map-maybe : Π(A B : Type), (A → B) → Maybe A → Maybe B :=
+  λ A B f → mapₚ Maybeₚ A B f
+
+--------------------------------------------------------------------------------
+
+-- | Dependent eliminator for 'Maybe'
+def maybe-elim : Π(A : Type) (f : Maybe A → Type),
+  (Π(x : A), f (Just A x)) → f (Nothing A) → Π (x : Maybe A), (f x) :=
+    λ A mot j n m →
+      ×-rec #{ .nothing , .just} (λ p → { .nothing = Void , .just = Unit } p → A) mot { .nothing = λ _ → n , .just = λ v → j (v .unit) } m
+
+-- | Non-dependent eliminator for 'Maybe'
+def maybe : Π(A B : Type), B → (A → B) → Maybe A → B :=
   λ A B b f m → maybe-elim A (λ _ → B) f b m
 
 --------------------------------------------------------------------------------
