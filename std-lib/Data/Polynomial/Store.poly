@@ -6,6 +6,9 @@ def store : Type → Poly := λ S → S × y^S
 
 def Store : Type → Type → Type := λ S → ofP (store S)
 
+def Store-Comonoid : Type → Comonoid-◁ :=
+  λ S → (store S , (λ s → (.unit , λ _ → s), (λ s → ((s, λ s' → s'), λ (s, s') → s'), .promise))) 
+
 def pos : Π (S A : Type), Store S A → S :=
   λ S A (s , _) → s
 
