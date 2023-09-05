@@ -1,5 +1,5 @@
 -- Helpers (TODO: abstract and import)
-def ofP : Poly → Type → Type :=
+def apply : Poly → Type → Type :=
   λ P A → Σ (p : base P), fib P p → A
 
 def Void := #{}
@@ -88,7 +88,7 @@ def vec : ℕ → Type → Type := λ n A → fin n → A
 
 def listP : Poly := Σ (n : ℕ), fin n
 
-def list : Type → Type := ofP listP
+def list : Type → Type := apply listP
 
 def nil : Π (A : Type), list A := λ A → (0 , {})
 

@@ -5,7 +5,7 @@ import Data::Polynomial
 def Identityₚ : Poly := Σ (_ : Unit), y^Unit
 
 -- | The Functor interpretation of 'Identityₚ'
-def Identity : Type → Type := ofP Identityₚ
+def Identity : Type → Type := apply Identityₚ
 
 -- | 'Identity' Data Constructor
 def mk-identity : Π(A : Type), A → Identity A :=

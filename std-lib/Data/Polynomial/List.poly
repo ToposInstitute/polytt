@@ -6,7 +6,7 @@ import Data::Polynomial::Maybe
 def Listₚ : Poly := Σ (n : ℕ), y^(fin n)
 
 -- | The Functor interpretation of 'Listₚ'
-def List : Type → Type := ofP Listₚ
+def List : Type → Type := apply Listₚ
 
 -- | 'Nil' Data Constructor
 def Nil : Π (A : Type), List A :=

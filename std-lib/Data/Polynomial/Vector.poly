@@ -8,7 +8,7 @@ def Vectorₚ : ℕ → Poly :=
   λ n → Σ( tag : Unit), y^({.unit = fin n} tag)
 
 -- | The Functor interpretation of 'Vectorₚ'
-def Vector : ℕ → Type → Type := λ n → ofP (Vectorₚ n)
+def Vector : ℕ → Type → Type := λ n → apply (Vectorₚ n)
 
 -- | 'VNil' Data Constructor
 def VNil : Π (A : Type), Vector 0 A :=

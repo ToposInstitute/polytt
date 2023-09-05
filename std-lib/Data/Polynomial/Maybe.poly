@@ -8,7 +8,7 @@ def Maybeₚ : Poly :=
   Σ (tag : #{ .nothing , .just }), y^({ .nothing = Void , .just = Unit} tag)
 
 -- | The Functor interpretation of 'Maybeₚ'
-def Maybe : Type → Type := ofP Maybeₚ
+def Maybe : Type → Type := apply Maybeₚ
 
 -- | 'Just' Data Constructor
 def Just : Π(A : Type), A → Maybe A :=

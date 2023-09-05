@@ -4,7 +4,10 @@ import Data::Void
 --------------------------------------------------------------------------------
 
 -- Interpret a Poly as a functor Type → Type
-def ofP : Poly → Type → Type :=
+def apply : Poly → Type → Type :=
+  -- NOTE: This is a nicer definition but we would need to reorganize
+  -- the module to reference tensor-◁ here:
+  --λ P A → base (tensor-◁ P (constantₚ A))
   λ P A → Σ (p : base P), fib P p → A
 
 def mapₚ (P : Poly) (A B : Type) : (A → B) → (ofP P) A → (ofP P) B :=
