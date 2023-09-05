@@ -1,0 +1,15 @@
+-- | A demonstration of records using finite sets.
+
+def MyRecordTy := { .foo : ℕ, .bar : Unit, .baz : ℕ → Unit }
+
+def getFoo : MyRecordTy → ℕ := λ rec → rec .foo
+
+def myRecordValue : MyRecordTy :=
+  { .foo = 1
+  , .bar = .unit
+  , .baz = λ _ → .unit
+  }
+
+def myRecordAnon : { .foo: ℕ, .bar : Unit, .baz : ℕ → Unit } := { .foo = 1, .bar = .unit, .baz = λ _ → .unit }
+
+def prf : (getFoo myRecordValue) = (getFoo myRecordAnon) := refl
