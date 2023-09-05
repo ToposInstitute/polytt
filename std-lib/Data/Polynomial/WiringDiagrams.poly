@@ -1,0 +1,167 @@
+-- | Wiring Diagrams
+--
+-- The Poly book describes Wiring Diagrams as:
+--
+-- ▆ Formally, and more precisely, we can think of each box in a wiring
+-- │ diagram as an interface given by some monomial. Then the entire
+-- │ wiring diagram—specifying how these boxes nest within a larger
+-- │ box—is just an interaction pattern between the interfaces, with
+-- │ the larger box playing the role of the wrapper interface.
+
+import Data::Polynomial
+import Data::Polynomial::Machines
+
+--------------------------------------------------------------------------------
+
+--               ┌─────────────────┐
+--	        -│ -┌───┐+ -┌───┐+ │+
+-- two-chain : ──┼──┤ P ├───┤ Q ├──┼──
+--              A│ A└───┘B B└───┘C │C
+--               └─────────────────┘
+def two-chain (A B C : Type) : (tensor-⊗ (B × y^A) (C × y^B)) ⇒ (C × y^A) :=
+  λ (p⁺ , q⁺) ⇜ (p⁻ , q⁻) ⇒
+     q⁻ ← p⁺;
+     return q⁺ ⇜ p⁻
+
+def plug : Π(A B C : Type),
+  (A → B) → (B → C) → (tensor-⊗ (B × y^B) (C × y^C)) ⇒ (tensor-⊗ (B × y^A) (C × y^B)) :=
+    λ A B C f g →
+      let fₚ : (B × y^B) ⇒ (B × y^A) := mds A B f in
+      let gₚ : (C × y^C) ⇒ (C × y^B) := mds B C g in
+      mux-⊗ (B × y^B) (B × y^A) (C × y^C) (C × y^B) fₚ gₚ
+
+def two-chain :
+  Π(A B C : Type),
+  (A → B) →
+  (B → C) →
+   (tensor-⊗ (B × y^B) (C × y^C)) ⇒ (C × y^A) :=
+    λ A B C f g →
+      compose
+      (tensor-⊗ (B × y^B) (C × y^C))
+      (tensor-⊗ (B × y^A) (C × y^B))
+      (C × y^A)
+      (two-chain A B C)
+      (plug A B C f g)
+
+--------------------------------------------------------------------------------
+
+--              ┌────────────────────────┐
+--              │  ┌───────┐             │ 
+--              │  │┌─────┐│  ┌─────┐    │ 
+--              │  └┤A    ││  │     │    │ 
+-- fib-wire : ──┤   │  P A├┴──┤A Q A├┬───┼──
+--            ()│  ┌┤A    │   │     ││   │A
+--              │  │└─────┘   └─────┘│   │ 
+--              │  └─────────────────┘   │ 
+--              └────────────────────────┘
+
+def fib-wire : Π(A : Type), (tensor-⊗ (A × y^(A × A)) (A × y^A)) ⇒ (A × y^Unit) :=
+  λ A →
+    λ (p⁺, q⁺) ⇜ (p⁻, q⁻) ⇒
+      return q⁺ ⇜ λ⁻ _ →
+        p⁻ ← (p⁺, q⁺);
+        q⁻ ← p⁺;
+	done
+
+def fib-wire' : Π(A : Type), (tensor-⊗ (A × y^(A × A)) (A × y^A)) ⇒ (A × y^Unit) :=
+  λ A (p⁺, q⁺) → (q⁺ , λ _ → ((p⁺ , q⁺) , p⁺))
+
+def fib-wire≡fib-wire' : Π(A : Type), (fib-wire A) = (fib-wire' A) :=
+  λ A → refl
+
+-- With our wiring diagram defined, the next move is to tensor
+-- together Moore machines to match the inner interface of the
+-- diagram.
+--
+-- Fibonacci consists of an adder and a delay line, which we defined
+-- previously, tensored with the parallel product:
+
+def delay⊗sumₘ : (tensor-⊗ (ℕ × y^ℕ) (ℕ × y^ℕ)) ⇒ (tensor-⊗ (ℕ × y^(ℕ × ℕ)) (ℕ × y^ℕ)) :=
+  mux-⊗ (ℕ × y^ℕ) (ℕ × y^(ℕ × ℕ)) (ℕ × y^ℕ) (ℕ × y^ℕ) sumₘ (delayₘ ℕ)
+
+-- Notice that the outer interface of 'delay⊗sumₘ' is the same shape as
+-- the inner interface of 'fib-wire':
+--
+--  delay⊗sum : (tensor-⊗ (ℕ × ℕ) (ℕ × ℕ)) ⇒ (tensor-⊗ (ℕ × (ℕ × ℕ)) (ℕ × ℕ))
+--  fib-wire   :                 Π(A : Type), (tensor-⊗ (A × (A × A)) (A × A)) ⇒ (A × Unit)
+--   
+-- This means we can use 'composeₚ' connect them together and produce
+-- a poly morphism with the inner interface of 'delay⊗sumₘ' and the
+-- outer interface of 'fib-wire':
+
+def fibₘ : Moore (ℕ × ℕ) Unit ℕ :=
+  compose
+    (tensor-⊗ (ℕ × y^ℕ) (ℕ × y^ℕ))
+    ((tensor-⊗ (ℕ × y^(ℕ × ℕ)) (ℕ × y^ℕ)))
+    ((ℕ × y^Unit))
+    (fib-wire ℕ)
+    delay⊗sumₘ
+
+-- #normalize (step-moore (ℕ × ℕ) Unit ℕ .unit (3, 2) fibₘ)
+
+def input : List Unit := Cons Unit .unit (Cons Unit .unit ((Cons Unit .unit (Nil Unit))))
+-- #normalize (process-moore (ℕ × ℕ) Unit ℕ (1, 1) input fibₘ)
+
+--------------------------------------------------------------------------------
+-- An incomplete attempt at Mealy Machine wiring diagrams.
+
+--def MealyInterface : Type → Type → Poly :=
+--  λ A B → internal-hom (A × y^Unit) (B × y^Unit)
+--
+--def eval⊗id : Π(P Q R : Poly), tensor-⊗ (tensor-⊗ P (internal-hom P Q)) R ⇒ tensor-⊗ Q R:=
+--  λ P Q R → mux-⊗ (tensor-⊗ P (internal-hom P Q)) Q R R (eval P Q) (idₚ R)
+--
+--def two-chain-helper : Π(A B C : Type),
+--  tensor-⊗ (tensor-⊗ (MealyInterface A B) (MealyInterface B C)) (A × Unit) ⇒ (C × Unit) :=
+--    λ A B C →
+--      let P := tensor-⊗ (tensor-⊗ (MealyInterface A B) (MealyInterface B C)) (A × Unit) in
+--      let Q := tensor-⊗ (A × Unit) (tensor-⊗ (MealyInterface A B) (MealyInterface B C)) in
+--      let R := tensor-⊗ (tensor-⊗ (A × Unit) (MealyInterface A B)) (MealyInterface B C) in
+--      let S := tensor-⊗ (B × Unit) (internal-hom (B × Unit) (C × Unit)) in
+--      let f : S ⇒ (C × Unit) := eval-⊗ (B × Unit) (C × Unit) in 
+--      let h : Q ⇒ R := assoc-⊗ᵣ (A × Unit) (MealyInterface A B) (MealyInterface B C) in
+--      let i : P ⇒ Q := swap-⊗ (tensor-⊗ (MealyInterface A B) (MealyInterface B C)) (A × Unit) in
+--      let hi : P ⇒ R := compose P Q R h i in
+--      let g : R ⇒ S :=
+--        mux-⊗
+--	  (tensor-⊗ (A × Unit) (MealyInterface A B))
+--	  (B × Unit)
+--	  (MealyInterface B C)
+--	  (MealyInterface B C)
+--	  (eval-⊗ (A × Unit) (B × Unit))
+--	  (idₚ (MealyInterface B C))
+--	  in
+--      let ghi : P ⇒ S := compose P R S g hi in
+--      compose P S (C × Unit) f ghi
+--
+--def two-chain-mealy :
+--  Π(A B C : Type), (tensor-⊗ (MealyInterface A B) (MealyInterface B C)) ⇒ (MealyInterface A C) :=
+--    λ A B C →
+--      curryₚ (tensor-⊗ (MealyInterface A B) (MealyInterface B C)) (A × Unit) (C × Unit) (two-chain-helper A B C)
+
+-- | Compose the daigram with the mealy machines
+-- def funcs→mealy :
+--   Π(A B C : Type),
+--   (A → B) →
+--   (B → C) →
+--   Mealy Unit A C :=
+--   λ A B C f g →
+--     let ab-mealy := mds-mealy A B f in -- (Unit × A) × Unit ⇒ B × Unit
+--     let bc-mealy := mds-mealy B C g in -- (Unit × B) × Unit ⇒ C × Unit
+--     let ab⊗bc := mux-⊗ ((Unit × A) × Unit) (B × Unit) ((Unit × B) × Unit) (C × Unit) ab-mealy bc-mealy in
+--     compose
+--       (Unit × Unit)
+--       (tensor-⊗ (MealyInterface A B) (MealyInterface B C))
+--       (MealyInterface A C)
+--       (two-chain-mealy A B C)
+--       ?
+
+-- mux-⊗ ((Unit × A) × Unit) (B × Unit) ((Unit × B) × Unit) (C × Unit) ab-mealy bc-mealy
+  
+-- def two-chain' :
+--   Π(A B C : Type),
+--   (A → B) →
+--   (B → C) →
+
+-- TODO: REPORT UNBOUND VARIABLES MORE CORRECTLY SUCH AS THE 'x' HERE:
+--  (tensor-⊗ (internal-hom (A × Unit) (B × Unit)) (internal-hom (B × Unit) (C x Unit))) ⇒ (internal-hom (A × Unit) (B × Unit)) :=

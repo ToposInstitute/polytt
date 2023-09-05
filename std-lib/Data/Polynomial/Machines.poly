@@ -156,7 +156,7 @@ def mds-partial : Π (A B : Type),
 --     └───────────┘
 --
 -- A × y^A ⇒ A × y^A
-def delay : Π(A : Type), Moore A A A :=
+def delayₘ : Π(A : Type), Moore A A A :=
   λ A → mds A A (λ x → x)
 
 -- | Sum receives a pair of ℕ as input and outputs their sum.
@@ -169,7 +169,7 @@ def delay : Π(A : Type), Moore A A A :=
 --  Note at * we apply the addition operation
 --
 -- ℕ × y^ℕ ⇒ ℕ × y^(ℕ × ℕ)
-def sum : Moore ℕ (ℕ × ℕ) ℕ :=
+def sumₘ : Moore ℕ (ℕ × ℕ) ℕ :=
   mds (ℕ × ℕ) ℕ (λ (x , y) → add x y)
 
 -- | Counter receives a 'Unit' and outputs the sequence of natural
@@ -184,7 +184,7 @@ def sum : Moore ℕ (ℕ × ℕ) ℕ :=
 --     Note: At * we apply 'succ'
 --
 --  ℕ × y^ℕ ⇒ ℕ × y^Unit
-def counter : Moore ℕ Unit ℕ :=
+def counterₘ : Moore ℕ Unit ℕ :=
   moore ℕ Unit ℕ (λ a → a) (λ n _ → succ n)
 
 -- #normalize (step-moore ℕ Unit ℕ .unit 0 counter)
@@ -199,7 +199,7 @@ def counter : Moore ℕ Unit ℕ :=
 --     Note: At * we apply 'succ'
 --
 --  ℕ × y^ℕ ⇒ ℕ × y^Unit
-def repeater : Moore ℕ Unit ℕ :=
+def repeaterₘ : Moore ℕ Unit ℕ :=
   moore ℕ Unit ℕ (λ x → x) (λ n _ → n)
 
 -- #normalize (step-moore ℕ Unit ℕ .unit 42 repeater)
