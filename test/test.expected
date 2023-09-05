@@ -92,8 +92,8 @@ Encountered hole with known type!
    │
  3 │     return ? ⇜ p⁻
    │
-   █ [E006] Could not solve fib P ?0 = fib P p⁺
-
+   █ [E006] Could not solve:
+              fib P ?0 = fib P p⁺
 --------------------[./hole/morph3.poly]--------------------
 
 Encountered hole with known type!
@@ -128,6 +128,8 @@ baz : ℕ
 
 --------------------[./std-lib/Data/Natural.poly]--------------------
 
+--------------------[./std-lib/Data/Polynomial/ADTs.poly]--------------------
+
 --------------------[./std-lib/Data/Polynomial/Fin.poly]--------------------
 
 --------------------[./std-lib/Data/Polynomial/Identity.poly]--------------------
@@ -144,8 +146,18 @@ baz : ℕ
 
 --------------------[./std-lib/Data/Polynomial/Vector.poly]--------------------
 
+--------------------[./std-lib/Data/Polynomial/WiringDiagrams.poly]--------------------
+
 --------------------[./std-lib/Data/Polynomial.poly]--------------------
 
+--------------------[./std-lib/Data/Records.poly]--------------------
+
+
+   🭁 ./std-lib/Data/Records.poly
+   │
+ 3 │ def MyRecordTy := { .foo : ℕ, .bar : Unit, .baz : ℕ → Unit }
+   │
+   █ [E004] Variable is not bound (or is negative, idk).
 --------------------[./std-lib/Data/Unit.poly]--------------------
 
 --------------------[./std-lib/Data/Void.poly]--------------------
