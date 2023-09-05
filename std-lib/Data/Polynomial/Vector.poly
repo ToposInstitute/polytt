@@ -7,10 +7,21 @@ import Data::Polynomial::Fin
 def Vectorₚ : ℕ → Poly :=
   λ n → Σ( tag : Unit), y^({.unit = fin n} tag)
 
+-- | The Functor interpretation of 'Vectorₚ'
 def Vector : ℕ → Type → Type := λ n → ofP (Vectorₚ n)
 
-def vnil : Π (A : Type), Vector 0 A :=
+-- | 'VNil' Data Constructor
+def VNil : Π (A : Type), Vector 0 A :=
   λ _ → ( .unit , {} )
 
+-- | 'VCons' Data Constructor
+--
+-- TODO:
 -- def vcons : Π (A : Type), Π (n : ℕ), A → Vector n A → Vector (succ n) A :=
---   λ A n a vec → ?
+--   λ A n a as → (.unit , ?)
+
+--------------------------------------------------------------------------------
+
+-- | The map operation for the 'Vector' Functor
+def map-list : Π(n : ℕ) (A B : Type), (A → B) → Vector n A → Vector n B :=
+  λ n A B f → mapₚ (Vectorₚ n) A B f
