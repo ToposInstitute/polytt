@@ -1,0 +1,52 @@
+-- | An encoding of ADTs as Polynomials
+
+import Data::Polynomial
+
+--------------------------------------------------------------------------------
+
+-- 'BigRecTy'
+def UnivPoly : Poly :=
+  Σ(T : Type), y^T
+
+def TotalType : Poly → Type :=
+  λ P → Σ (I : base P), (fib P I)
+
+-- 'universal prolynomial' AKA 'universal categorical polynomial'
+def AD : Poly :=
+  Σ(P : Poly), y^(TotalType P)
+
+def ADT : Type :=
+  apply AD Type
+  -- Σ(P : Poly), (TotalType P) → Type
+
+-- def ElimADTTy : ADT → Type :=
+--   Π(mot : Type), λ aDT → 
+
+def DataConstructor : ADT → Type :=
+  λ (P, f) → Σ(tag : base P), let labels := fib P tag in Π(l : labels), f (tag , l)
+
+def Maybe : Type → ADT :=
+  λ A → (tensor-+ (#{ .just} × y^Unit)  (#{.nothing } × y^Void), λ _ → A)
+
+def Just : Π(A : Type), A → DataConstructor (Maybe A) := λ A a → ((.true , .just) , λ _ → a)
+def Nothing : Π(A : Type), DataConstructor (Maybe A) := λ A → ((.false , .nothing) , {})
+
+-- def maybe-elim : Π(A B : Type), B → (A → B) → DataConstructor (Maybe A) → B :=
+--   λ A B b f m →
+--     let x := fst m in
+--     let x1 := fst x in
+--     let x2 := snd x in
+--     let y := snd m in
+--     ?
+
+-- def type-of-elim : Poly → Type → Type → Type :=
+--   λ P A B →
+--     let Tag := base P in
+--     let Label : Tag → Type := λ tag → fib P tag in
+--     Π(t : Tag), (Label t → A) → B
+
+-- def maybe-elim : Π(A B : Type), B → (A → B) → DataConstructor (Maybe A) → B :=
+-- def maybe-elim : Π(A B : Type), type-of-elim A B 
+--   ?
+
+--   maybe-elim ℕ 0 (λ _ → 1) (Just Bool .true) 

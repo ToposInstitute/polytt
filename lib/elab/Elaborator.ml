@@ -156,7 +156,7 @@ struct
     | CS.ReprIntro exp ->
       T.Syn.ann (Poly.repr_intro (chk exp)) Poly.repr_formation
     | _ ->
-      T.Error.error `RequiresAnnotation "Term requires an annotation."
+      T.Error.error `RequiresAnnotation "Cannot synth term, it requires an annotation."
 
   and neg_syn (tm : CS.t) =
     T.NegSyn.locate tm.loc @@

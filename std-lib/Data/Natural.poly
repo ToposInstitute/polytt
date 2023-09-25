@@ -1,3 +1,7 @@
+-- Helper functions for manipulating and eliminating Natural numbers.
+
+--------------------------------------------------------------------------------
+
 def add : ℕ → ℕ → ℕ :=
   λ m n → elim (λ _ → ℕ) n (λ _ n → succ n) m
 
@@ -7,6 +11,7 @@ def mul : ℕ → ℕ → ℕ :=
 def pred : ℕ → ℕ :=
   λ n → elim (λ _ → ℕ) 0 (λ m _ → m) n
 
+-- | Dependent Eliminator for Naturals
 def ℕ-elim :
   Π (mot : ℕ → Type),
   { .zero : mot zero
@@ -15,6 +20,7 @@ def ℕ-elim :
   Π (n : ℕ), mot n :=
   λ mot cases n → elim mot (cases .zero) (cases .succ) n
 
+-- | Recursion Principle for Naturals
 def ℕ-rec :
   Π (mot : Type),
   { .zero : mot

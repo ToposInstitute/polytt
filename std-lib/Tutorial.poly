@@ -1,4 +1,5 @@
 import Data::Polynomial
+import Data::Polynomial::Machines
 import Data::Natural
 
 --------------------------------------------------------------------------------
@@ -13,7 +14,7 @@ import Data::Natural
 -- PolyTT is a full Martin-Lof Type Theory with special primitives for
 -- Polynomials.
 
--- | Naturals:
+-- | Naturals are defined recursively and implemented as a primitive:
 def one : ℕ := 1
 def two : ℕ := succ one
 
@@ -24,8 +25,8 @@ def one≡one : one = 1 := refl
 def id : Π (A : Type), A → A := λ A a -> a
 
 -- | Sigma Types:
-def Either : Type → Type → Type :=
-  λ A B → Σ (tag : Bool), bool Type tag A B
+def Vec : Type → Type :=
+  λ A → Σ(n : ℕ), fin n → A
 
 -- | Finite Sets:
 def RGB : Type := #{ .Red, .Green, .Blue }
@@ -45,49 +46,57 @@ def rgb-func : RGB → ℕ :=
 --------------------------------------------------------------------------------
 -- | Polynomials
 
--- | P y ≡ y²
-def P : Π (Y : Type), Poly :=
-  λ Y → Σ (_ : #{ .only }), y^(Y × Y)
+-- Polynomials are encoded as Sigma types of the form:
+--
+-- (base : Type, fiber : base → Type)
+--
+-- Projection functions 'base' and 'fiber' are provided.
 
--- | Q y ≡ y³ + y²
-def Q (Y : Type) : Poly :=
-  Σ (i : #{ .zero, .one }),
+-- | P(y) ≔ y²
+def P : Poly :=
+  Σ(_ : Unit), y^(fin 2)
+
+-- | Q(y) ≔ y³ + y²
+def Q : Poly :=
+  -- NOTE: We use FiniteSets rather then inductive 'Fin' here because
+  -- elmination of 'Fin' is very painful at the moment.
+  Σ(i : #{ .zero, .one }),
     y^(
-      { .zero = Y × Y × Y
-      , .one = Y × Y
+      { .zero = fin 3
+      , .one = fin 2
       } i
     )
 
--- R y ≡ y³ + y² + y + 1
+-- R(y) ≔ y³ + y² + y + 1
 --
--- R y ≡ Σ [ i ∈ Fin 4 ] y^aᵢ
---   where
---     a : Fin 4 → Set
---
-def R (Y : Type) : Poly :=
-  Σ (i : #{ .zero, .one, .two, .three}),
+-- R(y) ≔ Σ(i : Fin 4), y^(Fin 4)
+def R : Poly :=
+  Σ(i : #{ .zero, .one, .two, .three}),
     y^(
-      { .zero = Y × Y × Y
-      , .one = Y × Y
-      , .two = Y
-      , .three = Unit
+      { .zero = fin 3
+      , .one = fin 2
+      , .two = fin 1
+      , .three = fin 0
       } i
     )
 
 def Listₚ : Poly :=
-  Σ (n : ℕ), y^(fin n)
+  Σ(n : ℕ), y^(fin n)
 
 -- | ℕy^ℕ
 def nyan : Poly :=
-  Σ (_ : ℕ), y^ℕ
+  Σ(_ : ℕ), y^ℕ
 
 -- | We can also define a non-dependent Poly using product shorthand
 -- in place of Sigma:
-def nyan' : Poly :=
-  ℕ × y^ℕ
+def nyan' : Poly := ℕ × y^ℕ
 
 -- | We can then prove their equivalence:
 def sigma≡pair : nyan = nyan' := refl
+
+-- | S × X⁰
+def constant : Π(S : Type), Poly :=
+  λ S → S × y^(fin 0)
 
 --------------------------------------------------------------------------------
 -- | Morphisms in Poly
@@ -116,69 +125,131 @@ def poly-map : Π(P Q : Poly), Type :=
 -- C)' and '(A → B, A → C)'. This variation on the typical Poly
 -- morphism encoding becomes important with Poly-Lambda syntax.
 
+-- We will start by defining a few basic morphisms in the direct Pi
+-- over Sigma style as you would in Agda.
+
+-- | The identity morphism maps P to P.  
+def id : Π(P : Poly), P ⇒ P :=
+  λ P b → (b , λ x → x)
+
+-- | Ay⁰ ⇒ By⁰
+def const : Π(A B : Type), (A → B) → (A × y^(fin 0)) ⇒ (B × y^(fin 0)) :=
+  λ A B f a → (f a , λ x → x)
+
+-- | yᴮ ⇒ yᴬ
+def rep : Π(A B : Type), (A → B) → (fin 1 × y^B) ⇒ (fin 1 × y^A) :=
+  λ A B f a → (z 0 , f)
+
+-- | P ⇒ p(1)
+def p⇒p1 : Π(P : Poly), P ⇒ (base P × y^Void) :=
+  λ P p → ( p , absurd (fib P p)) 
+
+-- | Ay¹ ⇒ By¹
+def linear : Π(A B : Type), (A → B) → (A × y^(fin 1)) ⇒ (B × y^(fin 1)) :=
+  λ A B f b → (f b , λ x → x)
+
+--------------------------------------------------------------------------------
 -- | Poly-Lambda Syntax
 --
 -- We provide a special form of lambda syntax for defining morphisms
--- in Poly. This allows you to bind the base and fiber-sink of polynomials
--- and connect them in a typesafe manner.
+-- in Poly. This allows you to bind the forward map on bases and
+-- backwards map on fiber's (which we call a fiber-sink) of
+-- polynomials, and connect them in a typesafe manner.
 --
--- Lets implement 'idₚ : P ⇒ P' as our first Poly-Lambda. As a wiring
--- diagram, idₚ looks like:
+-- We declare a Poly-Lambda with a specialized lambda syntax:
+--
+--  λ (domain⁺ ⇜ domain⁻) ⇒
+--
+-- Where '(dom-base ⇜ dom-fib)' respectively binds the base and fiber-sink of the
+-- domain polynomial.
+--
+-- We then complete the Poly-Lambda by describing how to wire the
+-- codomain polynomial using a 'return' statement:
+--
+--  return cod-base ⇜ cod-fib
+--
+-- where 'cod-base ⇜ cod-fib' applies 'cod-base' and 'cod-fib'
+-- variables as the base and fiber of the codomain polynomail.
+--
+-- Between the lambda declaration and return statement we can use
+-- various bits of special syntax to manipulate and 'wire' the
+-- Poly-Lambda. This syntax will be introduced gradually in this
+-- section.
+--
+-- For a first example we can re-implement idₚ using just the basic
+-- Poly-Lambda syntax.
+--
+-- As a wiring diagram, idₚ looks like:
 --
 --         ┌─────────┐
 --        -│ -┌───┐+ │+
--- idₚ : ──┼──┤  p├──┼──
---         │  └───┘  │
+-- idₚ : ──┼──┤  *├──┼──
+--         │  └───┘**│
 --         └─────────┘
+--         *  domain
+--         ** codomain
 --
 -- Where + denotes the base and - denotes the fiber-sink. Being the
 -- identity morphism, 'idₚ' maps from 'base P' to 'base P' and 'fib P'
 -- to 'fib P'.
 
-def idₚ : Π (P : Poly), P ⇒ P :=
+def id : Π(P : Poly), P ⇒ P :=
   λ P →
-    -- Here we bind the base and fiber-sink of the inner Poly:
-    -- inner⁺ : base P
-    -- inner⁻ : fib P inner⁺
-    λ inner⁺ ⇜ inner⁻ ⇒
-    -- And here we define the base and fiber-sink of the outer
+    -- Here we bind the base and fiber-sink of the domain Poly:
+    -- domain⁺ : base P
+    -- domain⁻ : fib P domain⁺ → _
+    λ (domain⁺ ⇜ domain⁻) ⇒
+    -- And here we define the base and fiber-sink of the codomain
     -- Poly. In this case we map the base to the base and the
     -- fiber-sink to the fiber-sink.
-    return inner⁺ ⇜ inner⁻
+    return domain⁺ ⇜ λ⁻ codomain-fiber → domain⁻ ← codomain-fiber ; done
 
--- We can also define a morphism without the special lambda syntax, by providing
--- the underlying map as a lambda.
+-- For reference here we re-implement all the previously defined
+-- morphisms using Poly-Lambda syntax:
 
-def idₚ' (P : Poly) : P ⇒ P :=
-  λ inner⁺ → (inner⁺ , λ inner → inner)
+-- Ay⁰ ⇒ By⁰
+def const : Π(A B : Type), (A → B) → (A × y^(fin 0)) ⇒ (B × y^(fin 0)) :=
+  λ A B f → 
+    λ p⁺ ⇜ p⁻ ⇒
+      return f p⁺ ⇜ p⁻
 
--- We can prove the equivalence of these two definitions:
-def idₚ≡idₚ' : idₚ = idₚ' := refl
+-- yᴮ ⇒ yᴬ
+def rep : Π(A B : Type), (A → B) → (fin 1 × y^B) ⇒ (fin 1 × y^A) :=
+  λ A B f →
+    λ p⁺ ⇜ p⁻ ⇒
+      return z 0 ⇜ p⁻ ∘ f
 
--- We can also use _←_ notation for internally connecting
--- Poly(s). This can be used to connect multiple tensored Polys or
--- even to create feedback loops around a single Poly.
+-- | P ⇒ P(1)
+def p⇒p1 : Π(P : Poly), P ⇒ (base P × y^Void) :=
+  λ P → 
+    λ p⁺ ⇜ p⁻ ⇒
+      return p⁺ ⇜ p⁻ ∘ (absurd (fib P p⁺))
+
+-- | Ay¹ ⇒ By¹
+def linear : Π(A B : Type), (A → B) → (A × y^(fin 1)) ⇒ (B × y^(fin 1)) :=
+  λ A B f → 
+    λ p⁺ ⇜ p⁻ ⇒
+      return f p⁺ ⇜ p⁻
+
+-- | _←_ Notation
 --
--- For a first example we can implement an n-chain from Diagrammatics
--- in Categorification and Compositionality (Vagner, 2019):
+-- In more complicated morphisms you start to require internal
+-- connections across tensored polynomials or to produce feedback
+-- loops around polynomials.
 --
---                ┌─────────────────┐
---	         -│ -┌───┐+ -┌───┐+ │+
--- two-chainₚ : ──┼──┤ P ├───┤ Q ├──┼──
---               A│ A└───┘B B└───┘C │C
---                └─────────────────┘
-
-def two-chainₚ (A B C : Type) : (tensor-⊗ (B × y^A) (C × y^B)) ⇒ (C × y^A) :=
-  λ (p⁺ , q⁺) ⇜ pq⁻ ⇒
-     let- (p⁻ , q⁻) := pq⁻;
-     q⁻ ← p⁺;
-     return q⁺ ⇜ p⁻
-
--- Here we use _←_ to connect the 'fst' projection of the base of P to
--- the fiber-sink of Q.
+-- The _←_ notation allows for these sorts of internal connections
+-- within Poly-Lambda syntax:
 --
--- We can also demonstrate a simple feedback loop on the inner Poly by
--- implementing a counter:
+--   q-fiber ← p-base;
+--
+-- From the wiring diagram perspective, a wire has been drawn
+-- connecting 'p-base' to 'q-fiber'.
+--
+-- Operationally this means we have applied 'p-base' to 'mapᵇ' to
+-- produce a 'base Q' and applied it to the 'fiber Q'.
+--
+-- For example, we can demonstrate a simple feedback loop on the inner
+-- (domain) Poly by implementing a counter:
 --
 --              ┌───────────┐
 --	       -│  -┌───┐+  │+
@@ -188,18 +259,16 @@ def two-chainₚ (A B C : Type) : (tensor-⊗ (B × y^A) (C × y^B)) ⇒ (C × y
 --              └───────────┘
 --              Note: At * we apply 'succ'
 --
--- Here the outer Poly receives a unit value, which we discard, and
--- the inner Poly emits a ℕ which is fanned out to both the base of
--- the outer Poly and back to the fiber-sink of the inner Poly.
+-- Here the outer (codomain) Poly receives a unit value, which we
+-- discard, and the inner Poly emits a ℕ which is fanned out to both
+-- the base of the outer Poly and back to the fiber-sink of the inner
+-- Poly.
 --
 -- For this machine we will need to introduce two concepts:
 --
 -- 1. A special syntax element for the unique sink--which we call
---    "drop"--which does nothing with its input. The syntax for drop
+--    'drop'--which does nothing with its input. The syntax for drop
 --    is a '!' character.
---
---    The linearity obligation for the fiber-sink of the outer Poly is
---    reversed which allows us to ignore it using drop.
 --
 -- 2. Applying a function to the base of the inner Poly.
 --
@@ -207,12 +276,8 @@ def two-chainₚ (A B C : Type) : (tensor-⊗ (B × y^A) (C × y^B)) ⇒ (C × y
 --    value and can apply a function to it. In this case we apply
 --    'succ' to the base in the feedback loop to increment the
 --    counter.
---
---    NOTE: We actually did this in the last example but we want to
---    reinforce that you can apply any pure function in a positive
---    fragment.
 
-def counterₚ : (ℕ × y^ℕ) ⇒ (ℕ × y^#{ .unit }) :=
+def counter : (ℕ × y^ℕ) ⇒ (ℕ × y^Unit) :=
   -- Bind the base and fiber-sink of the inner Poly:
   -- n⁺ : base (ℕ × ℕ)
   -- n⁻ : fib (ℕ × ℕ) n⁺
@@ -226,13 +291,37 @@ def counterₚ : (ℕ × y^ℕ) ⇒ (ℕ × y^#{ .unit }) :=
     -- base.
     return n⁺ ⇜ !
 
--- | Let Bindings
+-- Uncomment to demo the counter:
+-- #normalize (step-moore ℕ Unit ℕ .unit 2 counterₚ)
+
+def counter' : (ℕ × y^ℕ) ⇒ (ℕ × y^Unit) :=
+  λ n → ( n , λ _ → succ n )
+
+def counter≡counter : counter = counter' := refl
+
+-- | Let Notation
 --
--- Let bindings allow you to apply Poly morphisms inside a
--- Poly-Lambda and bind their result components.
+-- Let bindings allow you to apply a 'base' to a Poly morphisms inside
+-- a Poly-Lambda and bind the resulting components.
 --
+-- We can do this because we have internally enocoded our morphisms
+-- as:
+--
+--   Π(p : base P), Σ(q : base Q), (fib Q q → fib P p)
+--
+-- By applying a 'base P' to the morphism, we simply return a pair of
+-- a 'base Q' and the 'fib Q _ → fib P _' map which we bind to variables:
+--
+--   let (q⁺ , f⁻) := f p⁺;
+--
+-- With types:
+--
+--   q⁺ : base Q
+--   f⁻ : fib Q (mapᵇ p⁺) → fib P p⁺'.
+--
+-- 
 -- Let comes in positive and negative forms which allow you to apply
--- the base and fiber-sink operations of Poly morphisms respectively.
+-- the base and fiber-sink components of Poly morphisms respectively.
 --
 -- Eg., Given 'p⁺ : base P' and 'p⁻ : fib P p⁺':
 --
@@ -258,7 +347,7 @@ def counterₚ : (ℕ × y^ℕ) ⇒ (ℕ × y^#{ .unit }) :=
 --
 -- Composition of Poly morphisms serves as a good example of let bindings:
 --
---   composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R)
+--   compose : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R)
 --
 -- First lets build an intuition for composition in Poly using wiring
 -- diagrams:
@@ -267,34 +356,36 @@ def counterₚ : (ℕ × y^ℕ) ⇒ (ℕ × y^#{ .unit }) :=
 --
 --          ┌─────────┐
 --         -│ -┌───┐+ │+
---   g :  ──┼──┤  p├──┼───
---          │  └───┘ q│
+--   g :  ──┼──┤  P├──┼───
+--          │  └───┘ Q│
 --          └─────────┘
 --
 --          ┌─────────┐
 --         -│ -┌───┐+ │+
---   f :  ──┼──┤  q├──┼───
---          │  └───┘ r│
+--   f :  ──┼──┤  Q├──┼───
+--          │  └───┘ R│
 --          └─────────┘
 --
 -- We define composeₚ as:
 --
---                ┌───────────────┐
---                │  ┌─────────┐  │
---               -│ -│ -┌───┐+ │+ │+
---   composeₚ : ──┼──┼──┤  p├──┼──┼──
---                │  │  └───┘ q│  │
---                │  └─────────┘ r│
---                └───────────────┘
+--               ┌───────────────┐
+--               │  ┌─────────┐  │
+--              -│ -│ -┌───┐+ │+ │+
+--   compose : ──┼──┼──┤  P├──┼──┼──
+--               │  │  └───┘ Q│  │
+--               │  └─────────┘ R│
+--               └───────────────┘
 --
 -- You can think of composeₚ as building a Matryoshka doll of
--- polynomials.
+-- polynomials where the middle Poly Q is an interface translation
+-- layer between the inner and outer Polys. This will become clear
+-- when we look at wiring diagrams later.
 --
 -- Starting from our inner 'P : Poly' we use let and let- to apply our
 -- Poly morphisms and build up to a 'base R' and obligation 'fib R
 -- (base R)':
 
-def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
+def compose : Π(P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
   λ P Q R f g →
     λ p⁺ ⇜ p⁻ ⇒
       let (q⁺ , g⁻) := g p⁺;
@@ -305,7 +396,29 @@ def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
 
       return r⁺ ⇜ r⁻
 
--- We provide a special _←_ syntax to streamline this use of let
+def compose : Π(P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
+  λ P Q R f g →
+    λ p⁺ ⇜ p⁻ ⇒
+      let (q⁺ , g⁻) := g p⁺;
+      let- q⁻ := p⁻ ∘ g⁻;
+
+      let (r⁺ , f⁻) := f q⁺;
+      let- r⁻ := q⁻ ∘ f⁻;
+
+      return (fst (f (fst (g p⁺)))) ⇜ λ⁻ r →
+        r⁻ ← r ; done
+
+-- For reference, compose can be defined as follows without poly-lambda syntax:
+
+def compose' : Π(P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
+  λ P Q R f g p⁺ →
+    let (q⁺ , q⁻) := g p⁺ in
+    let (r⁺ , r⁻) := f q⁺ in
+    (r⁺ , λ r → q⁻ (r⁻ r))
+
+def compose-equiv : compose = compose' := refl
+
+-- We provide a special _⇜_ syntax to streamline this use of let
 -- bindings. It allows you to apply an entire Poly to a morphism and
 -- bind both projections of the resulting Poly.
 --
@@ -318,14 +431,14 @@ def composeₚ : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
 --
 -- We can simplify composeₚ as such:
 
-def composeₚ' : Π (P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
+def compose' : Π(P Q R : Poly), (Q ⇒ R) → (P ⇒ Q) → (P ⇒ R) :=
   λ P Q R f g → λ p⁺ ⇜ p⁻ ⇒
     let (q⁺ ⇜ q⁻) := g (p⁺ ⇜ p⁻);
     let (r⁺ ⇜ r⁻) := f (q⁺ ⇜ q⁻);
     return r⁺ ⇜ r⁻
 
 -- We can prove the equivalence of these two definitions:
-def compose-equiv : composeₚ = composeₚ' := refl
+-- def compose-equiv : composeₚ = composeₚ' := refl
 
 -- | Working with tensors
 --
@@ -341,26 +454,23 @@ def compose-equiv : composeₚ = composeₚ' := refl
 --
 -- This comes in handy when defining 'swapₚ':
 --
---              ┌──────────────┐
---             -│   -┌───┐+    │+
---            ──┼────┤  p├──┐┌─┼──
---   swapₚ :    │    └───┘  ││ │
---             -│   -┌───┐+ └│┐│+
---            ──┼────┤  q├───┘└┼──
---              │    └───┘     │
---              └──────────────┘
+--             ┌──────────────┐
+--            -│   -┌───┐+    │+
+--           ──┼─┐┌─┤  p├──┐┌─┼──
+--   swap :    │ ││ └───┘  ││ │
+--            -│ └│┐┌───┐+ └│┐│+
+--           ──┼──┘└┤  q├───┘└┼──
+--             │   -└───┘     │
+--             └──────────────┘
 
-def swapₚ (P Q : Poly) : (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
-  λ pq⁺ ⇜ pq⁻ ⇒
-    -- Case on the tensored fiber-sinks. Note that because
-    -- fiber-sinks are linear obligations we can no longer reference
-    -- pq⁻ after this point.
-    let⁻ (p⁻ , q⁻) := pq⁻;
+def swap (P Q : Poly) : (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
+  λ (p⁺ , q⁺) ⇜ (p⁻ , q⁻) ⇒
+    return (q⁺ , p⁺) ⇜ (q⁻ , p⁻)
 
-    -- Reverse the positions of P and Q when connecting them to the
-    -- outer Poly. Note that we can use fst and snd on pq⁺ because
-    -- it is not linear.
-    return (snd pq⁺ , fst pq⁺) ⇜ (q⁻ , p⁻)
+def swap' (P Q : Poly) : (tensor-⊗ P Q) ⇒ (tensor-⊗ Q P) :=
+  λ (p⁺, q⁺) → ((q⁺, p⁺) , λ (p⁻, q⁻) → (q⁻ , p⁻) )
+
+def swap≡swap' : Π(P Q : Poly), swap = swap' := λ P Q → refl
 
 -- | λ⁻ or Negative-lamda
 --
@@ -383,29 +493,26 @@ def f : (ℕ × y^ℕ) ⇒ (ℕ × y^ℕ) :=
 --------------------------------------------------------------------------------
 -- | Moore Machines
 --
--- We have been seen a Moore machines in the counterₚ example. Lets
--- focus on them in a bit more detail now.
+-- ▆  If 𝐴, 𝐵, and 𝑆 are sets, an (𝐴, 𝐵)-Moore machine with
+-- │  states 𝑆 consists of two functions
+-- │    return : 𝑆 → 𝐵
+-- │    update : 𝑆 × 𝐴 → 𝑆
 --
--- We define Moore as a Poly morphism:
+-- An AB-Moore Machine is simply morphism between monomials:
 --
---   'Syˢ ⇒ Oyᴵ'
---
+--   Syˢ ⇒ Oyᴵ
 
 def Moore : Type → Type → Type → Type :=
   λ S I O → (S × y^S) ⇒ (O × y^I)
 
 -- The inner Poly 'S × S' represents the internal state of the machine
 -- and the outer Poly 'O × I' describes the input and output types.
-
--- As a first Moore machine we can define repeaterₘ which recieves a
--- unit input and always returns its state.
-
 --
--- From this perspective we can demonstrate that counterₚ is a Moore
--- Machine:
-
-def counterₚ-is-a-machine : Moore ℕ #{ .unit } ℕ := counterₚ
-
+-- At any point in time the Machine is in some state 's ∈ S' and we
+-- can use the output function to produce an output 'o ∈ O'. We can
+-- also feed it an input 'i ∈ I' to switch to a new state using the
+-- transition function and the current state.
+--
 -- We can write a helper function for building a Moore Machine from
 -- output and transition functions:
 
@@ -414,14 +521,47 @@ def moore (S I O : Type) : (S → O) → (S → I → S) → Moore S I O :=
     λ s⁺ ⇜ s⁻ ⇒
       return (output s⁺) ⇜ λ⁻ (i : I) → s⁻ ← transition s⁺ i; done
 
--- We can also define counterₚ using the 'moore' function:
+def moore' (S I O : Type) : (S → O) → (S → I → S) → Moore S I O :=
+  λ output transition s →
+    (output s , transition s)
 
-def counterₘ : Moore ℕ #{ .unit } ℕ :=
-  moore ℕ #{ .unit } ℕ (λ a → a) (λ n _ → succ n)
+def moore≡moore' : Π(S I O : Type), Π(out : S → O), Π(trans : S → I → S),
+  (moore S I O out trans) = (moore' S I O out trans) :=
+    λ S I O output transition → refl
 
--- We can prove the equivalence of these two definitions:
-def counterₚ≡counterₘ : counterₚ = counterₘ := refl
+-- And then we can build the Three State Moore Machine example from the Poly Book (ex3.2):
 
+def Command := #{ .Green, .Orange }
+def Output := #{ .B1, .B2 }
+
+-- | RGB × RGB ⇒ Output × Command
+def three-state-moore : Moore RGB Command Output :=
+  let output : RGB → Output := {
+      .Red   = .B1
+    , .Green = .B2
+    , .Blue  = .B2
+  } in
+  let transition : RGB → Command → RGB := {
+      .Red   = { .Green = .Red  , .Orange = .Green }
+    , .Green = { .Green = .Blue , .Orange = .Red }
+    , .Blue  = { .Green = .Blue , .Orange = .Red }
+  } in
+  moore RGB Command Output output transition
+
+-- Earlier we were introduced to counter which is in fact a Moore
+-- Machine:
+
+def counterₚ-is-a-machine : Moore ℕ Unit ℕ := counter
+
+-- It can be redefined using the  'moore' function:
+
+def counterₘ : Moore ℕ Unit ℕ :=
+  moore ℕ Unit ℕ (λ a → a) (λ n _ → succ n)
+
+-- And we can prove the equivalence of these two definitions:
+def counterₚ≡counterₘ : counter = counterₘ := refl
+
+--------------------------------------------------------------------------------
 -- | Deterministic Finite State Automata
 --
 -- From a Moore Machine we can build DFSAs:
@@ -451,7 +591,7 @@ def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
 --
 -- We can also define the MDS from the Poly Book, defined as:
 --
---   Byᴬ ⇒ Byᴬ
+--   Byᴮ ⇒ Byᴬ
 --
 
 def mds (A B : Type) : (A → B) → Moore B A B :=
@@ -477,7 +617,231 @@ def delayₘ : Moore ℕ ℕ ℕ :=
 --          └───────────┘
 --       Note at * we apply the addition operation
 
+--def sumₘ : (ℕ × ℕ) ⇒ (ℕ × (ℕ × ℕ)) :=
 def sumₘ : Moore ℕ (ℕ × ℕ) ℕ :=
   mds (ℕ × ℕ) ℕ (λ (x , y) → add x y)
 
--- ** More examples can be found in Data::Polynomial::Machines **
+--------------------------------------------------------------------------------
+-- | Deterministic Finite State Automata
+--
+--  ▆ A deterministic state automaton consists of
+--  │ 1. a set 𝑆, elements of which are called states;
+--  │ 2. a set 𝐴, elements of which are called input symbols;
+--  │ 3. a function 𝑢 : 𝑆 × 𝐴 → 𝑆, called the update function;
+--  │ 4. an element 𝑠0 ∈ 𝑆, called the initial state; and
+--  │ 5. a subset 𝐹 ⊆ 𝑆, called the accept states.
+
+
+-- DFSAs can be expressed with as a Moore Machine:
+
+def DFSA : Type → Type → Type :=
+  λ S A → Moore S A Bool
+
+
+-- | Build a DFSA from its requisite components.
+def dfsa : Π(S A : Type), ((S × A) → S) → (S → Bool) → S → DFSA S A :=
+  λ S A update check s → moore S A Bool check (λ s a → update (s , a))
+
+-- S is the DFSA state type and A is the alphabet.
+--
+-- Here we build a 3 State DFSA with a two symbol alphabet:
+
+def three-state-dfsa : DFSA #{ .A, .B, .C} #{ .a₀, .a₁ } :=
+  let check : #{ .A, .B, .C } → Bool :=
+    { .A = .false
+    , .B = .true
+    , .C = .false }
+  in
+  let step : #{ .A, .B, .C } → #{ .a₀, .a₁ } → #{ .A, .B, .C } :=
+    { .A = { .a₀ = .B, .a₁ = .C }
+    , .B = { .a₀ = .C, .a₁ = .B }
+    , .C = { .a₀ = .A, .a₁ = .A }
+    }
+  in
+  λ s⁺ ⇜ s⁻ ⇒ return (check s⁺) ⇜ (s⁻ ∘ (step s⁺))
+
+--------------------------------------------------------------------------------
+-- | Dependent Dynamical Systems
+--
+-- ▆ A dependent dynamical system (or a dependent Moore machine, or
+-- | simply a dynamical system) is a lens
+-- │
+-- │   𝜑 : Syˢ ⇒ P
+-- │
+-- │ for some 𝑆 ∈ Set and 𝑝 ∈ Poly. The set 𝑆 is called the set of
+-- │ states—with 𝑆yˢ called the state system—and the polynomial 𝑝 is called
+-- │ the interface. Positions of the interface are called outputs, and
+-- │ directions of the interface are called inputs
+-- │
+-- │ The lens’s on-positions function 𝜑₁ : 𝑆 → 𝑝(1) is called the return
+-- │ function, and for each 𝑠 ∈ 𝑆, the lens’s on-directions function 𝜑♯ 𝑠 :
+-- │ 𝑝[𝜑₁(𝑠)] → 𝑆 is called the update function at 𝑠.
+
+def Command := #{ .Green, .Orange }
+def Three : Type := #{ .One, .Two, .Three }
+
+-- | 𝜑 : 𝑆yˢ → yᵃ + 1.
+-- def ex-321 : (Three × Three) ⇒ tensor-+ (Unit × Command) (Unit × Unit) :=
+--   let check : Three → Either Unit Unit := { .One = Left Unit Unit .unit , .Three = Right Unit Unit .unit, .Two = Left Unit Unit .unit } in
+--   let update₁ : Command → Three := { .Green = .One , .Orange = .Two } in
+--   let update₂ : Command → Three := { .Green = .One , .Orange = .Three } in
+--   let update₃ : Void → Three := {} in
+--   λ state⁺ → (check state⁺ , λ x → ?)
+
+-- { .true = λ v → #{ .Green, .Orange }
+-- , .false = λ v → #{ .unit }
+-- } (fst ({ .One = (.true , .unit), .Three = (.false , .unit), .Two = (.true , .unit) } state⁺))
+--   (snd ({ .One = (.true , .unit), .Three = (.false , .unit), .Two = (.true , .unit) } state⁺))
+
+
+--------------------------------------------------------------------------------
+-- | Interpretation of Poly Morphisms
+
+-- We can use 'hom-base' and 'hom-fiber' to extract the base and fiber
+-- respectively.
+
+def identity : Π(A : Type), A → A :=
+  λ A →
+    hom-base (A × y^A) (A × y^A) (id (A × y^A))
+
+--def swap : Π(A B : Type), (A × B) → (B × A) :=
+--  λ A B →
+--    hom-base ((A × B) × (#{} × y^#{})) ((B × A) × (#{} × y^#{}))
+--      (swapₚ (A × y^#{}) (B × y^#{}))
+
+def delay : ℕ → ℕ :=
+  hom-base (ℕ × y^ℕ) (ℕ × y^ℕ) delayₘ
+
+def sum : (ℕ × ℕ) → ℕ :=
+  λ n×n → hom-fiber (ℕ × y^ℕ) (ℕ × y^(ℕ × ℕ)) sumₘ 0 n×n
+
+--------------------------------------------------------------------------------
+-- | Wiring Diagrams
+--
+-- The Poly book describes Wiring Diagrams as:
+--
+-- ▆ Formally, and more precisely, we can think of each box in a wiring
+-- │ diagram as an interface given by some monomial. Then the entire
+-- │ wiring diagram—specifying how these boxes nest within a larger
+-- │ box—is just an interaction pattern between the interfaces, with
+-- │ the larger box playing the role of the wrapper interface.
+--  
+--
+--                ┌─────────────────┐
+--	         -│ -┌───┐+ -┌───┐+ │+
+-- two-chainₚ : ──┼──┤ P ├───┤ Q ├──┼──
+--               A│ A└───┘B B└───┘C │C
+--                └─────────────────┘
+
+def two-chainₚ (A B C : Type) : (tensor-⊗ (B × y^A) (C × y^B)) ⇒ (C × y^A) :=
+  λ (p⁺ , q⁺) ⇜ (p⁻ , q⁻) ⇒
+     q⁻ ← p⁺;
+     return q⁺ ⇜ p⁻
+
+def plug : Π(A B C : Type),
+  (A → B) → (B → C) → (tensor-⊗ (B × y^B) (C × y^C)) ⇒ (tensor-⊗ (B × y^A) (C × y^B)) :=
+    λ A B C f g →
+      let fₚ : (B × y^B) ⇒ (B × y^A) := mds A B f in
+      let gₚ : (C × y^C) ⇒ (C × y^B) := mds B C g in
+      mux-⊗ (B × y^B) (B × y^A) (C × y^C) (C × y^B) fₚ gₚ
+
+def two-chain :
+  Π(A B C : Type),
+  (A → B) →
+  (B → C) →
+   (tensor-⊗ (B × y^B) (C × y^C)) ⇒ (C × y^A) :=
+    λ A B C f g →
+      compose
+      (tensor-⊗ (B × y^B) (C × y^C))
+      (tensor-⊗ (B × y^A) (C × y^B))
+      (C × y^A)
+      (two-chainₚ A B C)
+      (plug A B C f g)
+
+-- def compose :
+--   Π(A B C : Type),
+--   (A → B) →
+--   (B → C) →
+--   A →
+--   (B × C) :=
+--   λ A B C f g a →
+--     let two-chain' := two-chain A B C f g
+--     in hom-fiber ((B × C) × (B × C)) (C × A) two-chain' (? , ?) a
+
+-- Here we use _←_ to connect the 'fst' projection of the base of P to
+-- the fiber-sink of Q.
+
+
+--              ┌────────────────────────┐
+--              │  ┌───────┐             │ 
+--              │  │┌─────┐│  ┌─────┐    │ 
+--              │  └┤A    ││  │     │    │ 
+-- fib-wire : ──┤   │  P A├┴──┤A Q A├┬───┼──
+--            ()│  ┌┤A    │   │     ││   │A
+--              │  │└─────┘   └─────┘│   │ 
+--              │  └─────────────────┘   │ 
+--              └────────────────────────┘
+
+def fib-wire : Π(A : Type), (tensor-⊗ (A × y^(A × A)) (A × y^A)) ⇒ (A × y^Unit) :=
+  λ A →
+    λ (p⁺, q⁺) ⇜ (p⁻, q⁻) ⇒
+      return q⁺ ⇜ λ⁻ _ →
+        p⁻ ← (p⁺, q⁺);
+        q⁻ ← p⁺;
+	done
+
+def fib-wire' : Π(A : Type), (tensor-⊗ (A × y^(A × A)) (A × y^A)) ⇒ (A × y^Unit) :=
+  λ A (p⁺, q⁺) → (q⁺ , λ _ → ((p⁺ , q⁺) , p⁺))
+
+def fib-wire≡fib-wire' : Π(A : Type), (fib-wire A) = (fib-wire' A) :=
+  λ A → refl
+
+-- With our wiring diagram defined, the next move is to tensor
+-- together Moore machines to match the inner interface of the
+-- diagram.
+--
+-- Fibonacci consists of an adder and a delay line, which we defined
+-- previously, tensored with the parallel product:
+
+def delay⊗sumₘ : (tensor-⊗ (ℕ × y^ℕ) (ℕ × y^ℕ)) ⇒ (tensor-⊗ (ℕ × y^(ℕ × ℕ)) (ℕ × y^ℕ)) :=
+  mux-⊗ (ℕ × y^ℕ) (ℕ × y^(ℕ × ℕ)) (ℕ × y^ℕ) (ℕ × y^ℕ) sumₘ delayₘ 
+
+-- Notice that the outer interface of 'delay⊗sumₘ' is the same shape as
+-- the inner interface of 'fib-wire':
+--
+--  delay⊗sumₘ : (tensor-⊗ (ℕ × ℕ) (ℕ × ℕ)) ⇒ (tensor-⊗ (ℕ × (ℕ × ℕ)) (ℕ × ℕ))
+--  fib-wire   :                 Π(A : Type), (tensor-⊗ (A × (A × A)) (A × A)) ⇒ (A × Unit)
+--   
+-- This means we can use 'composeₚ' connect them together and produce
+-- a poly morphism with the inner interface of 'delay⊗sumₘ' and the
+-- outer interface of 'fib-wire':
+
+def fibₘ : Moore (ℕ × ℕ) Unit ℕ :=
+  compose
+    (tensor-⊗ (ℕ × y^ℕ) (ℕ × y^ℕ))
+    ((tensor-⊗ (ℕ × y^(ℕ × ℕ)) (ℕ × y^ℕ)))
+    ((ℕ × y^Unit))
+    (fib-wire ℕ)
+    delay⊗sumₘ
+
+-- #normalize (step-moore (ℕ × ℕ) Unit ℕ .unit (3, 2) fibₘ)
+
+def input : List Unit := Cons Unit .unit (Cons Unit .unit ((Cons Unit .unit (Nil Unit))))
+-- #normalize (process-moore (ℕ × ℕ) Unit ℕ (1, 1) input fibₘ)
+
+-- From here you can start to see the power Poly. We can build
+-- granular Moore Machines which perform narrow behaviors, tensor them
+-- together, and then compose them with wiring diagrams that describe
+-- larger subroutines.
+--
+-- Those compositions themselves are themselves Moore Machines which
+-- can be tensored with more Moore machines and then composed with a
+-- wiring diagram to describe even larger subroutines.
+
+--------------------------------------------------------------------------------
+-- | Moore Machines as Lenses
+-- TODO
+
+--------------------------------------------------------------------------------
+-- | Polynomial Composition: _◁_ 
+-- TODO
