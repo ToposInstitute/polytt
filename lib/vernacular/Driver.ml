@@ -28,7 +28,7 @@ let normalize tm =
     S.pp_toplevel ntm
 
 let rec execute_cmd  (cmd : CS.cmd) =
-  match cmd.node with
+  match cmd.value with
   | CS.Def {name; tp = Some tp; tm} ->
     Debug.print "-------------------------------------------------@.";
     Debug.print "> Elaborating %a@." Ident.pp name;

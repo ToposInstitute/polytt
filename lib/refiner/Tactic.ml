@@ -13,7 +13,7 @@ module rec Chk : sig
   val run : tac -> D.tp -> S.t
   val run2 : tac -> D.tp -> D.tp -> (S.t * bool)
   val syn : Syn.tac -> Chk.tac
-  val locate : Asai.Span.t -> tac -> tac
+  val locate : Asai.Span.t option -> tac -> tac
 end =
 struct
   type tac = D.tp -> S.t
@@ -34,7 +34,7 @@ and Syn : sig
   val rule : (unit -> D.tp * S.t) -> tac
   val run : tac -> D.tp * S.t
   val ann : Chk.tac -> Chk.tac -> tac
-  val locate : Asai.Span.t -> tac -> tac
+  val locate : Asai.Span.t option -> tac -> tac
 end =
 struct
   type tac = unit -> D.tp * S.t
@@ -54,7 +54,7 @@ and Hom : sig
   type tac
   val rule : (D.t * (unit -> S.t) -> S.t) -> tac
   val run : tac -> D.t * (unit -> S.t) -> S.t
-  val locate : Asai.Span.t -> tac -> tac
+  val locate : Asai.Span.t option -> tac -> tac
 end =
 struct
   type tac = D.t * (unit -> S.t) -> S.t
@@ -70,7 +70,7 @@ and Prog : sig
   type tac
   val rule : (unit -> unit) -> tac
   val run : tac -> unit -> unit
-  val locate : Asai.Span.t -> tac -> tac
+  val locate : Asai.Span.t option -> tac -> tac
 end =
 struct
   type tac = unit -> unit
@@ -86,7 +86,7 @@ and NegChk : sig
   val rule : (D.t -> (D.t -> unit)) -> tac
   val run : tac -> D.t -> (D.t -> unit)
   val syn : NegSyn.tac -> tac
-  val locate : Asai.Span.t -> tac -> tac
+  val locate : Asai.Span.t option -> tac -> tac
 end =
 struct
   type tac = D.t -> (D.t -> unit)
@@ -106,7 +106,7 @@ and NegSyn : sig
   type tac
   val rule : (unit -> D.t * (D.t -> unit)) -> tac
   val run : tac -> D.t * (D.t -> unit)
-  val locate : Asai.Span.t -> tac -> tac
+  val locate : Asai.Span.t option -> tac -> tac
 end =
 struct
   type tac = unit -> D.t * (D.t -> unit)

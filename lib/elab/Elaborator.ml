@@ -11,7 +11,7 @@ module Internal =
 struct
   let rec chk (tm : CS.t) =
     T.Chk.locate tm.loc @@
-    match tm.node with
+    match tm.value with
     | CS.Lam (names, tm) ->
       chk_lams names tm
     | CS.LamSyn (qs, tm) ->
@@ -55,7 +55,7 @@ struct
 
   and neg_chk (tm : CS.t) =
     T.NegChk.locate tm.loc @@
-    match tm.node with
+    match tm.value with
     | CS.NegPair (a, name, b) ->
       NegSigma.intro (neg_chk a) ~name (fun _ -> neg_chk b)
     | CS.Drop ->
@@ -92,7 +92,7 @@ struct
 
   and syn (tm : CS.t) =
     T.Syn.locate tm.loc @@
-    match tm.node with
+    match tm.value with
     | CS.LamSyn (qs, tm) ->
       List.fold_left
         (fun b (names, a) ms -> Pi.intro_syn ~names (chk a) (fun ns -> b (ms @ ns)))
@@ -160,7 +160,7 @@ struct
 
   and neg_syn (tm : CS.t) =
     T.NegSyn.locate tm.loc @@
-    match tm.node with
+    match tm.value with
     | CS.Var path ->
       begin
         match T.Locals.resolve_neg path with
@@ -184,7 +184,7 @@ struct
 
   and hom (tm : CS.t) =
     T.Hom.locate tm.loc @@
-    match tm.node with
+    match tm.value with
     | Set (pos, neg, steps) ->
       Hom.set (chk pos) (neg_syn neg) (hom steps)
     | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->
@@ -204,7 +204,7 @@ struct
 
   and prog (tm : CS.t) =
     T.Prog.locate tm.loc @@
-    match tm.node with
+    match tm.value with
     | Set (pos, neg, steps) ->
       Prog.set (chk pos) (neg_syn neg) (prog steps)
     | HomAp (pos, neg, phi, pos_name, neg_name, steps) ->

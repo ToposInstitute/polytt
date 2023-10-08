@@ -15,7 +15,7 @@ depends: [
   "algaeff" {>= "0.2"}
   "eio" {< "0.9"}
   "alcotest"
-  "asai"
+  "asai" {>= "0.1"}
   "bantorra"
   "bwd" {>= "1.1"}
   "cmdliner" {>= "1.1"}
@@ -37,7 +37,6 @@ build: [
   ]
 ]
 pin-depends: [
-  [ "asai.0.1.0~dev" "git+https://github.com/RedPRL/asai#4b0679bb051e9a820596d830d29dd74915521802" ]
-  [ "bantorra.0.2.0~dev" "git+https://github.com/RedPRL/bantorra#ce619fbf8f87f24c5c93847af6721cfcdb7c85be" ]
+  [ "bantorra.0.2.0~dev" "git+https://github.com/RedPRL/bantorra#e83d74b0e1318317bc1adc486191862fb6e8bfc8" ]
 ]
 dev-repo: "git+https://github.com/ToposInstitute/polytt.git"

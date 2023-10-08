@@ -385,26 +385,22 @@ end
 
 module Error =
 struct
-  module Eff = Algaeff.Reader.Make(struct type nonrec env = Span.t end)
-
   let error code fmt =
-    let loc = Eff.read () in
-    Logger.fatalf ~loc:loc code fmt
+    Logger.fatalf code fmt
 
   let type_error tp conn =
-    let loc = Eff.read () in
     let env = Locals.qenv () in
     let ppenv = Locals.ppenv () in
     let qtp = Quote.quote ~env ~tp:D.Univ tp in
-    Logger.fatalf ~loc:loc `TypeError "Expected %a, but got %s@."
+    Logger.fatalf `TypeError "Expected %a, but got %s@."
       (S.pp ppenv Precedence.isolated) qtp
       conn
 
   let locate loc k =
-    Eff.scope (fun _ -> loc) k
+    Logger.merge_loc loc k
 
   let run ~loc k =
-    Eff.run ~env:loc k
+    Logger.with_loc loc k
 end
 
 module Hole =

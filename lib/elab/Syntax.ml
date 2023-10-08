@@ -1,13 +1,10 @@
-open Asai
 open Core
 
 type labelset = string list
 type label = string
 type 'a labeled = (string * 'a) list
 
-type 'a node = { node : 'a; loc : Span.t }
-
-type t = t_ node
+type t = t_ Asai.Span.located
 and t_ =
   | Var of Yuujinchou.Trie.path
   | Pi of (Ident.binder list * t) list * t
