@@ -1,4 +1,4 @@
 (library
   (name Loader)
   (public_name polytt.loader)
-  (libraries polytt.errors polytt.parser polytt.vernacular asai.unix bantorra))
+  (libraries polytt.errors polytt.parser polytt.vernacular asai bantorra))

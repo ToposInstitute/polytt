@@ -1,7 +1,7 @@
 include Elab.Syntax
 open Core
 
-type cmd = cmd_ node
+type cmd = cmd_ Asai.Span.located
 and cmd_ =
   | Def of { name : Ident.t; tp : t option; tm : t }
   | Fail of { name: Ident.t; tp : t option; tm : t }

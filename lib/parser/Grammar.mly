@@ -4,20 +4,15 @@ open Asai
 module CS = Vernacular.Syntax
 module Ident = Core.Ident
 
-let locate (start, stop) node =
-  {CS.node; loc = Span.make (Span.of_lex_position start) (Span.of_lex_position stop)}
-
-let unlocate {CS.node; loc = _} = node
-let get_loc {CS.loc; node = _} = loc
-let clonecate other node =
-  { CS.node;
-    loc = get_loc other
-  }
-let duolocate (starter, stopper) node =
-  { CS.node;
-    loc = Span.make
-      (fst @@ Span.to_positions @@ get_loc starter)
-      (snd @@ Span.to_positions @@ get_loc stopper)
+let unlocate ({value; _} : _ Asai.Span.located) = value
+let get_loc ({loc; _} : _ Asai.Span.located) = Option.get loc
+let clonecate other value : _ Asai.Span.located =
+  { other with value }
+let duolocate (starter, stopper) value : _ Asai.Span.located =
+  { value;
+    loc = Option.some @@ Span.make
+      (fst @@ Span.split @@ get_loc starter,
+       snd @@ Span.split @@ get_loc stopper)
   }
 
 
@@ -86,7 +81,7 @@ let rec fold_pat = fun t ->
 %inline
 located(X):
   | e = X
-    { locate $loc e }
+    { Asai.Span.locate_lex $loc e }
 
 path:
   | path = PATH
@@ -193,7 +188,7 @@ let_binding:
   | LET; nm = pattern; COLON_EQUALS; tm1 = term; IN; tm2 = term
     { CS.Let (nm, tm1, tm2) }
   | LET; nm = pattern; COLON; ty1 = term; COLON_EQUALS; tm1 = term; IN; tm2 = term
-    { CS.Let (nm, { node = Anno(tm1, ty1) ; loc = get_loc tm1 }, tm2) }
+    { CS.Let (nm, clonecate tm1 (CS.Anno(tm1, ty1)), tm2) }
 
 labeled_field(sep):
   | label = LABEL; sep; term = term;

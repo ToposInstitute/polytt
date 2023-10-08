@@ -31,15 +31,14 @@ Here is the context!
 - y⁻ : fib Q (fst (snd _ (borrow p⁻)))
 ──────────────
 
-
     🭁 ./hole/eval.poly
     │
  10 │     return q⁺ ⇜ λ⁻ q →
  11 │       x⁻ ← f q;
  12 │       -- y⁻ involves (borrow p⁻)
  13 │       ?
-    │
-    █ [E010] Didn't use all your linear variables in hom.
+    ┷
+ [E010] Didn't use all your linear variables in hom.
 --------------------[./hole/let.poly]--------------------
 
 Encountered hole with known type!
@@ -72,12 +71,11 @@ Encountered negative hole with known type!
 ──────────────
 - ⊢ ?1 : fib P ?0
 
-
-   🭁 ./hole/morph1.poly
-   │
- 3 │     return ? ⇜ ?
-   │
-   █ [E010] Didn't use all your linear variables in hom.
+    🭁 ./hole/morph1.poly
+    │
+  3 │     return ? ⇜ ?
+    ┷
+ [E010] Didn't use all your linear variables in hom.
 --------------------[./hole/morph2.poly]--------------------
 
 Encountered hole with known type!
@@ -87,13 +85,12 @@ Encountered hole with known type!
 ──────────────
 + ⊢ ?0 : base P
 
-
-   🭁 ./hole/morph2.poly
-   │
- 3 │     return ? ⇜ p⁻
-   │
-   █ [E006] Could not solve:
-              fib P ?0 = fib P p⁺
+    🭁 ./hole/morph2.poly
+    │
+  3 │     return ? ⇜ p⁻
+    ┷
+ [E006] Could not solve:
+          fib P ?0 = fib P p⁺
 --------------------[./hole/morph3.poly]--------------------
 
 Encountered hole with known type!
@@ -152,12 +149,11 @@ baz : ℕ
 
 --------------------[./std-lib/Data/Records.poly]--------------------
 
-
-   🭁 ./std-lib/Data/Records.poly
-   │
- 3 │ def MyRecordTy := { .foo : ℕ, .bar : Unit, .baz : ℕ → Unit }
-   │
-   █ [E004] Variable is not bound (or is negative, idk).
+    🭁 ./std-lib/Data/Records.poly
+    │
+  3 │ def MyRecordTy := { .foo : ℕ, .bar : Unit, .baz : ℕ → Unit }
+    ┷
+ [E004] Variable is not bound (or is negative, idk).
 --------------------[./std-lib/Data/Unit.poly]--------------------
 
 --------------------[./std-lib/Data/Void.poly]--------------------

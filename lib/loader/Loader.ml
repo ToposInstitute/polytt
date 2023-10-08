@@ -2,7 +2,7 @@ open Errors
 open Parser
 open Vernacular
 
-module Terminal = Asai_unix.Make(Code)
+module Terminal = Asai.Tty.Make(Code)
 
 type env = { manager : Bantorra.Manager.t; lib : Bantorra.Manager.library }
 
@@ -13,9 +13,9 @@ let parse_file path =
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = path };
   try Grammar.commands Lex.token lexbuf with
   | Lex.SyntaxError tok ->
-    Logger.fatalf ~loc:(Span.of_lex lexbuf) `LexError {|Unrecognized token "%s"|} (String.escaped tok)
+    Logger.fatalf ~loc:(Span.of_lexbuf lexbuf) `LexError {|Unrecognized token "%s"|} (String.escaped tok)
   | Grammar.Error ->
-    Logger.fatalf ~loc:(Span.of_lex lexbuf) `ParseError "Failed to parse"
+    Logger.fatalf ~loc:(Span.of_lexbuf lexbuf) `ParseError "Failed to parse"
 
 let load_file (unitpath : Bantorra.Manager.path) =
   let env = Eff.read () in
@@ -25,7 +25,7 @@ let load_file (unitpath : Bantorra.Manager.path) =
 
 let initialize_bantorra dir =
   let open Bantorra in
-  let router = 
+  let router =
     Router.dispatch @@
     function
     | "file" -> Option.some @@
@@ -38,11 +38,11 @@ let initialize_bantorra dir =
   { manager; lib }
 
 let load path debug =
-  let open Bantorra in
+  let module B = Bantorra in
   Logger.run ~emit:Terminal.display ~fatal:Terminal.display @@ fun () ->
-  Logger.wrap (Asai.Diagnostic.map (fun _ -> `LoadFailure)) Bantorra.Error.run @@ fun () ->
-  let dir = FilePath.parent @@ FilePath.of_string ~relative_to:(File.get_cwd ()) path in
-  Format.eprintf "Entering directory '%s'@." (FilePath.to_string dir);
+  Logger.adopt (Asai.Diagnostic.map (fun _ -> `LoadFailure)) B.Logger.run @@ fun () ->
+  let dir = B.FilePath.parent @@ B.FilePath.of_string ~relative_to:(B.File.get_cwd ()) path in
+  Format.eprintf "Entering directory '%s'@." (Bantorra.FilePath.to_string dir);
   let env = initialize_bantorra dir in
   Eff.run ~env @@ fun () ->
   let cmds = parse_file path in

@@ -47,8 +47,8 @@ end
 module Error : sig
   val error : Code.t -> ('a, Format.formatter, unit, 'b) format4 -> 'a
   val type_error : D.t -> string -> 'a
-  val locate : Span.t -> (unit -> 'a) -> 'a
-  val run : loc:Span.t -> (unit -> 'a) -> 'a
+  val locate : Span.t option -> (unit -> 'a) -> 'a
+  val run : loc:Span.t option -> (unit -> 'a) -> 'a
 end
 
 module Hole : sig
@@ -70,4 +70,3 @@ val do_nat_elim : mot:D.t -> zero:D.t -> succ:D.t -> scrut:D.t -> D.t
 val do_base : D.t -> D.t
 val do_fib : D.t -> D.t -> D.t
 val do_hom_elim : D.t -> D.t -> D.t
-
